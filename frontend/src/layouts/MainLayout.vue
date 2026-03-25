@@ -71,6 +71,15 @@ const linksList = [
     icon: 'favorite',
     link: 'https://awesome.quasar.dev',
   },
+
+
+  {
+    title: 'AI Symptom Checker',
+    caption: 'Get health suggestions',
+    icon: 'psychology',
+    link: '/#/symptoms' // මෙතන path එක වැදගත්
+  },
+  // අනිත් links ටික පල්ලෙහායින් තියෙන්න දෙන්න...
 ]
 
 const leftDrawerOpen = ref(false)
