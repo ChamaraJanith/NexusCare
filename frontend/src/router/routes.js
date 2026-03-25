@@ -5,7 +5,9 @@ const routes = [
     children: [
       { path: '', component: () => import('pages/IndexPage.vue') },
       // AI Symptom Checker route
-      { path: 'symptoms', component: () => import('pages/SymptomChecker.vue') }
+      { path: 'symptoms', component: () => import('pages/SymptomChecker.vue') },
+      // Video Session route
+      { path: 'video', component: () => import('pages/VideoSession.vue') }
     ]
   },
 
