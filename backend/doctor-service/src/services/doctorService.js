@@ -1,4 +1,5 @@
 import Doctor from "../models/Doctor.js";
+import AvailabilitySlot from "../models/AvailabilitySlot.js";
 
 // CREATE
 export const createDoctorProfile = async (data) => {
@@ -19,7 +20,7 @@ export const updateDoctor = async (id, data) => {
   );
 };
 
-// SOFT DELETE ❌ (not hard delete)
+// SOFT DELETE ❌
 export const deleteDoctor = async (id) => {
   return await Doctor.findOneAndUpdate(
     { _id: id, isDeleted: false },
@@ -28,16 +29,18 @@ export const deleteDoctor = async (id) => {
   );
 };
 
-// GET ALL (basic list)
+// GET ALL
 export const getAllDoctors = async (filter = {}) => {
   return await Doctor.find({ isDeleted: false, ...filter });
 };
 
-// 🔍 SEARCH + FILTER + PAGINATION 🔥
+// 🔍 SEARCH + FILTER + PAGINATION + ADVANCED 🔥
 export const searchDoctors = async (queryParams) => {
   const {
     search,
     specialization,
+    location,
+    available,
     minExp,
     maxExp,
     page = 1,
@@ -48,15 +51,17 @@ export const searchDoctors = async (queryParams) => {
 
   const query = { isDeleted: false };
 
-  // 🔍 Search (name or specialization)
+  // 🔍 FULL-TEXT SEARCH (if index exists)
   if (search) {
-    query.$or = [
-      { fullName: { $regex: search, $options: "i" } },
-      { specialization: { $regex: search, $options: "i" } }
-    ];
+    query.$text = { $search: search };
   }
 
-  // 🎯 Exact specialization filter
+  // 📍 Location filter
+  if (location) {
+    query.location = { $regex: location, $options: "i" };
+  }
+
+  // 🎯 Specialization filter
   if (specialization) {
     query.specialization = specialization;
   }
@@ -68,9 +73,14 @@ export const searchDoctors = async (queryParams) => {
     if (maxExp) query.experience.$lte = Number(maxExp);
   }
 
-  const skip = (Number(page) - 1) * Number(limit);
+  // ⏰ Availability filter
+  if (available === "true") {
+    const slots = await AvailabilitySlot.find({ isBooked: false });
+    const doctorIds = [...new Set(slots.map(slot => slot.doctorId.toString()))];
+    query._id = { $in: doctorIds };
+  }
 
-  // 🔽 Sort order
+  const skip = (Number(page) - 1) * Number(limit);
   const sortOrder = order === "desc" ? -1 : 1;
 
   const doctors = await Doctor.find(query)
