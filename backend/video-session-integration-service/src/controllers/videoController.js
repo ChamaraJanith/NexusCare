@@ -1,4 +1,8 @@
+// videoController.js
 const videoService = require('../services/videoService');
+
+// මෙන්න මේ array එක අනිවාර්යයෙන්ම ඕනේ!
+let activeSessions = []; 
 
 const initializeSession = async (req, res) => {
   try {
@@ -10,6 +14,9 @@ const initializeSession = async (req, res) => {
 
     const sessionData = await videoService.generateNeuralLink(patientId, doctorId);
     
+    // මෙතනදී තමයි array එකට දත්ත දාන්නේ
+    activeSessions.push(sessionData); 
+    
     res.status(200).json({
       success: true,
       data: sessionData
@@ -19,4 +26,12 @@ const initializeSession = async (req, res) => {
   }
 };
 
-module.exports = { initializeSession };
+// GET රූට් එකට දත්ත යැවීමට අලුත් function එකක්
+const getSessions = (req, res) => {
+  res.status(200).json({
+    success: true,
+    data: activeSessions
+  });
+};
+
+module.exports = { initializeSession, getSessions };
