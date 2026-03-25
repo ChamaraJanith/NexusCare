@@ -1,22 +1,39 @@
 import mongoose from "mongoose";
 
-const prescriptionSchema = new mongoose.Schema({
-  doctorId: String,
-  patientId: String,
-  medicines: [String],
-  notes: String,
+const prescriptionSchema = new mongoose.Schema(
+  {
+    doctorId: {
+      type: String,
+      required: true
+    },
 
-  status: {
-    type: String,
-    enum: ["active", "updated", "cancelled"],
-    default: "active"
+    patientId: {
+      type: String,
+      required: true
+    },
+
+    medicines: {
+      type: [String],
+      required: true
+    },
+
+    notes: {
+      type: String,
+      default: ""
+    },
+
+    status: {
+      type: String,
+      enum: ["active", "updated", "cancelled"],
+      default: "active"
+    },
+
+    isDeleted: {
+      type: Boolean,
+      default: false
+    }
   },
-
-  isDeleted: {
-    type: Boolean,
-    default: false
-  }
-
-}, { timestamps: true });
+  { timestamps: true }
+);
 
 export default mongoose.model("Prescription", prescriptionSchema);
