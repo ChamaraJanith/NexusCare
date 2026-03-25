@@ -17,7 +17,8 @@ const doctorSchema = new mongoose.Schema(
     specialization: {
       type: String,
       required: true,
-      trim: true
+      trim: true,
+      index: true
     },
 
     qualifications: {
@@ -29,13 +30,21 @@ const doctorSchema = new mongoose.Schema(
     experience: {
       type: Number,
       required: true,
-      min: 0
+      min: 0,
+      index: true
     },
 
     hospital: {
       type: String,
       required: true,
       trim: true
+    },
+
+    location: {
+      type: String, // 🔥 NEW (for filtering)
+      required: true,
+      trim: true,
+      index: true
     },
 
     bio: {
@@ -50,15 +59,24 @@ const doctorSchema = new mongoose.Schema(
 
     isVerified: {
       type: Boolean,
-      default: false // admin verify doctor
+      default: false
     },
 
     isDeleted: {
       type: Boolean,
-      default: false
+      default: false,
+      index: true
     }
   },
   { timestamps: true }
 );
+
+// 🔍 FULL-TEXT SEARCH INDEX 🔥
+doctorSchema.index({
+  fullName: "text",
+  specialization: "text",
+  hospital: "text",
+  location: "text"
+});
 
 export default mongoose.model("Doctor", doctorSchema);
