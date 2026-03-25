@@ -3,8 +3,15 @@ import mongoose from "mongoose";
 const doctorSchema = new mongoose.Schema(
   {
     userId: {
-      type: String, // from auth service
+      type: String,
       required: true,
+      index: true
+    },
+
+    doctorId: {
+      type: String, // 🔥 from auth service (DOC-0001)
+      required: true,
+      unique: true,
       index: true
     },
 
@@ -41,7 +48,7 @@ const doctorSchema = new mongoose.Schema(
     },
 
     location: {
-      type: String, // 🔥 NEW (for filtering)
+      type: String,
       required: true,
       trim: true,
       index: true
@@ -53,7 +60,7 @@ const doctorSchema = new mongoose.Schema(
     },
 
     profileImage: {
-      type: String, // URL (Cloudinary etc.)
+      type: String,
       default: ""
     },
 
@@ -71,7 +78,7 @@ const doctorSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// 🔍 FULL-TEXT SEARCH INDEX 🔥
+// 🔍 Full-text search
 doctorSchema.index({
   fullName: "text",
   specialization: "text",
