@@ -1,6 +1,6 @@
 // Patient controller - manages patient profiles, medical reports, and prescriptions
 const User = require("../models/User");
-const PatientProfile = require("../models/Patientprofile");
+const PatientProfile = require("../models/PatientProfile");
 const cloudinary = require("../config/cloudinary");
 const { v4: uuidv4 } = require("uuid");
 

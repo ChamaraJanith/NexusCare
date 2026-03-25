@@ -2,8 +2,8 @@
 // Covers all 3 roles: patient, doctor, admin
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
-const PatientProfile = require("../models/Patientprofile");
-//const DoctorProfile = require("../models/DoctorProfile");
+const PatientProfile = require("../models/PatientProfile");
+const DoctorProfile = require("../models/DoctorProfile");
 const cloudinary = require("../config/cloudinary");
 
 // Helper: Generate JWT token from userId and role

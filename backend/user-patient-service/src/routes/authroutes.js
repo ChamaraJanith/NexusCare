@@ -7,7 +7,7 @@ const {
   getMe,
   verifyToken,
   changePassword,
-} = require("../controllers/authcontroller");
+} = require("../controllers/authController");
 const { protect } = require("../middleware/auth");
 
 // Public routes (no token needed)
