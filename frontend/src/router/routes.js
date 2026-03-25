@@ -7,7 +7,11 @@ const routes = [
       // AI Symptom Checker route
       { path: 'symptoms', component: () => import('pages/SymptomChecker.vue') },
       // Video Session route
-      { path: 'video', component: () => import('pages/VideoSession.vue') }
+      { path: 'video', component: () => import('pages/VideoSession.vue') },
+      {
+        path:'doctorVideo',
+        component: () => import('pages/Doctor_Video.vue')
+      }
     ]
   },
 

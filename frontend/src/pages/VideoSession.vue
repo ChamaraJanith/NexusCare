@@ -14,7 +14,7 @@
         <div id="jitsi-container" class="nexus-video-window glass">
           <div v-if="loading" class="absolute-center text-center">
             <q-spinner-orbit color="cyan-4" size="4rem" />
-            <div class="text-cyan-2 q-mt-md">SYNCING INTERFACE...</div>
+            <div class="text-cyan-2 q-mt-md font-orbitron">SYNCING INTERFACE...</div>
           </div>
         </div>
 
@@ -51,15 +51,25 @@ const initJitsi = (roomId) => {
     height: '100%',
     parentNode: document.querySelector('#jitsi-container'),
     configOverwrite: {
-      prejoinPageEnabled: false, // prejoin page එක අයින් කරයි
+      // --- Moderator/Waiting Screen එක අයින් කරන settings ---
+      prejoinPageEnabled: false,
+      disableInviteFunctions: true,
+      enableUserRolesBasedOnToken: false, // Moderator කෙනෙක් නැතිව වුණත් session එක පටන් ගැනීමට
+      enableWelcomePage: false,
+      p2p: { enabled: true },             // Direct connection එකකට මාරු වීම
+
+      // --- Audio/Video Settings ---
       startWithAudioMuted: false,
       startWithVideoMuted: false,
+      requireDisplayName: false,
     },
     interfaceConfigOverwrite: {
       TOOLBAR_BUTTONS: [
-        'microphone', 'camera', 'fullscreen', 'fittowindow', 'hangup', 'chat'
+        'microphone', 'camera', 'fullscreen', 'fittowindow', 'hangup', 'chat', 'tileview'
       ],
       SHOW_JITSI_WATERMARK: false,
+      JITSI_WATERMARK_LINK: '',
+      RECENT_LIST_ENABLED: false,
     },
     userInfo: {
       displayName: isDoctor ? 'Dr. Aris (Consultant)' : 'Patient Node'
@@ -67,12 +77,19 @@ const initJitsi = (roomId) => {
   }
 
   // Jitsi API එක පණගන්වයි
-  jitsiApi = new window.JitsiMeetExternalAPI(domain, options)
+  try {
+    jitsiApi = new window.JitsiMeetExternalAPI(domain, options)
 
-  jitsiApi.addEventListeners({
-    videoConferenceJoined: () => { loading.value = false },
-    readyToClose: () => endSession()
-  })
+    jitsiApi.addEventListeners({
+      videoConferenceJoined: () => {
+        loading.value = false
+        console.log('Neural Bridge Active')
+      },
+      readyToClose: () => endSession()
+    })
+  } catch (error) {
+    console.error('Jitsi API Error:', error)
+  }
 }
 
 const endSession = () => {
@@ -81,11 +98,17 @@ const endSession = () => {
 }
 
 onMounted(() => {
-  const roomId = route.query.room || `Nexus-Link-${Math.random().toString(36).substr(2, 9)}`
+  // Room ID එකේ spaces අයින් කරලා ගන්නවා URL එකේ ගැටළු නොවන්න
+  const rawRoomId = route.query.room || `Nexus-Link-${Math.random().toString(36).substr(2, 9)}`
+  const sanitizedRoomId = rawRoomId.replace(/\s+/g, '')
 
   // Script එක load වෙනකම් පොඩි වෙලාවක් ඉන්නවා
   setTimeout(() => {
-    initJitsi(roomId)
+    if (window.JitsiMeetExternalAPI) {
+      initJitsi(sanitizedRoomId)
+    } else {
+      console.error('Jitsi External API script not found. Please add it to index.html')
+    }
   }, 500)
 })
 
@@ -95,6 +118,10 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+.font-orbitron { font-family: 'Orbitron', sans-serif; }
+
 .nexus-video-window {
   height: 70vh;
   border: 1px solid rgba(0, 255, 255, 0.3);
@@ -102,8 +129,26 @@ onBeforeUnmount(() => {
   overflow: hidden;
   position: relative;
   background: #000;
+  box-shadow: 0 0 30px rgba(0, 255, 255, 0.1);
 }
-.font-orbitron { font-family: 'Orbitron', sans-serif; }
-.glass { background: rgba(255, 255, 255, 0.02); backdrop-filter: blur(10px); }
-.nexus-btn { border-radius: 12px; box-shadow: 0 0 15px rgba(255, 0, 0, 0.2); }
+
+.glass {
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(10px);
+}
+
+.nexus-btn {
+  border-radius: 12px;
+  box-shadow: 0 0 15px rgba(255, 0, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+.nexus-btn:hover {
+  box-shadow: 0 0 25px rgba(255, 0, 0, 0.4);
+  transform: translateY(-2px);
+}
+
+.letter-spacing-1 {
+  letter-spacing: 1px;
+}
 </style>
