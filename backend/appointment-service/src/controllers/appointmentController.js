@@ -1,41 +1,62 @@
-const service = require("../services/appointmentService");
-
-// Book Appointment
-exports.bookAppointment = async (req, res) => {
+export const bookAppointment = async (req, res) => {
   try {
-    const data = await service.createAppointment(req.body);
-    res.status(201).json(data);
+    // 👉 dummy logic (later DB logic add කරන්න)
+    const data = req.body;
+
+    res.status(201).json({
+      message: "Appointment booked successfully",
+      data
+    });
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Error booking appointment:", error.message);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
-// Get Appointments
-exports.getAppointments = async (req, res) => {
+export const getAppointments = async (req, res) => {
   try {
-    const data = await service.getAppointmentsByPatient(req.params.patientId);
-    res.status(200).json(data);
+    const { patientId } = req.params;
+
+    res.status(200).json({
+      message: "Appointments fetched",
+      patientId
+    });
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Error fetching appointments:", error.message);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
-// Update Appointment
-exports.updateAppointment = async (req, res) => {
+export const updateAppointment = async (req, res) => {
   try {
-    const data = await service.updateAppointment(req.params.id, req.body);
-    res.status(200).json(data);
+    const { id } = req.params;
+    const updatedData = req.body;
+
+    res.status(200).json({
+      message: "Appointment updated",
+      id,
+      updatedData
+    });
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Error updating appointment:", error.message);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
-// Cancel Appointment
-exports.cancelAppointment = async (req, res) => {
+export const cancelAppointment = async (req, res) => {
   try {
-    const data = await service.cancelAppointment(req.params.id);
-    res.status(200).json(data);
+    const { id } = req.params;
+
+    res.status(200).json({
+      message: "Appointment cancelled",
+      id
+    });
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Error cancelling appointment:", error.message);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 };
