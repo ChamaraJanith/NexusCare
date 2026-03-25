@@ -1,31 +1,50 @@
-const checkSymptoms = (req, res) => {
-  const { symptomsText = '', age, gender } = req.body || {};
-  const text = symptomsText.toLowerCase();
+// src/controllers/ai.controller.js
+const {
+  checkSymptomsWithGemini,
+} = require("../services/geminiSymptomService");
 
-  let suggestedSpeciality = 'General Physician';
-  let riskLevel = 'low';
-  let advice = 'Please book a general consultation if symptoms persist.';
+const checkSymptoms = async (req, res) => {
+  try {
+    const { symptomsText, age, gender } = req.body;
 
-  if (text.includes('chest pain') || text.includes('shortness of breath')) {
-    suggestedSpeciality = 'Cardiologist';
-    riskLevel = 'high';
-    advice = 'This may be serious. Please seek urgent medical attention.';
-  } else if (text.includes('fever') && text.includes('cough')) {
-    suggestedSpeciality = 'General Physician';
-    riskLevel = 'medium';
-    advice = 'You may have a viral infection. Monitor and book a consultation.';
-  }
-
-  return res.json({
-    riskLevel,
-    suggestedSpeciality,
-    advice,
-    meta: {
-      age: age || null,
-      gender: gender || null,
-      disclaimer: 'This is not a medical diagnosis. Please consult a doctor.'
+    if (!symptomsText) {
+      return res.status(400).json({
+        success: false,
+        message: "symptomsText is required",
+      });
     }
-  });
+
+    const analysis = await checkSymptomsWithGemini(
+      symptomsText,
+      age,
+      gender
+    );
+
+    return res.json({
+      success: true,
+      source: "Gemini",
+      data: analysis,
+    });
+  } catch (err) {
+    console.error("Gemini error:", err.message);
+    if (err.response && err.response.data) {
+      console.error(
+        "Gemini error response:",
+        JSON.stringify(err.response.data, null, 2)
+      );
+      return res.status(err.response.status || 500).json({
+        success: false,
+        error: "AI service error",
+        details: err.response.data.error?.message || err.message,
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: "AI service error",
+      details: err.message,
+    });
+  }
 };
 
 module.exports = { checkSymptoms };
