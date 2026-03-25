@@ -8,10 +8,8 @@ const routes = [
       { path: 'symptoms', component: () => import('pages/SymptomChecker.vue') },
       // Video Session route
       { path: 'video', component: () => import('pages/VideoSession.vue') },
-      {
-        path:'doctorVideo',
-        component: () => import('pages/Doctor_Video.vue')
-      }
+      {path:'doctorVideo',component: () => import('pages/Doctor_Video.vue')},
+      {path:'patientVideo',component: () => import('pages/Patient_Video.vue')},
     ]
   },
 
