@@ -1,25 +1,28 @@
 import * as prescriptionService from "../services/prescriptionService.js";
 
-// CREATE Prescription
+// CREATE
 export const addPrescription = async (req, res) => {
   try {
-    const prescription = await prescriptionService.createPrescription(req.body);
+    const prescription = await prescriptionService.createPrescription(
+      req.body,
+      req.user
+    );
 
     res.status(201).json({
       success: true,
       data: prescription,
-      message: "Prescription created successfully"
+      message: "Prescription created"
     });
 
   } catch (err) {
-    res.status(500).json({
+    res.status(400).json({
       success: false,
       message: err.message
     });
   }
 };
 
-// GET Prescriptions by Patient (only active)
+// READ
 export const getPrescriptions = async (req, res) => {
   try {
     const prescriptions = await prescriptionService.getByPatient(req.params.patientId);
@@ -37,12 +40,13 @@ export const getPrescriptions = async (req, res) => {
   }
 };
 
-// 🔄 UPDATE (controlled update)
+// UPDATE
 export const updatePrescription = async (req, res) => {
   try {
     const updated = await prescriptionService.updatePrescription(
       req.params.id,
-      req.body
+      req.body,
+      req.user
     );
 
     if (!updated) {
@@ -55,21 +59,24 @@ export const updatePrescription = async (req, res) => {
     res.json({
       success: true,
       data: updated,
-      message: "Prescription updated (controlled)"
+      message: "Prescription updated"
     });
 
   } catch (err) {
-    res.status(500).json({
+    res.status(400).json({
       success: false,
       message: err.message
     });
   }
 };
 
-// ❌ SOFT DELETE (NOT real delete)
+// DELETE
 export const deletePrescription = async (req, res) => {
   try {
-    const deleted = await prescriptionService.deletePrescription(req.params.id);
+    const deleted = await prescriptionService.deletePrescription(
+      req.params.id,
+      req.user
+    );
 
     if (!deleted) {
       return res.status(404).json({
@@ -80,11 +87,11 @@ export const deletePrescription = async (req, res) => {
 
     res.json({
       success: true,
-      message: "Prescription cancelled (soft deleted)"
+      message: "Prescription cancelled"
     });
 
   } catch (err) {
-    res.status(500).json({
+    res.status(400).json({
       success: false,
       message: err.message
     });
