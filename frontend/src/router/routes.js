@@ -4,12 +4,12 @@ const routes = [
     component: () => import('layouts/MainLayout.vue'),
     children: [
       { path: '', component: () => import('pages/IndexPage.vue') },
-      // AI Symptom Checker route එක මෙතන පමණක් තිබිය යුතුයි
+      // AI Symptom Checker route
       { path: 'symptoms', component: () => import('pages/SymptomChecker.vue') }
     ]
   },
 
-  // මේක හැමවෙලේම අන්තිමට තියෙන්න ඕනේ (වැරදි URL එකක් ගැහුවොත් 404 පෙන්වන්න)
+  // keep this line if we enter invalid routes and redirect to 404 page (must always be last)
   {
     path: '/:catchAll(.*)*',
     component: () => import('pages/ErrorNotFound.vue')
