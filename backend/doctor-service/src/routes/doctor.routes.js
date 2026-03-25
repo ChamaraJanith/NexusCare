@@ -2,7 +2,9 @@ import express from "express";
 import {
   createDoctor,
   getDoctor,
-  updateDoctor
+  updateDoctor,
+  deleteDoctor,
+  searchDoctors
 } from "../controllers/doctorController.js";
 
 import { verifyToken } from "../middleware/authMiddleware.js";
@@ -11,6 +13,9 @@ import { validate } from "../middleware/validate.js";
 import { doctorSchema } from "../validators/doctorValidator.js";
 
 const router = express.Router();
+
+// 🔍 SEARCH + FILTER Doctors (public or protected based on requirement)
+router.get("/", searchDoctors);
 
 // 🔐 Create doctor profile (only doctor role)
 router.post(
@@ -31,6 +36,14 @@ router.put(
   allowRoles("doctor"),
   validate(doctorSchema),
   updateDoctor
+);
+
+// ❌ Soft delete doctor profile (only owner doctor)
+router.delete(
+  "/:id",
+  verifyToken,
+  allowRoles("doctor"),
+  deleteDoctor
 );
 
 export default router;

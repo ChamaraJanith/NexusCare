@@ -5,7 +5,7 @@ export const createDoctor = async (req, res) => {
   try {
     const doctor = await doctorService.createDoctorProfile({
       ...req.body,
-      userId: req.user.id // 🔥 get from token
+      userId: req.user.id
     });
 
     res.status(201).json({
@@ -27,7 +27,7 @@ export const getDoctor = async (req, res) => {
   try {
     const doctor = await doctorService.getDoctorById(req.params.id);
 
-    if (!doctor || doctor.isDeleted) {
+    if (!doctor) {
       return res.status(404).json({
         success: false,
         message: "Doctor not found"
@@ -47,12 +47,30 @@ export const getDoctor = async (req, res) => {
   }
 };
 
+// 🔍 SEARCH + FILTER Doctors
+export const searchDoctors = async (req, res) => {
+  try {
+    const result = await doctorService.searchDoctors(req.query);
+
+    res.json({
+      success: true,
+      ...result
+    });
+
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+};
+
 // UPDATE Doctor (only owner)
 export const updateDoctor = async (req, res) => {
   try {
     const existingDoctor = await doctorService.getDoctorById(req.params.id);
 
-    if (!existingDoctor || existingDoctor.isDeleted) {
+    if (!existingDoctor) {
       return res.status(404).json({
         success: false,
         message: "Doctor not found"
@@ -88,7 +106,7 @@ export const deleteDoctor = async (req, res) => {
   try {
     const existingDoctor = await doctorService.getDoctorById(req.params.id);
 
-    if (!existingDoctor || existingDoctor.isDeleted) {
+    if (!existingDoctor) {
       return res.status(404).json({
         success: false,
         message: "Doctor not found"
@@ -103,7 +121,7 @@ export const deleteDoctor = async (req, res) => {
       });
     }
 
-    await doctorService.deleteDoctor(req.params.id); // soft delete
+    await doctorService.deleteDoctor(req.params.id);
 
     res.json({
       success: true,
