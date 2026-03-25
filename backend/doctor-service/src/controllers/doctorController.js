@@ -3,9 +3,20 @@ import * as doctorService from "../services/doctorService.js";
 // CREATE Doctor Profile
 export const createDoctor = async (req, res) => {
   try {
+    // 🔥 Prevent duplicate profile
+    const existing = await doctorService.getDoctorByUserId(req.user.id);
+
+    if (existing) {
+      return res.status(400).json({
+        success: false,
+        message: "Doctor profile already exists"
+      });
+    }
+
     const doctor = await doctorService.createDoctorProfile({
       ...req.body,
-      userId: req.user.id
+      userId: req.user.id,
+      doctorId: req.user.doctorId // 🔥 from auth token
     });
 
     res.status(201).json({
@@ -47,7 +58,7 @@ export const getDoctor = async (req, res) => {
   }
 };
 
-// 🔍 SEARCH + FILTER Doctors
+// 🔍 SEARCH + FILTER
 export const searchDoctors = async (req, res) => {
   try {
     const result = await doctorService.searchDoctors(req.query);
@@ -65,7 +76,7 @@ export const searchDoctors = async (req, res) => {
   }
 };
 
-// UPDATE Doctor (only owner)
+// UPDATE Doctor
 export const updateDoctor = async (req, res) => {
   try {
     const existingDoctor = await doctorService.getDoctorById(req.params.id);
@@ -77,11 +88,10 @@ export const updateDoctor = async (req, res) => {
       });
     }
 
-    // 🔐 Ownership check
     if (existingDoctor.userId !== req.user.id) {
       return res.status(403).json({
         success: false,
-        message: "Not authorized to update this profile"
+        message: "Not authorized"
       });
     }
 
@@ -90,7 +100,7 @@ export const updateDoctor = async (req, res) => {
     res.json({
       success: true,
       data: updated,
-      message: "Doctor profile updated successfully"
+      message: "Doctor profile updated"
     });
 
   } catch (err) {
@@ -101,7 +111,7 @@ export const updateDoctor = async (req, res) => {
   }
 };
 
-// ❌ DELETE Doctor (SOFT DELETE)
+// DELETE Doctor
 export const deleteDoctor = async (req, res) => {
   try {
     const existingDoctor = await doctorService.getDoctorById(req.params.id);
@@ -113,11 +123,10 @@ export const deleteDoctor = async (req, res) => {
       });
     }
 
-    // 🔐 Ownership check
     if (existingDoctor.userId !== req.user.id) {
       return res.status(403).json({
         success: false,
-        message: "Not authorized to delete this profile"
+        message: "Not authorized"
       });
     }
 
@@ -125,7 +134,7 @@ export const deleteDoctor = async (req, res) => {
 
     res.json({
       success: true,
-      message: "Doctor profile deleted (soft delete)"
+      message: "Doctor profile deleted"
     });
 
   } catch (err) {
