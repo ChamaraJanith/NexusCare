@@ -6,18 +6,14 @@
       <q-input
         v-model="booking.patientId"
         label="Enter Patient ID (e.g. PT-9909)"
-        dark
-        filled
-        color="cyan-4"
+        dark filled color="cyan-4"
         class="font-orbitron"
       />
 
       <q-input
         v-model="booking.doctorId"
         label="Enter Doctor ID (e.g. DOC-7705)"
-        dark
-        filled
-        color="cyan-4"
+        dark filled color="cyan-4"
         class="font-orbitron"
       />
 
@@ -54,28 +50,18 @@ const processBooking = async () => {
 
   isBooking.value = true
   try {
-    // 1. Backend API එකට data යවනවා
-    const response = await axios.post('http://localhost:5005/api/video/initialize-link', {
-      patientId: booking.value.patientId,
-      doctorId: booking.value.doctorId
-    })
+    const response = await axios.post('http://localhost:5005/api/video/initialize-link', booking.value)
 
     if (response.data.success) {
-      // 2. ලැබෙන Room ID එකත් එක්ක වීඩියෝ පේජ් එකට රීඩිරෙක්ට් වෙනවා
       const roomId = response.data.data.roomId
-      router.push(`/video?room=${roomId}`)
+      // රෝගියාව වීඩියෝ පිටුවට යවයි
+      router.push({ path: '/video', query: { room: roomId } })
     }
   } catch (error) {
     console.error("Booking failed:", error)
+    alert("System Error: Could not initialize link")
   } finally {
     isBooking.value = false
   }
 }
 </script>
-
-<style scoped>
-.nexus-card { border: 1px solid rgba(0, 255, 255, 0.2); border-radius: 15px; }
-.glass { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(10px); }
-.nexus-btn-glow { box-shadow: 0 0 15px rgba(0, 255, 255, 0.4); }
-.font-orbitron { font-family: 'Orbitron', sans-serif; }
-</style>
