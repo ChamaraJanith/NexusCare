@@ -26,23 +26,6 @@ const routes = [
     ]
   },
 
-  // 🔥 DOCTOR MODULE (NEW - SEPARATE LAYOUT)
-  {
-    path: '/doctor',
-    component: () => import('layouts/DoctorLayout.vue'),
-    children: [
-      { path: '', redirect: '/doctor/dashboard' },
-
-      { path: 'dashboard', component: () => import('pages/DoctorDashboardPage.vue') },
-
-      { path: 'consultations', component: () => import('pages/ConsultationPage.vue') },
-
-      { path: 'availability', component: () => import('pages/AvailabilityPage.vue') },
-
-      { path: 'analytics', component: () => import('pages/AnalyticsPage.vue') },
-    ]
-  },
-
   // ❗ ALWAYS LAST
   {
     path: '/:catchAll(.*)*',
