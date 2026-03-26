@@ -13,6 +13,8 @@ import {
 
 import * as doctorService from "../services/doctorService.js";
 
+import { verifyToken } from "../middleware/authMiddleware.js";
+
 const router = express.Router();
 
 // ✅ Search doctors FIRST (important order)
@@ -27,7 +29,7 @@ router.get("/search/:specialty", async (req, res) => {
 });
 
 // ✅ Book appointment
-router.post("/", validateAppointment, bookAppointment);
+router.post("/", verifyToken, validateAppointment, bookAppointment);
 
 // ✅ Get appointments
 router.get("/:patientId", getAppointments);

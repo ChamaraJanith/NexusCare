@@ -8,7 +8,10 @@ import {
 // ✅ Book Appointment
 export const bookAppointment = async (req, res) => {
   try {
-    const data = req.body;
+   const data = {
+  ...req.body,
+  patientId: req.user.id
+};
 
     const appointment = await createAppointment(data);
 
