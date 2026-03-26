@@ -7,7 +7,7 @@ const { sendEmail, sendSMS } = require('../controllers/notificationController');
 // 1. POST /api/notifications/send (Email යැවීමට)
 router.post('/send', sendEmail);
 
-
+// 2. POST /api/notifications/send-sms (SMS යැවීමට)
 router.post('/send-sms', sendSMS);
 
 module.exports = router;
