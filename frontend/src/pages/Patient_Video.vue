@@ -62,25 +62,27 @@
 
 <script setup>
 import { ref, onMounted, computed, onBeforeUnmount } from 'vue'
-import { useRoute } from 'vue-router' // useRouter අයින් කළා (ESLint fix)
+import { useRoute } from 'vue-router'
 import axios from 'axios'
 import { useQuasar } from 'quasar'
 
 const route = useRoute()
 const $q = useQuasar()
 
-// State
+// --- State Management ---
 const isBooking = ref(false)
 const isInCall = ref(false)
 const sessions = ref([])
 let jitsiApi = null
 
-// Data from Route
+// --- User Data (Route එකෙන් හෝ Default අගයන් ලබා ගැනීම) ---
 const patientId = ref(route.query.patientId || 'UNKNOWN_ID')
 const patientName = ref(route.query.patientName || 'GUEST_USER')
+// 💡 ලොග් වෙලා ඉන්න යූසර්ගේ Email එක මෙතනට එනවා
+const patientEmail = ref(route.query.patientEmail || 'uni.chamaragithub21@gmail.com')
 const booking = ref({ patientId: patientId.value, doctorId: '' })
 
-// Filter History (COMPLETED ඒවා පමණක් පෙරා ගැනීම)
+// --- Computed: Filter History ---
 const completedSessions = computed(() => {
   return sessions.value.filter(s =>
     s.status === 'COMPLETED' &&
@@ -88,7 +90,7 @@ const completedSessions = computed(() => {
   ).sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
 })
 
-// Database එකෙන් සෙෂන් දත්ත ලබා ගැනීම
+// --- Methods ---
 const fetchSessions = async () => {
   try {
     const res = await axios.get('http://localhost:5005/api/video/sessions')
@@ -117,26 +119,26 @@ const startJitsiCall = (roomName) => {
     if (window.JitsiMeetExternalAPI) {
       jitsiApi = new window.JitsiMeetExternalAPI(domain, options)
 
-jitsiApi.addEventListeners({
-  videoConferenceLeft: async () => {
-    // roomName කියන variable එක පාවිච්චි කරන්න (එය function එකේ parameter එකක් ලෙස ලැබෙනවා)
-    try {
-      await axios.post('http://localhost:5005/api/video/end-session', { roomId: roomName });
-      await fetchSessions();
-    } catch (err) {
-      console.error("Backend Error:", err);
-    }
-    jitsiApi.dispose();
-    isInCall.value = false;
+      jitsiApi.addEventListeners({
+        videoConferenceLeft: async () => {
+          try {
+            // කෝල් එක ඉවර වූ විට Backend (5005) එකට දැනුම් දීම
+            await axios.post('http://localhost:5005/api/video/end-session', { roomId: roomName });
 
-          jitsiApi.dispose()
-          isInCall.value = false
-          $q.notify({
-            color: 'positive',
-            message: 'Session Ended & Saved to History.',
-            icon: 'check_circle',
-            position: 'top'
-          })
+            await fetchSessions();
+
+            $q.notify({
+              color: 'positive',
+              message: 'Session Ended. Summary sent to your email.',
+              icon: 'verified_user',
+              position: 'top'
+            });
+          } catch (err) {
+            console.error("End Session Error:", err);
+          } finally {
+            if (jitsiApi) jitsiApi.dispose();
+            isInCall.value = false;
+          }
         }
       })
     }
@@ -151,19 +153,27 @@ const processBooking = async () => {
 
   isBooking.value = true
   try {
+    // 💡 මෙතනදී තමයි නිවැරදි දත්ත Backend එකට යවන්නේ
     const response = await axios.post('http://localhost:5005/api/video/initialize-link', {
       patientId: String(patientId.value).trim(),
-      doctorId: String(booking.value.doctorId).trim()
-    })
+      doctorId: String(booking.value.doctorId).trim(),
+      patientEmail: patientEmail.value, // 👈 Dynamic Email
+      patientPhone: "+94767691846",      // 👈 ඔයාගේ Twilio Verified Phone Number එක
+      doctorEmail: "nexuscare.doctor@gmail.com"
+    });
 
     if (response.data.success) {
-      startJitsiCall(response.data.data.roomId)
+      startJitsiCall(response.data.data.roomId);
     }
   } catch (error) {
-    console.error("Booking Error:", error)
-    $q.notify({ color: 'negative', message: 'Connection Error. Backend Offline.', icon: 'bolt' })
+    console.error("Booking Error:", error);
+    $q.notify({
+      color: 'negative',
+      message: 'Connection Failed. Backend Offline.',
+      icon: 'report_problem'
+    });
   } finally {
-    isBooking.value = false
+    isBooking.value = false;
   }
 }
 

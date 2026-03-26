@@ -14,6 +14,18 @@ const videoSessionSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  patientEmail: {
+    type: String,
+    required: true
+  },
+  doctorEmail: {
+    type: String,
+    required: true
+  },
+  patientPhone: {
+    type: String,
+    required: true
+  },
   status: {
     type: String,
     enum: ['ACTIVE', 'COMPLETED', 'CANCELLED'],
