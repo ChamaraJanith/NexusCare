@@ -1,11 +1,20 @@
+import {
+  createAppointment,
+  getAppointmentsByPatient,
+  updateAppointment as updateAppointmentService,
+  cancelAppointment as cancelAppointmentService
+} from "../services/appointmentService.js";
+
+// ✅ Book Appointment
 export const bookAppointment = async (req, res) => {
   try {
-    // 👉 dummy logic (later DB logic add කරන්න)
     const data = req.body;
+
+    const appointment = await createAppointment(data);
 
     res.status(201).json({
       message: "Appointment booked successfully",
-      data
+      appointment
     });
 
   } catch (error) {
@@ -14,14 +23,14 @@ export const bookAppointment = async (req, res) => {
   }
 };
 
+// ✅ Get Appointments
 export const getAppointments = async (req, res) => {
   try {
     const { patientId } = req.params;
 
-    res.status(200).json({
-      message: "Appointments fetched",
-      patientId
-    });
+    const appointments = await getAppointmentsByPatient(patientId);
+
+    res.status(200).json(appointments);
 
   } catch (error) {
     console.error("Error fetching appointments:", error.message);
@@ -29,16 +38,14 @@ export const getAppointments = async (req, res) => {
   }
 };
 
+// ✅ Update Appointment
 export const updateAppointment = async (req, res) => {
   try {
     const { id } = req.params;
-    const updatedData = req.body;
 
-    res.status(200).json({
-      message: "Appointment updated",
-      id,
-      updatedData
-    });
+    const updated = await updateAppointmentService(id, req.body);
+
+    res.status(200).json(updated);
 
   } catch (error) {
     console.error("Error updating appointment:", error.message);
@@ -46,14 +53,14 @@ export const updateAppointment = async (req, res) => {
   }
 };
 
+// ✅ Cancel Appointment
 export const cancelAppointment = async (req, res) => {
   try {
     const { id } = req.params;
 
-    res.status(200).json({
-      message: "Appointment cancelled",
-      id
-    });
+    const cancelled = await cancelAppointmentService(id);
+
+    res.status(200).json(cancelled);
 
   } catch (error) {
     console.error("Error cancelling appointment:", error.message);
