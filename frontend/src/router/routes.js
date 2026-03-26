@@ -13,6 +13,9 @@ const routes = [
        // ─── MS1: Patient Portal ────────────────────────────────────
       { path: 'patient/dashboard', component: () => import('pages/PatientDashboard.vue') },
 
+      // ─── MS1: Admin Control ─────────────────────────────────────
+      { path: 'admin/dashboard', component: () => import('pages/AdminDashboard.vue') },
+
       // AI Symptom Checker
       { path: 'symptoms', component: () => import('pages/SymptomChecker.vue') },
 
