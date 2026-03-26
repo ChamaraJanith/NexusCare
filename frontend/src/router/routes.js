@@ -6,6 +6,10 @@ const routes = [
     children: [
       { path: '', component: () => import('pages/IndexPage.vue') },
 
+      // ─── MS1: Auth ──────────────────────────────────────────────
+      { path: 'login',    component: () => import('pages/LoginPage.vue') },
+      { path: 'register', component: () => import('pages/RegisterPage.vue') },
+
       // AI Symptom Checker
       { path: 'symptoms', component: () => import('pages/SymptomChecker.vue') },
 
