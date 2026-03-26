@@ -6,24 +6,16 @@ import {
   cancelAppointment
 } from "../controllers/appointmentController.js";
 
-import { validateAppointment ,validateUpdateAppointment} from "../validators/appointmentValidator.js";
+import {
+  validateAppointment,
+  validateUpdateAppointment
+} from "../validators/appointmentValidator.js";
+
 import * as doctorService from "../services/doctorService.js";
 
 const router = express.Router();
 
-// ✅ Book appointment with validation
-router.post("/", validateAppointment, bookAppointment);
-
-// ✅ Get appointments
-router.get("/:patientId", getAppointments);
-
-// ✅ Update appointment
-router.put("/:id", validateUpdateAppointment, updateAppointment);
-
-// ✅ Cancel appointment
-router.delete("/:id", cancelAppointment);
-
-// ✅ Search doctors by specialty
+// ✅ Search doctors FIRST (important order)
 router.get("/search/:specialty", async (req, res) => {
   try {
     const doctors = await doctorService.searchDoctors(req.params.specialty);
@@ -34,13 +26,16 @@ router.get("/search/:specialty", async (req, res) => {
   }
 });
 
-router.put("/status/:id", async (req, res) => {
-  const updated = await Appointment.findByIdAndUpdate(
-    req.params.id,
-    { status: req.body.status },
-    { new: true }
-  );
-  res.json(updated);
-});
+// ✅ Book appointment
+router.post("/", validateAppointment, bookAppointment);
+
+// ✅ Get appointments
+router.get("/:patientId", getAppointments);
+
+// ✅ Update appointment
+router.put("/:id", validateUpdateAppointment, updateAppointment);
+
+// ✅ Cancel appointment
+router.delete("/:id", cancelAppointment);
 
 export default router;
