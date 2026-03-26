@@ -7,9 +7,9 @@ const DoctorProfile = require("../models/DoctorProfile");
 const cloudinary = require("../config/cloudinary");
 
 // Helper: Generate JWT token from userId and role
-const generateToken = (userId, role) => {
+const generateToken = (userId, role, roleId) => {
   return jwt.sign(
-    { userId, role },
+    { userId, role, roleId },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
   );
@@ -96,7 +96,7 @@ const register = async (req, res, next) => {
     }
 
     // Generate token
-    const token = generateToken(user.userId, user.role);
+    const token = generateToken(user.userId, user.role, user.roleId);
 
     res.status(201).json({
       success: true,
@@ -158,7 +158,7 @@ const login = async (req, res, next) => {
     }
 
     // Generate token - includes userId, role, and roleId for other services
-    const token = generateToken(user.userId, user.role);
+    const token = generateToken(user.userId, user.role, user.roleId);
 
     res.status(200).json({
       success: true,

@@ -6,9 +6,11 @@ export const createPrescription = async (data, user) => {
     throw new Error("Only doctors can create prescriptions");
   }
 
+  const doctorId = user.doctorId || user.id; // 🔥 SAFE FIX
+
   return await Prescription.create({
     ...data,
-    doctorId: user.id
+    doctorId
   });
 };
 
@@ -25,14 +27,19 @@ export const updatePrescription = async (id, data, user) => {
   const prescription = await Prescription.findById(id);
   if (!prescription || prescription.isDeleted) return null;
 
-  if (prescription.doctorId !== user.id) {
+  const doctorId = user.doctorId || user.id; // 🔥 SAFE FIX
+
+  if (prescription.doctorId !== doctorId) {
     throw new Error("Unauthorized");
   }
 
   return await Prescription.findByIdAndUpdate(
     id,
     { ...data, status: "updated" },
-    { new: true, runValidators: true }
+    {
+      returnDocument: "after", // 🔥 modern fix
+      runValidators: true
+    }
   );
 };
 
@@ -41,13 +48,17 @@ export const deletePrescription = async (id, user) => {
   const prescription = await Prescription.findById(id);
   if (!prescription || prescription.isDeleted) return null;
 
-  if (prescription.doctorId !== user.id) {
+  const doctorId = user.doctorId || user.id; // 🔥 SAFE FIX
+
+  if (prescription.doctorId !== doctorId) {
     throw new Error("Unauthorized");
   }
 
   return await Prescription.findByIdAndUpdate(
     id,
     { isDeleted: true, status: "cancelled" },
-    { new: true }
+    {
+      returnDocument: "after" // 🔥 modern fix
+    }
   );
 };

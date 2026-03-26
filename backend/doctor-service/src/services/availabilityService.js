@@ -1,10 +1,10 @@
 import AvailabilitySlot from "../models/AvailabilitySlot.js";
 import Doctor from "../models/Doctor.js";
 
-// CREATE
+// CREATE SLOT
 export const addSlot = async (data, userId) => {
-  // 🔐 ownership (doctor check)
-  const doctor = await Doctor.findById(data.doctorId);
+  const doctor = await Doctor.findOne({ doctorId: data.doctorId });
+
   if (!doctor || doctor.userId !== userId) {
     throw new Error("Unauthorized");
   }
@@ -22,39 +22,73 @@ export const addSlot = async (data, userId) => {
   return await AvailabilitySlot.create(data);
 };
 
-// READ
+// GET SLOTS BY DOCTOR
 export const getSlotsByDoctor = async (doctorId) => {
   return await AvailabilitySlot.find({
     doctorId,
     isDeleted: false
-  });
+  }).sort({ date: 1, startTime: 1 });
 };
 
-// UPDATE
-export const updateSlot = async (id, data, userId) => {
-  const slot = await AvailabilitySlot.findById(id);
-  if (!slot || slot.isDeleted) throw new Error("Slot not found");
+// ✅ UPDATE SLOT (BY doctorId + date + startTime)
+export const updateSlot = async (data, userId) => {
+  const { doctorId, date, startTime, ...updateData } = data;
 
-  const doctor = await Doctor.findById(slot.doctorId);
-  if (doctor.userId !== userId) throw new Error("Unauthorized");
+  // check doctor ownership
+  const doctor = await Doctor.findOne({ doctorId });
 
-  return await AvailabilitySlot.findByIdAndUpdate(id, data, {
-    new: true,
-    runValidators: true
+  if (!doctor || doctor.userId !== userId) {
+    throw new Error("Unauthorized");
+  }
+
+  // find slot
+  const slot = await AvailabilitySlot.findOne({
+    doctorId,
+    date,
+    startTime,
+    isDeleted: false
   });
+
+  if (!slot) throw new Error("Slot not found");
+
+  // update
+  return await AvailabilitySlot.findOneAndUpdate(
+    { doctorId, date, startTime },
+    updateData,
+    {
+      returnDocument: "after",
+      runValidators: true
+    }
+  );
 };
 
-// SOFT DELETE
-export const deleteSlot = async (id, userId) => {
-  const slot = await AvailabilitySlot.findById(id);
-  if (!slot || slot.isDeleted) throw new Error("Slot not found");
+// ✅ SOFT DELETE SLOT (BY doctorId + date + startTime)
+export const deleteSlot = async (data, userId) => {
+  const { doctorId, date, startTime } = data;
 
-  const doctor = await Doctor.findById(slot.doctorId);
-  if (doctor.userId !== userId) throw new Error("Unauthorized");
+  // check doctor ownership
+  const doctor = await Doctor.findOne({ doctorId });
 
-  return await AvailabilitySlot.findByIdAndUpdate(
-    id,
+  if (!doctor || doctor.userId !== userId) {
+    throw new Error("Unauthorized");
+  }
+
+  // find slot
+  const slot = await AvailabilitySlot.findOne({
+    doctorId,
+    date,
+    startTime,
+    isDeleted: false
+  });
+
+  if (!slot) throw new Error("Slot not found");
+
+  // soft delete
+  return await AvailabilitySlot.findOneAndUpdate(
+    { doctorId, date, startTime },
     { isDeleted: true },
-    { new: true }
+    {
+      returnDocument: "after"
+    }
   );
 };

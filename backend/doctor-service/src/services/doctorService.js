@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Doctor from "../models/Doctor.js";
 import AvailabilitySlot from "../models/AvailabilitySlot.js";
 
@@ -11,9 +12,17 @@ export const getDoctorByUserId = async (userId) => {
   return await Doctor.findOne({ userId, isDeleted: false });
 };
 
-// GET by ID (only active doctors)
+// ✅ GET by ID (supports BOTH _id and doctorId)
 export const getDoctorById = async (id) => {
-  return await Doctor.findOne({ _id: id, isDeleted: false });
+  let doctor;
+
+  if (mongoose.Types.ObjectId.isValid(id)) {
+    doctor = await Doctor.findOne({ _id: id, isDeleted: false });
+  } else {
+    doctor = await Doctor.findOne({ doctorId: id, isDeleted: false });
+  }
+
+  return doctor;
 };
 
 // 🔥 GET by doctorId (business ID)
@@ -21,19 +30,35 @@ export const getDoctorByDoctorId = async (doctorId) => {
   return await Doctor.findOne({ doctorId, isDeleted: false });
 };
 
-// UPDATE (only active doctors)
+// ✅ UPDATE (supports BOTH _id and doctorId)
 export const updateDoctor = async (id, data) => {
+  let query;
+
+  if (mongoose.Types.ObjectId.isValid(id)) {
+    query = { _id: id, isDeleted: false };
+  } else {
+    query = { doctorId: id, isDeleted: false };
+  }
+
   return await Doctor.findOneAndUpdate(
-    { _id: id, isDeleted: false },
+    query,
     data,
-    { new: true, runValidators: true } // 🔥 validation on update
+    { new: true, runValidators: true }
   );
 };
 
-// SOFT DELETE ❌
+// ✅ SOFT DELETE (supports BOTH _id and doctorId)
 export const deleteDoctor = async (id) => {
+  let query;
+
+  if (mongoose.Types.ObjectId.isValid(id)) {
+    query = { _id: id, isDeleted: false };
+  } else {
+    query = { doctorId: id, isDeleted: false };
+  }
+
   return await Doctor.findOneAndUpdate(
-    { _id: id, isDeleted: false },
+    query,
     { isDeleted: true },
     { new: true }
   );
@@ -61,7 +86,7 @@ export const searchDoctors = async (queryParams) => {
 
   const query = { isDeleted: false };
 
-  // 🔍 FULL-TEXT SEARCH (fallback to regex if needed)
+  // 🔍 FULL-TEXT SEARCH
   if (search) {
     query.$text = { $search: search };
   }
@@ -83,16 +108,15 @@ export const searchDoctors = async (queryParams) => {
     if (maxExp) query.experience.$lte = Number(maxExp);
   }
 
-  // ⏰ Availability filter (optimized)
+  // ⏰ Availability filter (FIXED 🔥)
   if (available === "true") {
     const slots = await AvailabilitySlot.find({ isBooked: false }).select("doctorId");
 
     const doctorIds = [...new Set(slots.map(slot => slot.doctorId))];
 
     if (doctorIds.length > 0) {
-      query._id = { $in: doctorIds };
+      query.doctorId = { $in: doctorIds }; // ✅ FIXED
     } else {
-      // 🔥 no available doctors
       return {
         total: 0,
         page: Number(page),
