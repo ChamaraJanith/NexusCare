@@ -1,7 +1,6 @@
 const VideoSession = require('../models/videoSessionModel');
 const videoService = require('../services/videoService');
 const axios = require('axios');
-const User = require('../../../user-patient-service/src/models/User');
 
 // 1. Initialize Session
 const initializeSession = async (req, res) => {
@@ -12,24 +11,10 @@ const initializeSession = async (req, res) => {
             return res.status(400).json({ success: false, message: 'patientId and doctorId are required' });
         }
 
-        let resolvedPatientEmail = patientEmail ? String(patientEmail).trim() : '';
-        let resolvedDoctorEmail = doctorEmail ? String(doctorEmail).trim() : '';
-
-        if (!resolvedPatientEmail) {
-            const patientUser = await User.findOne({ roleId: patientId.trim() });
-            if (!patientUser || !patientUser.email) {
-                return res.status(404).json({ success: false, message: 'Patient email not found' });
-            }
-            resolvedPatientEmail = patientUser.email;
-        }
-
-        if (!resolvedDoctorEmail) {
-            const doctorUser = await User.findOne({ roleId: doctorId.trim() });
-            if (!doctorUser || !doctorUser.email) {
-                return res.status(404).json({ success: false, message: 'Doctor email not found' });
-            }
-            resolvedDoctorEmail = doctorUser.email;
-        }
+        // Avoid importing models from other microservices. If emails are missing,
+        // keep them empty and continue session creation.
+        const resolvedPatientEmail = patientEmail ? String(patientEmail).trim() : '';
+        const resolvedDoctorEmail = doctorEmail ? String(doctorEmail).trim() : '';
 
         // Avoid double notifications for duplicates
         const existingActiveSession = await VideoSession.findOne({ patientId, doctorId, status: 'ACTIVE' });
@@ -53,7 +38,7 @@ const initializeSession = async (req, res) => {
 
         const startMessage = `Your NexusCare session (Room: ${sessionData.roomId}) has started.`;
 
-        const uniqueRecipients = [...new Set([resolvedPatientEmail, resolvedDoctorEmail])];
+        const uniqueRecipients = [...new Set([resolvedPatientEmail, resolvedDoctorEmail].filter(Boolean))];
         await Promise.all(uniqueRecipients.map(async (toEmail) => {
             try {
                 await axios.post('http://localhost:5006/api/notifications/send', {

@@ -16,11 +16,11 @@ const videoSessionSchema = new mongoose.Schema({
   },
   patientEmail: {
     type: String,
-    required: true
+    default: ''
   },
   doctorEmail: {
     type: String,
-    required: true
+    default: ''
   },
   patientPhone: {
     type: String,
