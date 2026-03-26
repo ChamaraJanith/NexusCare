@@ -18,4 +18,6 @@ router.delete('/terminate-session/:roomId', (req, res) => {
     });
 });
 
+router.post('/end-session', videoController.endSession);
+
 module.exports = router;

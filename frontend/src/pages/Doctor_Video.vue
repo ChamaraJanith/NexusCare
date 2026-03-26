@@ -1,163 +1,192 @@
 <template>
-  <q-page class="bg-black q-pa-lg">
-    <div class="row items-center q-mb-xl">
-      <div class="col">
-        <h1 class="text-h4 font-orbitron text-cyan-4 q-ma-none uppercase tracking-tighter">
-          Consultant Command Center
-        </h1>
-        <div class="text-grey-5 font-orbitron q-mt-xs">NODE ID: DOC-ARIS-091</div>
-      </div>
-      <q-badge color="cyan-10" class="q-pa-sm glow-box">
-        <q-icon name="wifi" class="q-mr-xs" /> SYSTEM ONLINE
-      </q-badge>
-    </div>
-
-    <div class="row q-col-gutter-lg">
-      <div class="col-12 col-md-8">
-        <div class="nexus-panel glass q-pa-md">
-          <div class="text-subtitle1 text-white font-orbitron q-mb-md">
-            <q-icon name="sensors" color="red-5" class="q-mr-sm" />
-            INBOUND NEURAL LINK REQUESTS
-          </div>
-
-          <q-list separator v-if="sessions.length > 0">
-            <q-item v-for="session in sessions" :key="session.roomId" class="q-py-md nexus-item">
-              <q-item-section avatar>
-                <q-avatar rounded size="50px" class="avatar-glow">
-                  <q-icon name="person" color="cyan-4" />
-                </q-avatar>
-              </q-item-section>
-
-              <q-item-section>
-                <q-item-label class="text-h6 text-cyan-1 font-orbitron">{{ session.patientId }}</q-item-label>
-                <q-item-label caption class="text-grey-4">
-                  SESSION ID: {{ session.roomId }}
-                </q-item-label>
-                <q-item-label class="text-cyan-8 text-caption uppercase">
-                  STATUS: {{ session.status }} | {{ formatTime(session.timestamp) }}
-                </q-item-label>
-              </q-item-section>
-
-              <q-item-section side>
-                <q-btn
-                  label="ESTABLISH LINK"
-                  color="cyan-10"
-                  icon-right="bolt"
-                  class="font-orbitron nexus-btn"
-                  @click="joinSession(session.roomId)"
-                />
-              </q-item-section>
-            </q-item>
-          </q-list>
-
-          <div v-else class="text-center q-pa-xl text-grey-7 font-orbitron">
-            <q-spinner-rings color="cyan-4" size="3em" />
-            <div class="q-mt-md">SCANNING FOR ACTIVE PATIENT NODES...</div>
+  <q-page class="bg-black overflow-hidden">
+    <div v-if="!isInCall" class="q-pa-lg">
+      <div class="row items-center q-mb-xl justify-between">
+        <div class="col">
+          <h1 class="text-h4 font-orbitron text-cyan-4 q-ma-none uppercase tracking-tighter">Consultant Command Center</h1>
+          <div class="text-grey-5 font-orbitron q-mt-xs tracking-widest">
+            NODE ID: <span class="text-cyan-6 uppercase">{{ currentDoctorId }}</span>
           </div>
         </div>
+        <q-badge color="cyan-10" class="q-pa-sm font-orbitron">SYSTEM ONLINE</q-badge>
       </div>
 
-      <div class="col-12 col-md-4">
-        <div class="nexus-panel glass q-pa-md full-height">
-          <div class="text-subtitle1 text-white font-orbitron q-mb-lg">BIO-DATA OVERVIEW</div>
-          <div class="column q-gutter-md">
-            <div class="stat-box glass">
-              <div class="text-grey-5">DAILY CONSULTATIONS</div>
-              <div class="text-h4 text-white font-orbitron">24</div>
+      <div class="row q-col-gutter-lg">
+        <div class="col-12 col-md-7">
+          <div class="nexus-panel glass q-pa-md shadow-24">
+            <div class="text-subtitle1 text-white font-orbitron q-mb-md">INBOUND NEURAL LINK REQUESTS</div>
+
+            <q-list separator v-if="filteredSessions.length > 0">
+              <q-item v-for="session in filteredSessions" :key="session._id" class="q-py-md nexus-item q-mb-sm">
+                <q-item-section avatar>
+                  <q-avatar rounded size="50px" color="cyan-10" text-color="cyan-4" icon="person" class="avatar-glow" />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label class="text-h6 text-cyan-1 font-orbitron">PATIENT: {{ session.patientId }}</q-item-label>
+                  <q-item-label caption class="text-grey-4 uppercase">Session: {{ session.roomId }}</q-item-label>
+                </q-item-section>
+                <q-item-section side>
+                  <q-btn label="JOIN CALL" color="cyan-10" icon="bolt" class="font-orbitron nexus-btn-glow" @click="joinCall(session.roomId)" />
+                </q-item-section>
+              </q-item>
+            </q-list>
+
+            <div v-else class="text-center q-pa-xl text-grey-7 font-orbitron border-dashed">
+              <q-spinner-rings color="cyan-4" size="4em" />
+              <div class="q-mt-md uppercase tracking-widest">Scanning for Incoming Links...</div>
             </div>
-            <div class="stat-box glass border-red">
-              <div class="text-red-4">CRITICAL ALERTS</div>
-              <div class="text-h4 text-white font-orbitron">02</div>
+          </div>
+        </div>
+
+        <div class="col-12 col-md-5">
+          <div class="nexus-panel glass q-pa-md shadow-24">
+            <div class="text-subtitle1 text-cyan-4 font-orbitron q-mb-md">CONSULTATION LOGS</div>
+
+            <q-list separator v-if="completedSessions.length > 0">
+              <q-item v-for="history in completedSessions" :key="history._id" class="q-py-sm history-item">
+                <q-item-section avatar>
+                  <q-icon name="history" color="grey-5" size="sm" />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label class="text-white font-orbitron text-caption">PATIENT ID: {{ history.patientId }}</q-item-label>
+                  <q-item-label caption class="text-grey-6" style="font-size: 10px;">
+                    {{ new Date(history.updatedAt).toLocaleString() }}
+                  </q-item-label>
+                </q-item-section>
+                <q-item-section side>
+                  <q-badge outline color="cyan-9" label="DONE" size="xs" />
+                </q-item-section>
+              </q-item>
+            </q-list>
+
+            <div v-else class="text-center q-pa-xl text-grey-8 font-orbitron">
+              NO LOGS RECORDED
             </div>
           </div>
         </div>
       </div>
     </div>
+
+    <div v-show="isInCall" id="jitsi-container"></div>
   </q-page>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, computed, onBeforeUnmount } from 'vue'
+import { useRoute } from 'vue-router'
 import axios from 'axios'
+import { useQuasar } from 'quasar'
 
-const router = useRouter()
+const route = useRoute()
+const $q = useQuasar()
+
+// State
 const sessions = ref([])
+const isInCall = ref(false)
+let jitsiApi = null
+let pollInterval = null
 
-// Backend එකෙන් Active Sessions ලබා ගැනීම (Port 5005)
+const currentDoctorId = ref(route.query.doctorId || 'UNKNOWN_DOC')
+
+// දැනට පවතින Active කෝල් පමණක් පෙරීම
+const filteredSessions = computed(() => {
+  return sessions.value.filter(s =>
+    s.status === 'ACTIVE' &&
+    String(s.doctorId).toLowerCase() === String(currentDoctorId.value).toLowerCase()
+  )
+})
+
+// අවසන් කරන ලද (Completed) කෝල් පමණක් පෙරීම
+const completedSessions = computed(() => {
+  return sessions.value.filter(s =>
+    s.status === 'COMPLETED' &&
+    String(s.doctorId).toLowerCase() === String(currentDoctorId.value).toLowerCase()
+  ).sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+})
+
+// Database එකෙන් සෙෂන් දත්ත ලබා ගැනීම
 const fetchSessions = async () => {
   try {
-    // සටහන: මෙතන ඔයාගේ API endpoint එක හරියටම දෙන්න (image_895d5c.png එකේ පේන විදියට)
     const response = await axios.get('http://localhost:5005/api/video/sessions')
     if (response.data.success) {
-      sessions.value = response.data.data.filter(s => s.status === 'ACTIVE')
+      sessions.value = response.data.data
     }
-  } catch (error) {
-    console.error('Failed to fetch sessions:', error)
+  } catch (err) {
+    console.error('Sync Error:', err)
   }
 }
 
-const joinSession = (roomId) => {
-  // ඩොක්ටර්ව වීඩියෝ පේජ් එකට යවනවා
-  router.push({
-    path: '/video',
-    query: { room: roomId, role: 'doctor' }
-  })
-}
+const joinCall = (roomId) => {
+  isInCall.value = true
+  clearInterval(pollInterval) // කෝල් එක ඇතුළතදී Polling නවත්වන්න
 
-const formatTime = (ts) => {
-  return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const domain = "meet.jit.si"
+  const options = {
+    roomName: roomId,
+    width: "100%",
+    height: "100vh",
+    parentNode: document.querySelector("#jitsi-container"),
+    userInfo: { displayName: `Dr. ${currentDoctorId.value}` },
+    configOverwrite: { prejoinPageEnabled: false },
+    interfaceConfigOverwrite: { SHOW_PROMOTIONAL_CLOSE_PAGE: false }
+  }
+
+  setTimeout(() => {
+    if (window.JitsiMeetExternalAPI) {
+      jitsiApi = new window.JitsiMeetExternalAPI(domain, options)
+
+      jitsiApi.addEventListeners({
+        videoConferenceLeft: async () => {
+          try {
+            // Backend එක update කිරීම
+            await axios.post('http://localhost:5005/api/video/end-session', { roomId: roomId })
+            // UI එකට අලුත් දත්ත ලබා ගැනීම
+            await fetchSessions()
+          } catch (err) {
+            console.error("End session error:", err)
+          }
+
+          jitsiApi.dispose()
+          isInCall.value = false
+
+          // නැවත Polling පටන් ගැනීම
+          pollInterval = setInterval(fetchSessions, 5000)
+
+          $q.notify({ color: 'cyan-10', message: 'Consultation Session Logged.', icon: 'assignment_turned_in' })
+        }
+      })
+    }
+  }, 200)
 }
 
 onMounted(() => {
   fetchSessions()
-  // සෑම තත්පර 10කට වරක්ම update කිරීම
-  setInterval(fetchSessions, 10000)
+  pollInterval = setInterval(fetchSessions, 5000) // තත්පර 5කට වරක් නව කෝල් පරීක්ෂා කිරීම
+})
+
+onBeforeUnmount(() => {
+  if (jitsiApi) jitsiApi.dispose()
+  if (pollInterval) clearInterval(pollInterval)
 })
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
-
 .font-orbitron { font-family: 'Orbitron', sans-serif; }
+.glass { background: rgba(15, 15, 20, 0.9); border: 1px solid rgba(0, 255, 255, 0.1); border-radius: 15px; }
+.nexus-panel { min-height: 500px; }
+.nexus-item { background: rgba(0, 255, 255, 0.03); border-radius: 10px; border-left: 4px solid #00e5ff; transition: 0.3s; }
+.nexus-item:hover { background: rgba(0, 255, 255, 0.08); }
+.history-item { background: rgba(255, 255, 255, 0.02); margin-bottom: 5px; border-radius: 5px; }
+.avatar-glow { box-shadow: 0 0 15px rgba(0, 229, 255, 0.2); }
+.nexus-btn-glow { box-shadow: 0 0 15px rgba(0, 229, 255, 0.4); }
 
-.nexus-panel {
-  border: 1px solid rgba(0, 255, 255, 0.15);
-  border-radius: 15px;
-  min-height: 400px;
-}
-
-.glass {
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(15px);
-}
-
-.nexus-item {
-  border-radius: 10px;
-  margin-bottom: 8px;
-  transition: all 0.3s ease;
-  border-left: 3px solid transparent;
-}
-
-.nexus-item:hover {
-  background: rgba(0, 255, 255, 0.05);
-  border-left: 3px solid #00e5ff;
-}
-
-.stat-box {
-  padding: 20px;
-  border-radius: 12px;
-  border-bottom: 2px solid rgba(0, 255, 255, 0.3);
-}
-
-.border-red { border-bottom: 2px solid rgba(255, 0, 0, 0.3); }
-
-.glow-box { box-shadow: 0 0 15px rgba(0, 255, 255, 0.2); }
-
-.avatar-glow { box-shadow: 0 0 10px rgba(0, 255, 255, 0.3); background: rgba(0, 255, 255, 0.1); }
-
-.nexus-btn {
-  border-radius: 8px;
-  text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+#jitsi-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  background: black;
 }
 </style>
