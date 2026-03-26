@@ -1,30 +1,76 @@
 const VideoSession = require('../models/videoSessionModel');
 const videoService = require('../services/videoService');
 const axios = require('axios');
+const User = require('../../../user-patient-service/src/models/User');
 
 // 1. Initialize Session
 const initializeSession = async (req, res) => {
     try {
         const { patientId, doctorId, patientEmail, doctorEmail, patientPhone } = req.body;
+
+        if (!patientId || !doctorId) {
+            return res.status(400).json({ success: false, message: 'patientId and doctorId are required' });
+        }
+
+        let resolvedPatientEmail = patientEmail ? String(patientEmail).trim() : '';
+        let resolvedDoctorEmail = doctorEmail ? String(doctorEmail).trim() : '';
+
+        if (!resolvedPatientEmail) {
+            const patientUser = await User.findOne({ roleId: patientId.trim() });
+            if (!patientUser || !patientUser.email) {
+                return res.status(404).json({ success: false, message: 'Patient email not found' });
+            }
+            resolvedPatientEmail = patientUser.email;
+        }
+
+        if (!resolvedDoctorEmail) {
+            const doctorUser = await User.findOne({ roleId: doctorId.trim() });
+            if (!doctorUser || !doctorUser.email) {
+                return res.status(404).json({ success: false, message: 'Doctor email not found' });
+            }
+            resolvedDoctorEmail = doctorUser.email;
+        }
+
+        // Avoid double notifications for duplicates
+        const existingActiveSession = await VideoSession.findOne({ patientId, doctorId, status: 'ACTIVE' });
+        if (existingActiveSession) {
+            return res.status(200).json({ success: true, data: existingActiveSession, message: 'Active session already exists' });
+        }
+
         const sessionData = await videoService.generateNeuralLink(patientId, doctorId);
 
         const newSession = new VideoSession({
             roomId: sessionData.roomId,
             patientId,
             doctorId,
-            // Frontend එකෙන් එවන ඊමේල් එකම ගන්න (Default එකක් ලෙස ඔයාගේ Gmail එක තැබුවා)
-            patientEmail: patientEmail || "uni.chamarasweed44@gmail.com",
-            doctorEmail: doctorEmail || "nexuscare.doctor@gmail.com",
-            patientPhone: patientPhone || "+94767691846",
+            patientEmail: resolvedPatientEmail,
+            doctorEmail: resolvedDoctorEmail,
+            patientPhone: patientPhone ? String(patientPhone).trim() : '+94767691846',
             status: 'ACTIVE'
         });
 
         await newSession.save();
-        console.log(`✅ New Active Session Saved: ${sessionData.roomId}`);
+
+        const startMessage = `Your NexusCare session (Room: ${sessionData.roomId}) has started.`;
+
+        const uniqueRecipients = [...new Set([resolvedPatientEmail, resolvedDoctorEmail])];
+        await Promise.all(uniqueRecipients.map(async (toEmail) => {
+            try {
+                await axios.post('http://localhost:5006/api/notifications/send', {
+                    email: toEmail,
+                    subject: 'NexusCare Consultation Started',
+                    message: startMessage
+                });
+                console.log(`✅ Email sent to ${toEmail}`);
+            } catch (sendErr) {
+                console.warn(`⚠️ Email failed to ${toEmail}:`, sendErr.message);
+            }
+        }));
+
         res.status(200).json({ success: true, data: newSession });
     } catch (error) {
-        console.error("❌ Initialization Error:", error.message);
-        res.status(500).json({ success: false, message: error.message });
+        console.error('❌ Initialization Error:', error);
+        res.status(500).json({ success: false, message: error.message || 'Internal Server Error' });
     }
 };
 
@@ -52,23 +98,19 @@ const endSession = async (req, res) => {
             message: `Your medical session (Room: ${roomId}) has ended successfully. Thank you for using NexusCare.`
         };
 
-        // --- පේෂන්ට් හට ඊමේල් යැවීම ---
-        if (session.patientEmail) {
-            axios.post('http://localhost:5006/api/notifications/send', { 
-                email: session.patientEmail, 
-                ...emailPayload 
-            }).then(() => console.log(`✅ Email sent to Patient: ${session.patientEmail}`))
-              .catch(() => console.log("❌ Patient Email Failed"));
-        }
+        const uniqueRecipients = [...new Set([session.patientEmail, session.doctorEmail].filter(Boolean))];
 
-        // --- ඩොක්ටර් හට ඊමේල් යැවීම (පේෂන්ට්ගේ ඊමේල් එකට වඩා වෙනස් නම් පමණක්) ---
-        if (session.doctorEmail && session.doctorEmail !== session.patientEmail) {
-            axios.post('http://localhost:5006/api/notifications/send', { 
-                email: session.doctorEmail, 
-                ...emailPayload 
-            }).then(() => console.log(`✅ Email sent to Doctor: ${session.doctorEmail}`))
-              .catch(() => console.log("❌ Doctor Email Failed"));
-        }
+        await Promise.all(uniqueRecipients.map(async (toEmail) => {
+            try {
+                await axios.post('http://localhost:5006/api/notifications/send', {
+                    email: toEmail,
+                    ...emailPayload
+                });
+                console.log(`✅ Email sent to: ${toEmail}`);
+            } catch (sendErr) {
+                console.warn(`⚠️ Failed Email to: ${toEmail}`, sendErr.message);
+            }
+        }));
 
         // --- SMS යැවීම ---
         if (session.patientPhone) {

@@ -69,6 +69,9 @@ import { useQuasar } from 'quasar'
 const route = useRoute()
 const $q = useQuasar()
 
+const storedUserStr = localStorage.getItem('nexus_user')
+const storedUser = storedUserStr ? JSON.parse(storedUserStr) : null
+
 // --- State Management ---
 const isBooking = ref(false)
 const isInCall = ref(false)
@@ -76,11 +79,12 @@ const sessions = ref([])
 let jitsiApi = null
 
 // --- User Data (Route එකෙන් හෝ Default අගයන් ලබා ගැනීම) ---
-const patientId = ref(route.query.patientId || 'UNKNOWN_ID')
-const patientName = ref(route.query.patientName || 'GUEST_USER')
+const patientId = ref(route.query.patientId || (storedUser && storedUser.roleId) || 'UNKNOWN_ID')
+const patientName = ref(route.query.patientName || (storedUser && storedUser.name) || 'GUEST_USER')
 // 💡 ලොග් වෙලා ඉන්න යූසර්ගේ Email එක මෙතනට එනවා
-const patientEmail = ref(route.query.patientEmail || 'uni.chamaragithub21@gmail.com')
-const booking = ref({ patientId: patientId.value, doctorId: '' })
+const patientEmail = ref(route.query.patientEmail || (storedUser && storedUser.email) || '')
+const doctorEmail = ref(route.query.doctorEmail || '')
+const booking = ref({ patientId: patientId.value, doctorId: '', patientEmail: patientEmail.value, doctorEmail: doctorEmail.value })
 
 // --- Computed: Filter History ---
 const completedSessions = computed(() => {
@@ -154,12 +158,15 @@ const processBooking = async () => {
   isBooking.value = true
   try {
     // 💡 මෙතනදී තමයි නිවැරදි දත්ත Backend එකට යවන්නේ
+    // If doctor email is not provided by buyer, try from query or empty
+    const activeDoctorEmail = (booking.value.doctorEmail || doctorEmail.value).trim();
+
     const response = await axios.post('http://localhost:5005/api/video/initialize-link', {
       patientId: String(patientId.value).trim(),
       doctorId: String(booking.value.doctorId).trim(),
-      patientEmail: patientEmail.value, // 👈 Dynamic Email
+      patientEmail: patientEmail.value, // 👈 Dynamic Email from logged in user
       patientPhone: "+94767691846",      // 👈 ඔයාගේ Twilio Verified Phone Number එක
-      doctorEmail: "nexuscare.doctor@gmail.com"
+      doctorEmail: activeDoctorEmail || ''
     });
 
     if (response.data.success) {
