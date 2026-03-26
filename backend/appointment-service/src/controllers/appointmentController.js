@@ -5,13 +5,33 @@ import {
   cancelAppointment as cancelAppointmentService
 } from "../services/appointmentService.js";
 
-// ✅ Book Appointment
+import { verifyUser } from "../services/authService.js";
+
+// ✅ Book Appointment (UPDATED 🔥)
 export const bookAppointment = async (req, res) => {
   try {
-   const data = {
-  ...req.body,
-  patientId: req.user.id
-};
+    const authHeader = req.headers.authorization;
+
+    // ❌ No token
+    if (!authHeader) {
+      return res.status(401).json({ error: "No token provided" });
+    }
+
+    const token = authHeader.split(" ")[1];
+
+    // 🔥 Call MS1 (User Service)
+    const userData = await verifyUser(token);
+
+    // ❌ Only patients allowed
+    if (userData.role !== "patient") {
+      return res.status(403).json({ error: "Only patients can book appointments" });
+    }
+
+    // ✅ Use patientId from MS1
+    const data = {
+      ...req.body,
+      patientId: userData.roleId   // PAT-0001
+    };
 
     const appointment = await createAppointment(data);
 
@@ -22,7 +42,7 @@ export const bookAppointment = async (req, res) => {
 
   } catch (error) {
     console.error("Error booking appointment:", error.message);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(401).json({ error: "Unauthorized" });
   }
 };
 

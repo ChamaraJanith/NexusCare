@@ -24,13 +24,36 @@ export const getAppointmentsByPatient = async (patientId) => {
   return await Appointment.find({ patientId });
 };
 
-// ✅ Update appointment
-export const updateAppointment = async (id, data) => {
+// ✅ Update appointment (with ownership check)
+export const updateAppointment = async (id, patientId, data) => {
+  const appointment = await Appointment.findById(id);
+
+  if (!appointment) {
+    throw new Error("Appointment not found");
+  }
+
+  // 🔥 Check ownership
+  if (appointment.patientId !== patientId) {
+    throw new Error("Unauthorized: Not your appointment");
+  }
+
   return await Appointment.findByIdAndUpdate(id, data, { new: true });
 };
 
-// ✅ Cancel appointment
-export const cancelAppointment = async (id) => {
+
+// ✅ Cancel appointment (with ownership check)
+export const cancelAppointment = async (id, patientId) => {
+  const appointment = await Appointment.findById(id);
+
+  if (!appointment) {
+    throw new Error("Appointment not found");
+  }
+
+  // 🔥 Check ownership
+  if (appointment.patientId !== patientId) {
+    throw new Error("Unauthorized: Not your appointment");
+  }
+
   return await Appointment.findByIdAndUpdate(
     id,
     { status: "CANCELLED" },

@@ -13,11 +13,9 @@ import {
 
 import * as doctorService from "../services/doctorService.js";
 
-import { verifyToken } from "../middleware/authMiddleware.js";
-
 const router = express.Router();
 
-// ✅ Search doctors FIRST (important order)
+// ✅ Search doctors FIRST
 router.get("/search/:specialty", async (req, res) => {
   try {
     const doctors = await doctorService.searchDoctors(req.params.specialty);
@@ -28,8 +26,8 @@ router.get("/search/:specialty", async (req, res) => {
   }
 });
 
-// ✅ Book appointment
-router.post("/", verifyToken, validateAppointment, bookAppointment);
+// ✅ Book appointment (NO middleware now)
+router.post("/", validateAppointment, bookAppointment);
 
 // ✅ Get appointments
 router.get("/:patientId", getAppointments);
