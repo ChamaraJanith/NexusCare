@@ -1,13 +1,19 @@
 const express = require('express');
 const router = express.Router();
 
-// 💡 Controller එකෙන් අවශ්‍ය Functions ටික හරියට Import කරගන්න
+// Controller Functions Import කිරීම
 const { sendEmail, sendSMS } = require('../controllers/notificationController');
 
-// 1. POST /api/notifications/send (Email යැවීමට)
+/**
+ * Route: POST /api/notifications/send
+ * Description: Emails trigger කිරීමට
+ */
 router.post('/send', sendEmail);
 
-// 2. POST /api/notifications/send-sms (SMS යැවීමට)
+/**
+ * Route: POST /api/notifications/send-sms
+ * Description: SMS trigger කිරීමට
+ */
 router.post('/send-sms', sendSMS);
 
 module.exports = router;
