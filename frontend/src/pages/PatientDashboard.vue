@@ -467,7 +467,9 @@ const goToSymptoms = () => {
 }
 
 const goToVideoConsultation = () => {
-  window.location.href = 'http://localhost:9000/patientVideo'
+  const pId = profileData.value.patientId || profileData.value.id;
+  const pName = profileData.value.name;
+  window.location.href = `http://localhost:9000/patientVideo?patientId=${pId}&patientName=${pName}`;
 }
 
 // API client
@@ -657,7 +659,7 @@ onMounted(() => {
   content: '';
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: 
+  background:
     radial-gradient(circle at 20% 80%, rgba(0,229,255,0.05) 0%, transparent 50%),
     radial-gradient(circle at 80% 20%, rgba(0,188,212,0.03) 0%, transparent 50%),
     radial-gradient(circle at 40% 40%, rgba(0,150,136,0.02) 0%, transparent 50%);
@@ -1047,7 +1049,7 @@ onMounted(() => {
   position: absolute;
   top: 0; left: 0;
   width: 100%; height: 100%;
-  background: 
+  background:
     radial-gradient(circle at 30% 30%, rgba(0,229,255,0.05), transparent 40%),
     radial-gradient(circle at 70% 70%, rgba(0,188,212,0.03), transparent 40%);
   pointer-events: none;
@@ -1690,7 +1692,7 @@ onMounted(() => {
   .profile-container {
     grid-template-columns: 1fr;
   }
-  
+
   .form-grid {
     grid-template-columns: 1fr;
   }
@@ -1700,19 +1702,19 @@ onMounted(() => {
   .top-bar {
     padding: 15px 20px;
   }
-  
+
   .quick-actions-inner {
     flex-direction: column;
   }
-  
+
   .metrics-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .info-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .tab-panels-pro {
     padding: 20px;
   }
