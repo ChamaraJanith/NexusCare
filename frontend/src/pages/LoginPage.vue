@@ -218,6 +218,7 @@ const initCanvas = () => {
 const handleLogin = async () => {
   errorMsg.value = ''
   loading.value = true
+
   try {
     const { data } = await axios.post('http://localhost:5001/api/auth/login', {
       email: form.email,
@@ -249,15 +250,27 @@ const handleLogin = async () => {
         doctor: '/doctor/dashboard',
         admin: '/admin/dashboard'
       }
+
       router.push(routes[data.user.role] || '/')
     }
+
   } catch (err) {
-    errorMsg.value = err.response?.data?.message || 'Connection failed. Check server.'
+    console.error('LOGIN ERROR FULL:', err)
+
+    if (err.response) {
+      console.error('SERVER RESPONSE:', err.response.data)
+      errorMsg.value = err.response.data.message || 'Login failed'
+    } else if (err.request) {
+      console.error('NO RESPONSE FROM SERVER')
+      errorMsg.value = 'No response from server'
+    } else {
+      errorMsg.value = err.message
+    }
+
   } finally {
     loading.value = false
   }
 }
-
 onMounted(() => {
   initCanvas()
   window.addEventListener('resize', () => {

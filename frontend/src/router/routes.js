@@ -10,6 +10,9 @@ const routes = [
       { path: 'login',    component: () => import('pages/LoginPage.vue') },
       { path: 'register', component: () => import('pages/RegisterPage.vue') },
 
+       // ─── MS1: Patient Portal ────────────────────────────────────
+      { path: 'patient/dashboard', component: () => import('pages/PatientDashboard.vue') },
+
       // AI Symptom Checker
       { path: 'symptoms', component: () => import('pages/SymptomChecker.vue') },
 
