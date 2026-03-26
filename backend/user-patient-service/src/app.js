@@ -74,7 +74,7 @@ app.use((req, res) => {
 app.use(errorHandler);
 
 // ─── Start Server ─────────────────────────────────────────────────────────────
-const PORT = process.env.PORT || 5005;
+const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
   console.log(`🚀 MS1 User & Patient Service running on port ${PORT}`);
   console.log(`📌 Environment: ${process.env.NODE_ENV || "development"}`);
