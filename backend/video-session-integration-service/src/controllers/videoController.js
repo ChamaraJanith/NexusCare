@@ -13,13 +13,12 @@ const initializeSession = async (req, res) => {
     // Service එක හරහා Room ID සහ අනෙකුත් දත්ත ලබා ගැනීම
     const sessionData = await videoService.generateNeuralLink(patientId, doctorId);
     
-    // --- මෙන්න මෙතන තමයි වෙනස ---
-    // Array එකට දානවා වෙනුවට MongoDB එකේ අලුත් Record එකක් හදනවා
+
     const newSession = new VideoSession({
       roomId: sessionData.roomId,
       patientId: sessionData.patientId,
       doctorId: sessionData.doctorId,
-      status: 'ACTIVE' // ආරම්භයේදී ACTIVE ලෙස පවතී
+      status: 'ACTIVE' 
     });
 
     await newSession.save(); 
