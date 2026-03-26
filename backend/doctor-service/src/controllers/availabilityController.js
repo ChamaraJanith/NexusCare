@@ -41,7 +41,6 @@ export const getSlots = async (req, res) => {
 export const updateSlot = async (req, res) => {
   try {
     const updated = await availabilityService.updateSlot(
-      req.params.id,
       req.body,
       req.user.id
     );
@@ -63,7 +62,7 @@ export const updateSlot = async (req, res) => {
 // DELETE
 export const deleteSlot = async (req, res) => {
   try {
-    await availabilityService.deleteSlot(req.params.id, req.user.id);
+    await availabilityService.deleteSlot(req.user.id);
 
     res.json({
       success: true,

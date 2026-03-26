@@ -13,10 +13,33 @@ import { slotSchema } from "../validators/availabilityValidator.js";
 
 const router = express.Router();
 
-// Only doctors can manage availability
-router.post("/", verifyToken, allowRoles("doctor"), validate(slotSchema), createSlot);
+// ✅ CREATE SLOT
+router.post(
+  "/",
+  verifyToken,
+  allowRoles("doctor"),
+  validate(slotSchema),
+  createSlot
+);
+
+// ✅ GET SLOTS BY DOCTOR
 router.get("/:doctorId", verifyToken, getSlots);
-router.put("/:id", verifyToken, allowRoles("doctor"), updateSlot);
-router.delete("/:id", verifyToken, allowRoles("doctor"), deleteSlot);
+
+// 🔥 UPDATE SLOT
+router.put(
+  "/",
+  verifyToken,
+  allowRoles("doctor"),
+  validate(slotSchema), // 🔥 ADD THIS
+  updateSlot
+);
+
+// 🔥 DELETE SLOT
+router.delete(
+  "/",
+  verifyToken,
+  allowRoles("doctor"),
+  deleteSlot
+);
 
 export default router;

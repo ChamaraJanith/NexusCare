@@ -27,7 +27,7 @@ export const verifyToken = (req, res, next) => {
 
     // 🔥 Attach full user info
     req.user = {
-      id: decoded.id,
+      id: decoded.userId, 
       role: decoded.role,
       doctorId: decoded.doctorId || null // 🔥 support doctorId
     };

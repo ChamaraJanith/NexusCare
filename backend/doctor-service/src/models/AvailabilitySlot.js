@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const slotSchema = new mongoose.Schema(
   {
     doctorId: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: String,
       ref: "Doctor",
       required: true,
       index: true
