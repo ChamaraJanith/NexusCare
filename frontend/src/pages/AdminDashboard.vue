@@ -1,17 +1,17 @@
 <template>
-  <q-page class="bg-black q-pa-lg admin-dash">
+  <q-page class="q-pa-lg admin-dash">
 
     <!-- Header -->
     <div class="row items-start justify-between q-mb-xl">
       <div>
-        <div class="font-orbitron text-red-8 text-caption uppercase letter-spacing-3 q-mb-xs">
+        <div class="font-orbitron text-blue-7 text-caption uppercase letter-spacing-3 q-mb-xs">
           ◈ ADMINISTRATOR CONTROL NODE
         </div>
         <h1 class="text-h4 text-white font-orbitron q-ma-none q-mb-xs">
-          System <span class="text-red-4">Control</span>
+          System <span class="text-blue-4">Control</span>
         </h1>
         <div class="row items-center q-gutter-sm">
-          <q-chip dense dark color="red-10" class="font-orbitron text-caption">
+          <q-chip dense dark color="blue-10" class="font-orbitron text-caption">
             {{ adminUser.userId }}
           </q-chip>
           <q-chip dense dark color="grey-9" class="font-orbitron text-caption">
@@ -49,7 +49,7 @@
     <q-tabs
       v-model="tab" dense align="left"
       class="nexus-tabs font-orbitron q-mb-lg"
-      active-color="red-4" indicator-color="red-4"
+      active-color="blue-4" indicator-color="blue-4"
     >
       <q-tab name="users" label="USER REGISTRY" icon="group" />
       <q-tab name="pending" label="PENDING VERIFICATION" icon="pending_actions">
@@ -70,10 +70,10 @@
             <div class="col-12 col-sm-5">
               <q-input
                 v-model="search" placeholder="Search by name, email or ID..."
-                dark outlined color="red-4" dense class="nexus-field-red"
+                dark outlined color="blue-4" dense class="nexus-field-blue"
                 @update:model-value="debouncedLoad"
               >
-                <template #prepend><q-icon name="search" size="xs" color="red-8" /></template>
+                <template #prepend><q-icon name="search" size="xs" color="blue-8" /></template>
                 <template #append>
                   <q-icon v-if="search" name="close" size="xs" color="grey-6" class="cursor-pointer" @click="search=''; loadUsers()" />
                 </template>
@@ -86,7 +86,7 @@
                 :options="roleOptions"
                 option-label="label" option-value="value"
                 emit-value map-options
-                dark outlined color="red-4" dense class="nexus-field-red"
+                dark outlined color="blue-4" dense class="nexus-field-blue"
                 behavior="menu" :popup-content-style="ddStyle"
                 @update:model-value="loadUsers"
               />
@@ -169,7 +169,7 @@
 
           <!-- Pagination -->
           <div v-if="totalPages > 1" class="row justify-center q-mt-lg">
-            <q-pagination v-model="page" :max="totalPages" dark color="red-4" @update:model-value="loadUsers" />
+            <q-pagination v-model="page" :max="totalPages" dark color="blue-4" @update:model-value="loadUsers" />
           </div>
         </div>
       </q-tab-panel>
@@ -178,7 +178,7 @@
       <q-tab-panel name="pending" class="q-pa-none">
         <div class="nexus-panel q-pa-xl">
           <div class="panel-header q-mb-xl">
-            <q-icon name="pending_actions" color="orange-4" class="q-mr-sm" />
+            <q-icon name="pending_actions" color="amber-4" class="q-mr-sm" />
             <span class="font-orbitron text-white uppercase">Pending Doctor Verifications</span>
           </div>
 
@@ -272,7 +272,7 @@
               v-model="rejectDlg.reason"
               type="textarea" rows="3"
               placeholder="Provide a clear reason for rejection..."
-              dark outlined color="red-4" class="nexus-field q-mb-lg"
+              dark outlined color="blue-4" class="nexus-field q-mb-lg"
             />
 
             <div class="row q-gutter-sm justify-end">
@@ -320,9 +320,9 @@ const totalPages = ref(1)
 const rejectDlg = reactive({ show: false, doctor: null, reason: '' })
 
 const ddStyle = {
-  backgroundColor: '#020d0f',
-  border: '1px solid rgba(229,57,53,0.25)',
-  boxShadow: '0 0 20px rgba(229,57,53,0.1)',
+  backgroundColor: 'rgba(7, 15, 32, 0.96)',
+  border: '1px solid rgba(59,130,246,0.28)',
+  boxShadow: '0 16px 36px rgba(2, 6, 23, 0.75)',
   zIndex: 9999
 }
 
@@ -478,82 +478,176 @@ onMounted(() => {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&display=swap');
-.font-orbitron { font-family: 'Orbitron', sans-serif; }
-.letter-spacing-3 { letter-spacing: 3px; }
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&display=swap');
+
+.font-orbitron { font-family: 'Sora', sans-serif; }
+.letter-spacing-3 { letter-spacing: 2px; }
+
+.admin-dash {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 50% 16%, rgba(37, 99, 235, 0.16), transparent 56%),
+    radial-gradient(circle at 10% 84%, rgba(56, 189, 248, 0.08), transparent 50%),
+    radial-gradient(circle at 88% 78%, rgba(29, 78, 216, 0.1), transparent 48%),
+    #040812;
+}
 
 /* Stats */
 .stat-block {
-  background: rgba(255,255,255,0.02);
+  background: linear-gradient(150deg, rgba(10, 18, 38, 0.84), rgba(7, 15, 32, 0.72));
   border: 1px solid;
-  border-radius: 14px;
-  transition: all 0.3s;
+  border-radius: 16px;
+  box-shadow: 0 10px 28px rgba(2, 6, 23, 0.45);
+  transition: all 0.28s ease;
 }
-.stat-block:hover { transform: translateY(-2px); background: rgba(255,255,255,0.03); }
+.stat-block:hover {
+  transform: translateY(-3px);
+  background: linear-gradient(150deg, rgba(14, 25, 54, 0.88), rgba(7, 15, 32, 0.76));
+  box-shadow: 0 14px 34px rgba(2, 6, 23, 0.6);
+}
 
 /* Tabs */
-.nexus-tabs { border-bottom: 1px solid rgba(229,57,53,0.1); font-size: 0.7rem; letter-spacing: 1.5px; }
+.nexus-tabs {
+  border-bottom: 1px solid rgba(59, 130, 246, 0.22);
+  font-size: 0.7rem;
+  letter-spacing: 1.2px;
+}
+
+.nexus-tabs :deep(.q-tab) {
+  color: rgba(203, 213, 225, 0.72);
+}
 
 /* Panel */
 .nexus-panel {
-  background: rgba(6,14,16,0.7);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 18px;
-  backdrop-filter: blur(12px);
+  background: linear-gradient(160deg, rgba(10, 18, 38, 0.88), rgba(7, 15, 32, 0.76));
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 20px;
+  backdrop-filter: blur(22px) saturate(130%);
+  box-shadow: 0 26px 60px rgba(2, 6, 23, 0.62), inset 0 1px 0 rgba(255,255,255,0.06);
 }
-.panel-header { display: flex; align-items: center; font-size: 0.85rem; }
+.panel-header { display: flex; align-items: center; font-size: 0.9rem; }
 
 /* Fields */
-.field-label { font-family: 'Orbitron', sans-serif; font-size: 0.58rem; letter-spacing: 2px; color: rgba(229,57,53,0.4); }
-.nexus-field :deep(.q-field__control) { border-radius: 10px; background: rgba(0,0,0,0.2); }
-.nexus-field-red :deep(.q-field__control) { border-radius: 10px; background: rgba(229,57,53,0.02); }
+.field-label {
+  font-family: 'Sora', sans-serif;
+  font-size: 0.58rem;
+  letter-spacing: 1.8px;
+  color: rgba(191, 219, 254, 0.62);
+}
+.nexus-field :deep(.q-field__control) {
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.52);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+.nexus-field-blue :deep(.q-field__control) {
+  border-radius: 12px;
+  background: rgba(59, 130, 246, 0.06);
+  border: 1px solid rgba(59, 130, 246, 0.18);
+}
 
 /* User rows */
 .user-row {
-  background: rgba(255,255,255,0.015);
-  border: 1px solid rgba(255,255,255,0.05);
-  border-radius: 12px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 14px;
   transition: all 0.25s;
 }
-.user-row:hover { border-color: rgba(229,57,53,0.15); background: rgba(229,57,53,0.02); }
-.user-avatar { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); }
+.user-row:hover {
+  border-color: rgba(96, 165, 250, 0.36);
+  background: rgba(59, 130, 246, 0.08);
+}
+.user-avatar {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(96, 165, 250, 0.28);
+}
 
 /* Doctor cards */
 .doc-card {
-  background: rgba(255,152,0,0.02);
-  border: 1px solid rgba(255,152,0,0.15);
-  border-radius: 16px;
+  background: rgba(245, 158, 11, 0.05);
+  border: 1px solid rgba(245, 158, 11, 0.26);
+  border-radius: 18px;
   transition: all 0.3s;
 }
-.doc-card:hover { border-color: rgba(255,152,0,0.3); background: rgba(255,152,0,0.04); }
+.doc-card:hover {
+  border-color: rgba(245, 158, 11, 0.45);
+  background: rgba(245, 158, 11, 0.08);
+}
 .doc-avatar-wrap { position: relative; display: inline-block; }
-.doc-avatar { background: rgba(255,152,0,0.08); border: 1px solid rgba(255,152,0,0.2); }
+.doc-avatar {
+  background: rgba(245, 158, 11, 0.14);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
 .doc-pending-badge {
-  position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%);
-  background: rgba(255,152,0,0.9); color: #000;
-  font-size: 0.45rem; letter-spacing: 1px; padding: 2px 6px;
-  border-radius: 4px; white-space: nowrap;
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(245, 158, 11, 0.95);
+  color: #0b0b0b;
+  font-size: 0.45rem;
+  letter-spacing: 1px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
 }
 
 /* Verify buttons */
 .verify-approve-btn {
-  background: linear-gradient(135deg, #1b5e20, #2e7d32, #388e3c);
-  color: #fff !important; border-radius: 8px;
-  font-size: 0.65rem; letter-spacing: 2px;
-  box-shadow: 0 4px 15px rgba(76,175,80,0.15);
-  transition: all 0.3s; padding: 8px 16px;
+  background: linear-gradient(135deg, #1d4ed8, #2563eb, #0ea5e9);
+  color: #fff !important;
+  border-radius: 10px;
+  font-size: 0.65rem;
+  letter-spacing: 1.6px;
+  box-shadow: 0 8px 22px rgba(37, 99, 235, 0.35);
+  transition: all 0.28s;
+  padding: 8px 16px;
 }
-.verify-approve-btn:hover { box-shadow: 0 4px 25px rgba(76,175,80,0.3); transform: translateY(-1px); }
-.verify-reject-btn { color: rgba(229,57,53,0.7) !important; font-size: 0.65rem; letter-spacing: 1.5px; border: 1px solid rgba(229,57,53,0.2); border-radius: 8px; }
-.verify-reject-btn:hover { color: rgba(229,57,53,1) !important; border-color: rgba(229,57,53,0.4); }
+.verify-approve-btn:hover {
+  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.5);
+  transform: translateY(-2px);
+}
+.verify-reject-btn {
+  color: rgba(248, 113, 113, 0.95) !important;
+  font-size: 0.65rem;
+  letter-spacing: 1.4px;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.06);
+}
+.verify-reject-btn:hover {
+  color: rgba(254, 202, 202, 1) !important;
+  border-color: rgba(248, 113, 113, 0.6);
+  background: rgba(239, 68, 68, 0.14);
+}
 
 /* Dialog */
 .dialog-card {
-  background: #06060a !important;
-  border: 1px solid rgba(229,57,53,0.2) !important;
+  background: linear-gradient(160deg, rgba(10, 18, 38, 0.94), rgba(7, 15, 32, 0.9)) !important;
+  border: 1px solid rgba(59,130,246,0.24) !important;
   border-radius: 18px !important;
+  box-shadow: 0 24px 56px rgba(2, 6, 23, 0.7);
 }
-.card-accent-bar-red { height: 3px; background: linear-gradient(90deg, transparent, #ef5350, #e53935, transparent); border-radius: 2px; }
+.card-accent-bar-red {
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #2563eb, #38bdf8, transparent);
+  border-radius: 2px;
+}
 
-.empty-state { display: flex; flex-direction: column; align-items: center; opacity: 0.6; }
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  opacity: 0.72;
+}
+
+@media (max-width: 760px) {
+  .admin-dash {
+    padding: 16px !important;
+  }
+
+  .nexus-panel {
+    padding: 16px !important;
+  }
+}
 </style>

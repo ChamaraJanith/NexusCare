@@ -1,5 +1,5 @@
 <template>
-  <q-page class="login-page bg-black flex flex-center overflow-hidden">
+  <q-page class="login-page flex flex-center overflow-hidden">
 
     <!-- Animated particle background -->
     <canvas ref="bgCanvas" class="bg-canvas"></canvas>
@@ -287,7 +287,7 @@ const handleLogin = async () => {
 
       const targetRoute = routes[userRole] || '/'
       console.log('Executing Navigation Router Push to:', targetRoute)
-      
+
       // Wait for router push to effectively trigger transition
       await router.push(targetRoute)
     }
@@ -325,153 +325,190 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&display=swap');
 
-.font-orbitron { font-family: 'Orbitron', sans-serif; }
+.font-orbitron { font-family: 'Sora', sans-serif; }
 
-/* Page */
-.login-page { min-height: 100vh; }
-
-/* Canvas */
-.bg-canvas {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  z-index: 0;
-  pointer-events: none;
+.login-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 50% 20%, rgba(37, 99, 235, 0.16), transparent 55%),
+    radial-gradient(circle at 12% 85%, rgba(56, 189, 248, 0.09), transparent 50%),
+    radial-gradient(circle at 86% 78%, rgba(29, 78, 216, 0.1), transparent 48%),
+    #040812;
 }
 
-/* Grid overlay */
+.bg-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.35;
+}
+
 .grid-overlay {
   position: fixed;
   inset: 0;
   background-image:
-    linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
-  background-size: 50px 50px;
+    linear-gradient(rgba(148, 163, 184, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.06) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse at center, rgba(0,0,0,0.75), rgba(0,0,0,0.12));
+  -webkit-mask-image: radial-gradient(ellipse at center, rgba(0,0,0,0.75), rgba(0,0,0,0.12));
   z-index: 1;
   pointer-events: none;
 }
 
-/* Container */
 .login-container {
   position: relative;
   z-index: 10;
   width: 100%;
-  max-width: 420px;
+  max-width: 440px;
   padding: 24px 16px;
 }
 
-/* Logo */
 .nexus-logo {
-  font-family: 'Orbitron', sans-serif;
-  font-size: clamp(2.2rem, 6vw, 3.2rem);
+  font-family: 'Sora', sans-serif;
+  font-size: clamp(2rem, 5.5vw, 2.8rem);
   font-weight: 700;
-  color: #fff;
-  letter-spacing: 6px;
-  text-shadow: 0 0 25px rgba(0,229,255,0.5), 0 0 50px rgba(0,229,255,0.2);
+  color: #f8fbff;
+  letter-spacing: 2px;
+  text-shadow: 0 10px 30px rgba(15, 23, 42, 0.9);
 }
+
 .logo-sub {
-  font-size: 0.6rem;
-  letter-spacing: 4px;
+  font-size: 0.62rem;
+  letter-spacing: 2.2px;
+  color: rgba(147, 197, 253, 0.9);
 }
 
-/* Card */
 .glass-card {
-  background: rgba(8, 16, 18, 0.85) !important;
-  backdrop-filter: blur(24px);
-  border: 1px solid rgba(0, 229, 255, 0.15);
-  border-radius: 20px;
+  background: linear-gradient(160deg, rgba(10, 18, 38, 0.88), rgba(7, 15, 32, 0.78)) !important;
+  backdrop-filter: blur(24px) saturate(130%);
+  border: 1px solid rgba(59, 130, 246, 0.24);
+  border-radius: 24px;
   overflow: hidden;
-  box-shadow: 0 0 60px rgba(0, 229, 255, 0.05), 0 25px 50px rgba(0,0,0,0.5);
+  box-shadow: 0 32px 70px rgba(2, 6, 23, 0.7), inset 0 1px 0 rgba(255,255,255,0.06);
 }
 
-/* Accent bar */
 .card-accent-bar {
   height: 3px;
-  background: linear-gradient(90deg, transparent, #00e5ff, #00bcd4, transparent);
+  background: linear-gradient(90deg, transparent, #2563eb, #38bdf8, #2563eb, transparent);
 }
 
-/* Status bar */
 .card-status-bar {
-  background: rgba(0,0,0,0.3);
-  border-top: 1px solid rgba(255,255,255,0.04);
+  background: rgba(2, 6, 23, 0.55);
+  border-top: 1px solid rgba(148, 163, 184, 0.16);
 }
+
 .status-dot {
-  width: 6px; height: 6px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: #00e676;
-  box-shadow: 0 0 6px #00e676;
+  background: #22c55e;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.9);
   animation: blink 2s infinite;
 }
+
 @keyframes blink {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+  50% { opacity: 0.5; }
 }
 
-/* Field label */
 .field-label {
-  font-family: 'Orbitron', sans-serif;
-  font-size: 0.6rem;
-  letter-spacing: 2px;
-  color: rgba(0, 229, 255, 0.5);
+  font-family: 'Sora', sans-serif;
+  font-size: 0.62rem;
+  letter-spacing: 1.8px;
+  color: rgba(191, 219, 254, 0.76);
 }
 
-/* Input */
 .nexus-field :deep(.q-field__control) {
-  border-radius: 10px;
-  background: rgba(0, 229, 255, 0.03);
-}
-.nexus-field :deep(.q-field__control:hover) {
-  background: rgba(0, 229, 255, 0.05);
-}
-
-/* Role selector */
-.role-selector {
-  border: 1px solid rgba(0, 229, 255, 0.12);
-  border-radius: 10px;
-  overflow: hidden;
-}
-.role-pill {
-  font-size: 0.6rem;
-  letter-spacing: 1px;
-  color: rgba(255,255,255,0.3);
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.55) !important;
+  border: 1px solid rgba(148, 163, 184, 0.2);
   transition: all 0.25s ease;
-  padding-top: 10px;
-  padding-bottom: 10px;
 }
-.role-pill:hover { color: rgba(0, 229, 255, 0.6); background: rgba(0,229,255,0.04); }
+
+.nexus-field :deep(.q-field__control:hover) {
+  border-color: rgba(96, 165, 250, 0.45);
+}
+
+.nexus-field :deep(.q-field--focused .q-field__control) {
+  border-color: rgba(96, 165, 250, 0.75);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.18);
+}
+
+.role-selector {
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.role-pill {
+  font-size: 0.62rem;
+  letter-spacing: 1px;
+  color: rgba(203, 213, 225, 0.56);
+  transition: all 0.25s ease;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.role-pill:hover {
+  color: rgba(191, 219, 254, 0.96);
+  background: rgba(59, 130, 246, 0.1);
+}
+
 .role-pill-active {
-  color: #00e5ff !important;
-  background: rgba(0, 229, 255, 0.08) !important;
-  border-bottom: 2px solid #00e5ff;
+  color: #bfdbfe !important;
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.22), rgba(59, 130, 246, 0.1)) !important;
+  border-bottom: 2px solid #3b82f6;
 }
 
-/* Login button */
 .login-btn {
-  background: linear-gradient(135deg, #00494f, #006064 40%, #007c80);
+  background: linear-gradient(135deg, #1d4ed8, #2563eb 45%, #0ea5e9) !important;
   color: #fff;
-  border-radius: 10px;
-  font-size: 0.75rem;
-  letter-spacing: 3px;
-  box-shadow: 0 4px 25px rgba(0, 188, 212, 0.2);
-  transition: all 0.3s ease;
+  border-radius: 14px;
+  font-size: 0.78rem;
+  letter-spacing: 2px;
+  box-shadow: 0 10px 28px rgba(37, 99, 235, 0.42);
+  transition: all 0.28s ease;
 }
+
 .login-btn:hover {
-  box-shadow: 0 4px 35px rgba(0, 188, 212, 0.4);
-  transform: translateY(-1px);
+  box-shadow: 0 14px 34px rgba(37, 99, 235, 0.56);
+  transform: translateY(-2px);
 }
 
-/* Error box */
 .err-box {
-  background: rgba(229, 57, 53, 0.06);
-  border: 1px solid rgba(229, 57, 53, 0.25);
-  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 12px;
 }
 
-/* Link */
-.link-hover { transition: text-shadow 0.2s; }
-.link-hover:hover { text-shadow: 0 0 10px rgba(0,229,255,0.6); }
+.link-hover {
+  transition: all 0.2s ease;
+}
+
+.link-hover:hover {
+  color: #93c5fd !important;
+  text-shadow: 0 0 12px rgba(59, 130, 246, 0.5);
+}
 
 .z-top { z-index: 10; }
+
+@media (max-width: 520px) {
+  .login-container {
+    max-width: 94%;
+    padding: 18px 10px;
+  }
+
+  .nexus-logo {
+    letter-spacing: 1px;
+    font-size: 1.9rem;
+  }
+}
 </style>

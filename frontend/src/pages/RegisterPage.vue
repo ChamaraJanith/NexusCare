@@ -448,7 +448,11 @@ const handleRegister = async () => {
 /* Page */
 .register-page {
   min-height: 100vh;
-  background: #040710;
+  background:
+    radial-gradient(circle at 50% 20%, rgba(37, 99, 235, 0.14), transparent 55%),
+    radial-gradient(circle at 12% 82%, rgba(56, 189, 248, 0.08), transparent 50%),
+    radial-gradient(circle at 86% 78%, rgba(29, 78, 216, 0.08), transparent 46%),
+    #040812;
 }
 
 /* Ambient */
@@ -516,17 +520,17 @@ const handleRegister = async () => {
 
 /* Card */
 .register-card {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: linear-gradient(160deg, rgba(10, 18, 38, 0.88), rgba(7, 15, 32, 0.78));
+  border: 1px solid rgba(59, 130, 246, 0.2);
   border-radius: 28px;
   overflow: hidden;
-  box-shadow: 0 0 0 1px rgba(255,255,255,0.03), 0 40px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.07);
-  backdrop-filter: blur(20px);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.04), 0 40px 80px rgba(0,0,0,0.62), inset 0 1px 0 rgba(255,255,255,0.08);
+  backdrop-filter: blur(24px) saturate(130%);
 }
 
 .card-top-glow {
   height: 2px;
-  background: linear-gradient(90deg, transparent 0%, rgba(59,130,246,0.6) 30%, rgba(14,165,233,0.8) 50%, rgba(59,130,246,0.6) 70%, transparent 100%);
+  background: linear-gradient(90deg, transparent 0%, rgba(59,130,246,0.78) 30%, rgba(14,165,233,0.88) 50%, rgba(59,130,246,0.78) 70%, transparent 100%);
 }
 
 .card-body { padding: 40px 40px 32px; }
@@ -597,12 +601,18 @@ const handleRegister = async () => {
 /* Inputs */
 .nexus-field :deep(.q-field__control) {
   border-radius: 14px;
-  background: rgba(255,255,255,0.03);
-  transition: background 0.3s ease;
+  background: rgba(15, 23, 42, 0.56);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  transition: all 0.3s ease;
 }
 .nexus-field :deep(.q-field__control:hover),
 .nexus-field :deep(.q-field--focused .q-field__control) {
-  background: rgba(59,130,246,0.06);
+  background: rgba(59,130,246,0.08);
+  border-color: rgba(96, 165, 250, 0.5);
+}
+
+.nexus-field :deep(.q-field--focused .q-field__control) {
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
 }
 
 /* Role cards */
@@ -649,6 +659,10 @@ const handleRegister = async () => {
 .action-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 12px 32px rgba(37,99,235,0.5);
+}
+
+.action-btn:active {
+  transform: translateY(0);
 }
 
 .back-btn {
