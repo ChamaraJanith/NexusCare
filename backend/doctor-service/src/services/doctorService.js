@@ -1,10 +1,46 @@
 import Doctor from "../models/Doctor.js";
 import AvailabilitySlot from "../models/AvailabilitySlot.js";
+import { getUserByToken } from "./userServiceClient.js";
 
 // GET by doctorId (business ID)
 export const getDoctorByDoctorId = async (doctorId) => {
   return await Doctor.findOne({ doctorId, isDeleted: false });
 };
+
+/**
+ * GET full doctor profile by merging:
+ * - Doctor record from local DB (specialization, experience, hospital, bio)
+ * - User identity from user-patient-service (name, email, profileImage)
+ */
+export const getDoctorFullProfile = async (doctorId, bearerToken) => {
+  // Fetch both in parallel
+  const [doctorRecord, userIdentity] = await Promise.all([
+    getDoctorByDoctorId(doctorId),
+    getUserByToken(bearerToken),
+  ]);
+
+  console.log("[doctorService] doctorRecord:", doctorRecord);
+  console.log("[doctorService] userIdentity:", userIdentity);
+
+  // Build merged profile
+  return {
+    doctorId,
+    // Identity fields from user-patient-service
+    name: userIdentity?.name || null,
+    email: userIdentity?.email || null,
+    profileImage: userIdentity?.profileImage || null,
+    phone: userIdentity?.phone || null,
+    // Professional fields from doctor-service DB
+    specialization: doctorRecord?.specialization || null,
+    qualifications: doctorRecord?.qualifications || null,
+    experience: doctorRecord?.experience || null,
+    hospital: doctorRecord?.hospital || null,
+    location: doctorRecord?.location || null,
+    bio: doctorRecord?.bio || null,
+    isActive: doctorRecord?.isActive ?? true,
+  };
+};
+
 
 // UPDATE by doctorId
 export const updateDoctorByDoctorId = async (doctorId, data) => {

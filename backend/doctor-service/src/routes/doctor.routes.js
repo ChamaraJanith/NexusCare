@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  getDoctorMe,
   getDoctor,
   updateDoctor,
   searchDoctors
@@ -15,6 +16,10 @@ const router = express.Router();
 // 🔍 SEARCH + FILTER Doctors (public or protected based on requirement)
 router.get("/", searchDoctors);
 
+// 👤 GET aggregated doctor profile (identity + professional data)
+// MUST be before /:id to prevent "me" being treated as an ID
+router.get("/me", verifyToken, allowRoles("doctor"), getDoctorMe);
+
 // 🔍 Get doctor profile (any logged user)
 router.get("/:id", verifyToken, getDoctor);
 
@@ -27,4 +32,4 @@ router.put(
   updateDoctor
 );
 
-export default router;
+export default router;
