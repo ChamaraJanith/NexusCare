@@ -64,29 +64,50 @@ export const getAppointments = async (req, res) => {
 // ✅ Update Appointment
 export const updateAppointment = async (req, res) => {
   try {
-    const { id } = req.params;
+    const authHeader = req.headers.authorization;
 
-    const updated = await updateAppointmentService(id, req.body);
+    if (!authHeader) {
+      return res.status(401).json({ error: "No token provided" });
+    }
+
+    const token = authHeader.split(" ")[1];
+
+    const userData = await verifyUser(token);
+
+    const updated = await updateAppointmentService(
+      req.params.id,
+      userData.roleId, // 🔥 patientId
+      req.body
+    );
 
     res.status(200).json(updated);
 
   } catch (error) {
-    console.error("Error updating appointment:", error.message);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(403).json({ error: error.message });
   }
 };
 
 // ✅ Cancel Appointment
 export const cancelAppointment = async (req, res) => {
   try {
-    const { id } = req.params;
+    const authHeader = req.headers.authorization;
 
-    const cancelled = await cancelAppointmentService(id);
+    if (!authHeader) {
+      return res.status(401).json({ error: "No token provided" });
+    }
+
+    const token = authHeader.split(" ")[1];
+
+    const userData = await verifyUser(token);
+
+    const cancelled = await cancelAppointmentService(
+      req.params.id,
+      userData.roleId // 🔥 patientId
+    );
 
     res.status(200).json(cancelled);
 
   } catch (error) {
-    console.error("Error cancelling appointment:", error.message);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(403).json({ error: error.message });
   }
 };

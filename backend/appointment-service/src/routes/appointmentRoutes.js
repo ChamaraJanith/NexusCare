@@ -38,4 +38,34 @@ router.put("/:id", validateUpdateAppointment, updateAppointment);
 // ✅ Cancel appointment
 router.delete("/:id", cancelAppointment);
 
+router.put("/admin/verify/:id", async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader) {
+      return res.status(401).json({ error: "No token provided" });
+    }
+
+    const token = authHeader.split(" ")[1];
+
+    const userData = await verifyUser(token);
+
+    // 🔥 Only admin allowed
+    if (userData.role !== "admin") {
+      return res.status(403).json({ error: "Admin only" });
+    }
+
+    const updated = await Appointment.findByIdAndUpdate(
+      req.params.id,
+      { status: "VERIFIED" },
+      { new: true }
+    );
+
+    res.json(updated);
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;
