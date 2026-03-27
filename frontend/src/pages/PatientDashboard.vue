@@ -1,427 +1,352 @@
 <template>
-  <q-page class="patient-dashboard-bg">
-    <!-- ══ TOP BAR ═════════════════════════════════════════════════════ -->
-    <div class="top-bar">
-      <div class="top-left">
-        <div class="logo-wrapper">
-          <div class="logo-inner">
-            <q-icon name="health_and_safety" size="1.8rem" color="cyan-4" />
-            <span class="logo-text font-orbitron text-cyan-4">NEXUS</span>
-          </div>
-          <div class="logo-glow"></div>
-        </div>
-        <div class="user-info">
-          <div class="user-avatar">
-            <img v-if="profileData.profileImage?.url" :src="profileData.profileImage.url" />
-            <q-icon v-else name="person" color="cyan-4" size="1.2rem" />
-          </div>
-          <div>
-            <div class="user-name font-orbitron text-white">{{ profileData.name }}</div>
-            <div class="user-role text-cyan-8">PATIENT PORTAL</div>
-          </div>
-        </div>
-      </div>
-      <div class="top-right">
-        <q-btn flat round icon="notifications" class="top-btn q-mr-sm" @click="$q.notify('Notifications coming soon')">
-          <q-badge color="red-6" floating class="font-orbitron" style="font-size: 0.5rem;">3</q-badge>
-        </q-btn>
-        <q-btn flat round icon="settings" class="top-btn q-mr-sm" @click="tab = 'profile'" />
-        <q-btn flat round icon="logout" class="top-btn" @click="logout" />
-      </div>
-    </div>
+  <q-page class="text-white font-jakarta flex flex-center relative-position page-shell overflow-hidden">
+    <!-- Atmospheric Background -->
+    <div class="page-bg-gradient"></div>
 
-    <!-- ══ QUICK ACTIONS BAR ═════════════════════════════════════════ -->
-    <div class="quick-actions-bar">
-      <div class="quick-actions-inner">
-        <div class="action-card" @click="goToSymptoms">
-          <div class="action-icon-wrapper">
-            <q-icon name="medical_services" size="2rem" color="cyan-4" />
-            <div class="action-icon-glow"></div>
-          </div>
-          <div class="action-content">
-            <div class="action-title font-orbitron text-white">SYMPTOMS</div>
-            <div class="action-subtitle text-cyan-8">AI Checker</div>
-          </div>
-          <div class="action-arrow">
-            <q-icon name="arrow_forward_ios" color="cyan-6" size="0.8rem" />
-          </div>
-        </div>
+    <div class="row justify-center full-width z-top max-width-1200 q-px-md">
+      <div class="col-12 col-md-10 col-lg-9">
 
-        <div class="action-card" @click="goToVideoConsultation">
-          <div class="action-icon-wrapper">
-            <q-icon name="videocam" size="2rem" color="green-4" />
-            <div class="action-icon-glow green-glow"></div>
-          </div>
-          <div class="action-content">
-            <div class="action-title font-orbitron text-white">VIDEO</div>
-            <div class="action-subtitle text-green-8">Consultation</div>
-          </div>
-          <div class="action-arrow">
-            <q-icon name="arrow_forward_ios" color="green-6" size="0.8rem" />
-          </div>
-        </div>
-
-        <div class="action-card" @click="$q.notify('Appointments coming soon')">
-          <div class="action-icon-wrapper">
-            <q-icon name="event" size="2rem" color="purple-4" />
-            <div class="action-icon-glow purple-glow"></div>
-          </div>
-          <div class="action-content">
-            <div class="action-title font-orbitron text-white">BOOK</div>
-            <div class="action-subtitle text-purple-8">Appointment</div>
-          </div>
-          <div class="action-arrow">
-            <q-icon name="arrow_forward_ios" color="purple-6" size="0.8rem" />
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ══ METRICS SECTION ═══════════════════════════════════════════ -->
-    <div class="metrics-section">
-      <div class="metrics-grid">
-        <div v-for="(card, i) in statCards" :key="i" class="metric-card-pro">
-          <div class="metric-header">
-            <div class="metric-icon-wrapper">
-              <q-icon :name="card.icon" :color="card.color" size="1.5rem" />
-              <div class="metric-icon-pulse"></div>
+        <!-- Header area -->
+        <div class="text-center q-mb-xl mt-120">
+          <div class="header-actions row items-center justify-between q-mb-lg">
+            <div class="trusted-badge q-py-xs q-px-sm row items-center inline no-wrap">
+              <q-icon name="verified_user" color="blue-4" size="14px" class="q-mr-sm" />
+              <span class="text-caption text-weight-bolder tracking-wider text-blue-2 uppercase">Patient Dashboard</span>
             </div>
-            <div class="metric-label font-orbitron text-cyan-8">{{ card.label }}</div>
-          </div>
-          <div class="metric-value font-orbitron text-white">{{ card.value }}</div>
-          <div class="metric-progress">
-            <div class="metric-track"></div>
-            <div class="metric-fill-pro" :style="{ width: card.fill, background: `linear-gradient(90deg, ${getGradientColor(card.color)}, transparent)` }"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ══ TABS ═════════════════════════════════════════════════════ -->
-    <div class="tabs-wrapper">
-      <q-tabs v-model="tab" dense class="nexus-tabs-pro" indicator-color="cyan-4" active-color="cyan-4" inactive-color="grey-7">
-        <q-tab name="profile" icon="person" label="PROFILE" class="font-orbitron" />
-        <q-tab name="reports" icon="folder" label="REPORTS" class="font-orbitron" />
-        <q-tab name="prescriptions" icon="medication" label="PRESCRIPTIONS" class="font-orbitron" />
-      </q-tabs>
-    </div>
-
-    <q-tab-panels v-model="tab" animated class="tab-panels-pro">
-      <!-- ══ PROFILE TAB ═══════════════════════════════════════════════ -->
-      <q-tab-panel name="profile" class="q-pa-none">
-        <div class="profile-container">
-          <!-- Left: Avatar & info -->
-          <div class="profile-left">
-            <div class="profile-card-pro">
-              <div class="profile-header">
-                <div class="avatar-section">
-                  <div class="avatar-wrapper-pro">
-                    <q-avatar size="120px" class="patient-avatar-pro">
-                      <img v-if="profileData.profileImage?.url" :src="profileData.profileImage.url" />
-                      <q-icon v-else name="person" color="cyan-4" size="3.5rem" />
-                    </q-avatar>
-                    <div class="avatar-ring"></div>
-                    <q-btn
-                      round flat icon="photo_camera" color="cyan-4" size="sm"
-                      class="avatar-cam-btn-pro"
-                      @click="$refs.imgFile.click()"
-                    />
-                    <input ref="imgFile" type="file" accept="image/*" class="hidden" @change="doUploadImage" />
-                  </div>
-                </div>
-                <div class="profile-name-section">
-                  <div class="profile-name font-orbitron text-white">{{ profileData.name }}</div>
-                  <div class="profile-email text-cyan-8">{{ profileData.email }}</div>
-                  <div class="profile-phone text-grey-6">{{ profileData.phone || '—' }}</div>
-                </div>
-              </div>
-
-              <div class="profile-divider"></div>
-
-              <div class="info-grid">
-                <div class="info-item">
-                  <div class="info-label font-orbitron text-cyan-8">GENDER</div>
-                  <div class="info-value font-orbitron text-white capitalize">{{ profileData.gender || '—' }}</div>
-                </div>
-                <div class="info-item">
-                  <div class="info-label font-orbitron text-cyan-8">BLOOD</div>
-                  <div class="info-value font-orbitron text-white">{{ profileData.bloodGroup || '—' }}</div>
-                </div>
-                <div class="info-item">
-                  <div class="info-label font-orbitron text-cyan-8">AGE</div>
-                  <div class="info-value font-orbitron text-white">{{ calculateAge(profileData.dateOfBirth) || '—' }}</div>
-                </div>
-              </div>
-
-              <div class="profile-divider"></div>
-
-              <div class="medical-tags">
-                <div class="tags-section">
-                  <div class="tags-title font-orbitron text-cyan-8">ALLERGIES</div>
-                  <div v-if="profileData.allergies?.length" class="tags-container">
-                    <q-chip
-                      v-for="a in profileData.allergies" :key="a"
-                      dense dark color="red-10" class="font-orbitron tag-chip"
-                    >{{ a }}</q-chip>
-                  </div>
-                  <div v-else class="no-tags text-grey-7">None recorded</div>
-                </div>
-
-                <div class="tags-section">
-                  <div class="tags-title font-orbitron text-cyan-8">CHRONIC CONDITIONS</div>
-                  <div v-if="profileData.chronicConditions?.length" class="tags-container">
-                    <q-chip
-                      v-for="c in profileData.chronicConditions" :key="c"
-                      dense dark color="orange-10" class="font-orbitron tag-chip"
-                    >{{ c }}</q-chip>
-                  </div>
-                  <div v-else class="no-tags text-grey-7">None recorded</div>
-                </div>
-              </div>
+            <div class="header-buttons row items-center q-gutter-sm">
+              <q-btn flat round icon="settings" color="blue-4" size="sm" @click="tab = 'profile'" class="hover-glow" />
+              <q-btn flat round icon="logout" color="red-5" size="sm" @click="logout" class="hover-glow" />
             </div>
           </div>
+          <h1 class="page-title q-ma-none text-weight-bolder">
+            Welcome, <span class="text-gradient-primary">{{ profileData.name || 'Patient' }}</span>
+          </h1>
+          <p class="text-grey-4 text-body1 q-mt-md mx-auto">Your medical profile, reports, and prescriptions in one place</p>
+        </div>
 
-          <!-- Right: Edit form -->
-          <div class="profile-right">
-            <div class="form-card-pro">
-              <div class="form-header-pro">
-                <q-icon name="edit_note" color="cyan-4" size="1.5rem" />
-                <span class="font-orbitron text-white">UPDATE PROFILE</span>
+        <!-- Quick Actions -->
+        <div class="row q-col-gutter-md q-mb-xl">
+          <div class="col-12 col-sm-4">
+            <div class="quick-action-card" @click="goToSymptoms">
+              <div class="action-icon-box">
+                <q-icon name="medical_services" size="1.5rem" color="blue-4" />
               </div>
-
-              <q-form @submit="doSaveProfile" class="profile-form">
-                <div class="form-section">
-                  <div class="section-title-pro font-orbitron text-cyan-8">PERSONAL DETAILS</div>
-                  <div class="form-grid">
-                    <div class="form-field-pro">
-                      <div class="field-label-pro">FULL NAME</div>
-                      <q-input v-model="editForm.name" dark outlined color="cyan-4" class="nexus-field-pro" />
-                    </div>
-                    <div class="form-field-pro">
-                      <div class="field-label-pro">PHONE</div>
-                      <q-input v-model="editForm.phone" dark outlined color="cyan-4" class="nexus-field-pro" />
-                    </div>
-                  </div>
-                </div>
-
-                <div class="form-section">
-                  <div class="section-title-pro font-orbitron text-cyan-8">MEDICAL INFORMATION</div>
-                  <div class="form-grid">
-                    <div class="form-field-pro">
-                      <div class="field-label-pro">DATE OF BIRTH</div>
-                      <q-input v-model="editForm.dateOfBirth" type="date" dark outlined color="cyan-4" class="nexus-field-pro" />
-                    </div>
-                    <div class="form-field-pro">
-                      <div class="field-label-pro">GENDER</div>
-                      <q-select v-model="editForm.gender" :options="['male','female','other']" dark outlined color="cyan-4" class="nexus-field-pro" />
-                    </div>
-                    <div class="form-field-pro">
-                      <div class="field-label-pro">BLOOD GROUP</div>
-                      <q-select v-model="editForm.bloodGroup" :options="bloodGroups" dark outlined color="cyan-4" class="nexus-field-pro" />
-                    </div>
-                  </div>
-                </div>
-
-                <div class="form-section">
-                  <div class="section-title-pro font-orbitron text-cyan-8">HEALTH CONDITIONS</div>
-                  <div class="form-grid">
-                    <div class="form-field-pro full-width">
-                      <div class="field-label-pro">ALLERGIES</div>
-                      <q-select
-                        v-model="editForm.allergies" multiple use-chips use-input new-value-mode="add-unique"
-                        placeholder="Type and press Enter"
-                        dark outlined color="cyan-4" class="nexus-field-pro"
-                      />
-                    </div>
-                    <div class="form-field-pro full-width">
-                      <div class="field-label-pro">CHRONIC CONDITIONS</div>
-                      <q-select
-                        v-model="editForm.chronicConditions" multiple use-chips use-input new-value-mode="add-unique"
-                        placeholder="Type and press Enter"
-                        dark outlined color="cyan-4" class="nexus-field-pro"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div class="form-actions">
-                  <q-btn type="submit" :loading="savingProfile" class="save-btn-pro font-orbitron" label="SAVE CHANGES" icon-right="save" />
-                </div>
-              </q-form>
+              <div class="action-title font-weight-bold text-white">AI Symptom</div>
+              <div class="action-subtitle text-grey-5">Check Now</div>
+            </div>
+          </div>
+          <div class="col-12 col-sm-4">
+            <div class="quick-action-card" @click="goToVideoConsultation">
+              <div class="action-icon-box">
+                <q-icon name="videocam" size="1.5rem" color="green-4" />
+              </div>
+              <div class="action-title font-weight-bold text-white">Video Call</div>
+              <div class="action-subtitle text-grey-5">Consult</div>
+            </div>
+          </div>
+          <div class="col-12 col-sm-4">
+            <div class="quick-action-card" @click="$q.notify('Appointments coming soon')">
+              <div class="action-icon-box">
+                <q-icon name="event" size="1.5rem" color="purple-4" />
+              </div>
+              <div class="action-title font-weight-bold text-white">Book</div>
+              <div class="action-subtitle text-grey-5">Appointment</div>
             </div>
           </div>
         </div>
-      </q-tab-panel>
 
-      <!-- ══ REPORTS TAB ═══════════════════════════════════════════════ -->
-      <q-tab-panel name="reports" class="q-pa-none">
-        <div class="reports-container">
-          <div class="reports-header-pro">
-            <div class="reports-title-section">
-              <q-icon name="folder_open" color="cyan-4" size="1.8rem" />
+        <!-- Tabs ═════════════════════════════════════════════════════ -->
+        <div class="glass-card q-pa-none shadow-glow relative-position q-mb-xl">
+          <q-tabs v-model="tab" dense class="modernized-tabs" indicator-color="blue-6" active-color="blue-6" inactive-color="grey-6">
+            <q-tab name="profile" icon="person" label="PROFILE" class="text-weight-bold" />
+            <q-tab name="reports" icon="folder" label="REPORTS" class="text-weight-bold" />
+            <q-tab name="prescriptions" icon="medication" label="PRESCRIPTIONS" class="text-weight-bold" />
+          </q-tabs>
+        </div>
+
+        <q-tab-panels v-model="tab" animated class="q-pa-none">
+          <!-- PROFILE TAB ═══════════════════════════════════════════════ -->
+          <q-tab-panel name="profile" class="q-pa-none patient-panel">
+          <div class="glass-card q-pa-xl shadow-glow profile-main-card">
+            <!-- Avatar Section -->
+            <div class="text-center q-mb-xl">
+              <div class="avatar-wrapper-pro relative-position inline-block q-mb-md">
+                <q-avatar size="120px" class="profile-avatar-modern">
+                  <img v-if="profileData.profileImage?.url" :src="profileData.profileImage.url" />
+                  <q-icon v-else name="person" color="blue-4" size="3.5rem" />
+                </q-avatar>
+                <q-btn
+                  round flat icon="photo_camera" color="blue-4" size="sm"
+                  class="avatar-cam-btn-pro"
+                  @click="$refs.imgFile.click()"
+                />
+                <input ref="imgFile" type="file" accept="image/*" class="hidden" @change="doUploadImage" />
+              </div>
+              <div class="profile-name text-h4 text-weight-bold text-white q-mb-sm">{{ profileData.name }}</div>
+              <div class="profile-email text-grey-5">{{ profileData.email }}</div>
+              <div class="profile-phone text-grey-6">{{ profileData.phone || '—' }}</div>
+            </div>
+
+            <q-separator dark class="q-my-lg" style="opacity: 0.3;" />
+
+            <!-- Info Grid -->
+            <div class="row q-col-gutter-lg q-mb-xl">
+              <div class="col-12 col-sm-6">
+                <div class="info-block">
+                  <div class="info-label text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-xs">Gender</div>
+                  <div class="text-h6 text-white">{{ profileData.gender ? profileData.gender.charAt(0).toUpperCase() + profileData.gender.slice(1) : '—' }}</div>
+                </div>
+              </div>
+              <div class="col-12 col-sm-6">
+                <div class="info-block">
+                  <div class="info-label text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-xs">Blood Group</div>
+                  <div class="text-h6 text-white">{{ profileData.bloodGroup || '—' }}</div>
+                </div>
+              </div>
+              <div class="col-12 col-sm-6">
+                <div class="info-block">
+                  <div class="info-label text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-xs">Age</div>
+                  <div class="text-h6 text-white">{{ calculateAge(profileData.dateOfBirth) || '—' }} years</div>
+                </div>
+              </div>
+              <div class="col-12 col-sm-6">
+                <div class="info-block">
+                  <div class="info-label text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-xs">Allergies</div>
+                  <div class="text-h6 text-white">{{ profileData.allergies?.length || 0 }}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Allergies & Conditions -->
+            <div class="row q-col-gutter-lg q-mb-xl">
+              <div class="col-12 col-sm-6">
+                <div class="tag-section">
+                  <div class="tag-title text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-md">Known Allergies</div>
+                  <div v-if="profileData.allergies?.length" class="q-gutter-sm">
+                    <q-chip v-for="a in profileData.allergies" :key="a" dark color="red-10" text-color="white" dense class="q-pa-md">{{ a }}</q-chip>
+                  </div>
+                  <div v-else class="text-grey-6">No allergies recorded</div>
+                </div>
+              </div>
+              <div class="col-12 col-sm-6">
+                <div class="tag-section">
+                  <div class="tag-title text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-md">Chronic Conditions</div>
+                  <div v-if="profileData.chronicConditions?.length" class="q-gutter-sm">
+                    <q-chip v-for="c in profileData.chronicConditions" :key="c" dark color="orange-10" text-color="white" dense class="q-pa-md">{{ c }}</q-chip>
+                  </div>
+                  <div v-else class="text-grey-6">No chronic conditions recorded</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Edit Form -->
+            <q-separator dark class="q-my-lg" style="opacity: 0.3;" />
+
+            <div class="text-weight-bold text-h6 text-white q-mb-lg">Edit Profile</div>
+            <q-form @submit="doSaveProfile" class="row q-col-gutter-md">
+              <div class="col-12 col-sm-6">
+                <div class="text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-sm">Full Name</div>
+                <q-input v-model="editForm.name" dark outlined color="blue-4" class="modern-input" />
+              </div>
+              <div class="col-12 col-sm-6">
+                <div class="text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-sm">Phone</div>
+                <q-input v-model="editForm.phone" dark outlined color="blue-4" class="modern-input" />
+              </div>
+              <div class="col-12 col-sm-6">
+                <div class="text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-sm">Date of Birth</div>
+                <q-input v-model="editForm.dateOfBirth" type="date" dark outlined color="blue-4" class="modern-input" />
+              </div>
+              <div class="col-12 col-sm-6">
+                <div class="text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-sm">Gender</div>
+                <q-select v-model="editForm.gender" :options="['male', 'female', 'other']" dark outlined color="blue-4" class="modern-input" />
+              </div>
+              <div class="col-12 col-sm-6">
+                <div class="text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-sm">Blood Group</div>
+                <q-select v-model="editForm.bloodGroup" :options="bloodGroups" dark outlined color="blue-4" class="modern-input" />
+              </div>
+              <div class="col-12">
+                <div class="text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-sm">Allergies</div>
+                <q-select
+                  v-model="editForm.allergies" multiple use-chips use-input new-value-mode="add-unique"
+                  placeholder="Add allergies..."
+                  dark outlined color="blue-4" class="modern-input"
+                />
+              </div>
+              <div class="col-12">
+                <div class="text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-sm">Chronic Conditions</div>
+                <q-select
+                  v-model="editForm.chronicConditions" multiple use-chips use-input new-value-mode="add-unique"
+                  placeholder="Add conditions..."
+                  dark outlined color="blue-4" class="modern-input"
+                />
+              </div>
+              <div class="col-12 text-right q-mt-md">
+                <q-btn type="submit" unelevated label="Save Changes" color="blue-6" icon-right="save" class="btn-primary-glow q-px-lg" :loading="savingProfile" />
+              </div>
+            </q-form>
+          </div>
+        </q-tab-panel>
+
+        <!-- REPORTS TAB ═══════════════════════════════════════════════ -->
+        <q-tab-panel name="reports" class="q-pa-none">
+          <div class="glass-card q-pa-xl shadow-glow">
+            <div class="row items-center justify-between q-mb-lg">
               <div>
-                <div class="reports-title font-orbitron text-white">MEDICAL REPORTS</div>
-                <div class="reports-subtitle text-cyan-8">{{ reports.length }} documents</div>
+                <div class="text-h6 text-weight-bold text-white q-mb-xs">Medical Reports</div>
+                <div class="text-caption text-grey-5">{{ reports.length }} document{{ reports.length !== 1 ? 's' : '' }} uploaded</div>
               </div>
+              <q-btn unelevated label="Upload Report" color="blue-6" icon="upload_file" class="btn-primary-glow" @click="uploadDialog = true" />
             </div>
-            <q-btn
-              icon="upload_file" label="UPLOAD REPORT"
-              class="upload-btn-pro font-orbitron"
-              @click="uploadDialog = true"
-            />
-          </div>
 
-          <div v-if="reports.length === 0" class="empty-state-pro">
-            <div class="empty-icon-wrapper">
-              <q-icon name="description" size="5rem" color="grey-8" />
+            <q-separator dark class="q-my-lg" style="opacity: 0.3;" />
+
+            <div v-if="reports.length === 0" class="text-center q-py-xl">
+              <q-icon name="description" size="3rem" color="grey-8" class="q-mb-md" />
+              <div class="text-h6 text-grey-7">No reports uploaded</div>
+              <div class="text-caption text-grey-6">Upload your medical reports to keep them organized</div>
             </div>
-            <div class="empty-title font-orbitron text-grey-7">NO REPORTS UPLOADED</div>
-            <div class="empty-subtitle text-grey-8">Upload your medical reports to keep them organized</div>
-          </div>
 
-          <div v-else class="reports-grid-pro">
-            <div v-for="r in reports" :key="r.reportId" class="report-card-pro">
-              <div class="report-icon-section">
-                <div class="report-icon-wrapper">
-                  <q-icon
-                    :name="r.fileType === 'pdf' ? 'picture_as_pdf' : 'image'"
-                    :color="r.fileType === 'pdf' ? 'red-4' : 'cyan-4'"
-                    size="2.5rem"
-                  />
-                </div>
-              </div>
-              <div class="report-content">
-                <div class="report-title font-orbitron text-white">{{ r.title }}</div>
-                <div class="report-description text-grey-6">{{ r.description || 'No description' }}</div>
-                <div class="report-meta">
-                  <q-chip dense dark :color="r.fileType === 'pdf' ? 'red-10' : 'cyan-10'" class="font-orbitron meta-chip">
-                    {{ r.fileType?.toUpperCase() }}
-                  </q-chip>
-                  <span class="report-date text-grey-7 font-orbitron">{{ formatDate(r.uploadedAt) }}</span>
-                </div>
-              </div>
-              <div class="report-actions">
-                <q-btn flat round icon="visibility" color="cyan-6" size="sm" @click="window.open(r.fileUrl, '_blank')">
-                  <q-tooltip class="font-orbitron">View</q-tooltip>
-                </q-btn>
-                <q-btn flat round icon="delete_outline" color="red-5" size="sm" @click="doDeleteReport(r.reportId)">
-                  <q-tooltip class="font-orbitron">Delete</q-tooltip>
-                </q-btn>
-              </div>
-            </div>
-          </div>
-        </div>
-      </q-tab-panel>
-
-      <!-- ══ PRESCRIPTIONS TAB ══════════════════════════════════════════ -->
-      <q-tab-panel name="prescriptions" class="q-pa-none">
-        <div class="prescriptions-container">
-          <div class="prescriptions-header-pro">
-            <div class="prescriptions-title-section">
-              <q-icon name="medication_liquid" color="cyan-4" size="1.8rem" />
-              <div>
-                <div class="prescriptions-title font-orbitron text-white">PRESCRIPTIONS</div>
-                <div class="prescriptions-subtitle text-cyan-8">{{ prescriptions.length }} prescriptions</div>
-              </div>
-            </div>
-          </div>
-
-          <div v-if="prescriptions.length === 0" class="empty-state-pro">
-            <div class="empty-icon-wrapper">
-              <q-icon name="medication" size="5rem" color="grey-8" />
-            </div>
-            <div class="empty-title font-orbitron text-grey-7">NO PRESCRIPTIONS YET</div>
-            <div class="empty-subtitle text-grey-8">Prescriptions issued by your doctors will appear here</div>
-          </div>
-
-          <div v-else class="prescriptions-list-pro">
-            <q-expansion-item
-              v-for="rx in prescriptions" :key="rx.prescriptionId"
-              class="prescription-item-pro"
-              header-class="prescription-header-pro"
-              expand-icon-class="text-cyan-4"
-              dark
-            >
-              <template #header>
-                <q-item-section avatar>
-                  <div class="prescription-avatar-pro">
-                    <q-icon name="medical_services" color="cyan-4" size="1.5rem" />
-                  </div>
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label class="prescription-diagnosis font-orbitron text-white">{{ rx.diagnosis || 'Prescription' }}</q-item-label>
-                  <q-item-label caption class="prescription-doctor text-cyan-8">
-                    Dr. {{ rx.doctorName }} · {{ formatDate(rx.issuedAt) }}
-                  </q-item-label>
-                </q-item-section>
-                <q-item-section side>
-                  <q-chip dense dark color="cyan-10" class="font-orbitron med-count-chip">
-                    {{ rx.medications?.length || 0 }} MEDS
-                  </q-chip>
-                </q-item-section>
-              </template>
-
-              <div class="prescription-body-pro">
-                <div class="medications-section">
-                  <div class="medications-title font-orbitron text-cyan-8">PRESCRIBED MEDICATIONS</div>
-                  <div v-for="(med, i) in rx.medications" :key="i" class="medication-item-pro">
-                    <div class="medication-icon">
-                      <q-icon name="medication" color="cyan-6" size="1.2rem" />
+            <div v-else class="q-gutter-md">
+              <div v-for="r in reports" :key="r.reportId" class="report-item-modern">
+                <div class="row items-center q-gutter-md">
+                  <div class="col-auto">
+                    <div class="report-icon-box">
+                      <q-icon :name="r.fileType === 'pdf' ? 'picture_as_pdf' : 'image'" :color="r.fileType === 'pdf' ? 'red-4' : 'blue-4'" size="2rem" />
                     </div>
-                    <div class="medication-info">
-                      <div class="medication-name font-orbitron text-white">{{ med.name }}</div>
-                      <div class="medication-details">
-                        <q-chip dense dark color="grey-9" class="font-orbitron med-detail-chip">{{ med.dosage }}</q-chip>
-                        <q-chip dense dark color="grey-9" class="font-orbitron med-detail-chip">{{ med.frequency }}</q-chip>
-                        <q-chip dense dark color="grey-9" class="font-orbitron med-detail-chip">{{ med.duration }}</q-chip>
+                  </div>
+                  <div class="col">
+                    <div class="text-weight-bold text-white">{{ r.title }}</div>
+                    <div class="text-caption text-grey-6">{{ r.description || 'No description' }}</div>
+                    <div class="q-mt-xs row items-center q-gutter-xs">
+                      <q-chip dense dark :color="r.fileType === 'pdf' ? 'red-10' : 'blue-10'" class="text-caption text-weight-bold">
+                        {{ r.fileType?.toUpperCase() || 'FILE' }}
+                      </q-chip>
+                      <span class="text-caption text-grey-7">{{ formatDate(r.uploadedAt) }}</span>
+                    </div>
+                  </div>
+                  <div class="col-auto row q-gutter-xs">
+                    <q-btn flat round dense icon="visibility" color="blue-5" size="sm" @click="window.open(r.fileUrl, '_blank')">
+                      <q-tooltip class="text-caption">View</q-tooltip>
+                    </q-btn>
+                    <q-btn flat round dense icon="delete_outline" color="red-5" size="sm" @click="doDeleteReport(r.reportId)">
+                      <q-tooltip class="text-caption">Delete</q-tooltip>
+                    </q-btn>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </q-tab-panel>
+
+        <!-- PRESCRIPTIONS TAB ══════════════════════════════════════════ -->
+        <q-tab-panel name="prescriptions" class="q-pa-none">
+          <div class="glass-card q-pa-xl shadow-glow">
+            <div class="text-h6 text-weight-bold text-white q-mb-lg">Prescriptions</div>
+
+            <div v-if="prescriptions.length === 0" class="text-center q-py-xl">
+              <q-icon name="medication" size="3rem" color="grey-8" class="q-mb-md" />
+              <div class="text-h6 text-grey-7">No prescriptions yet</div>
+              <div class="text-caption text-grey-6">Prescriptions issued by your doctors will appear here</div>
+            </div>
+
+            <div v-else class="q-gutter-md">
+              <q-expansion-item
+                v-for="rx in prescriptions" :key="rx.prescriptionId"
+                :label="rx.diagnosis || 'Prescription'"
+                class="prescription-expansion"
+                expand-icon-class="text-blue-4"
+                dark
+                header-class="prescription-header-modern"
+              >
+                <template #header>
+                  <q-item-section avatar>
+                    <div class="header-icon-box">
+                      <q-icon name="medical_services" color="blue-4" />
+                    </div>
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label class="text-weight-bold text-white">{{ rx.diagnosis || 'Prescription' }}</q-item-label>
+                    <q-item-label caption class="text-grey-6">Dr. {{ rx.doctorName }} • {{ formatDate(rx.issuedAt) }}</q-item-label>
+                  </q-item-section>
+                  <q-item-section side>
+                    <q-chip dense dark color="blue-10" class="text-weight-bold text-caption">
+                      {{ rx.medications?.length || 0 }} MEDS
+                    </q-chip>
+                  </q-item-section>
+                </template>
+
+                <div class="q-pa-lg">
+                  <div class="q-mb-lg">
+                    <div class="text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-md">Medications</div>
+                    <div class="q-gutter-md">
+                      <div v-for="(med, i) in rx.medications" :key="i" class="medication-item-modern">
+                        <div class="row items-start q-gutter-md">
+                          <div class="col-auto">
+                            <q-icon name="medication" color="blue-5" size="1.5rem" />
+                          </div>
+                          <div class="col">
+                            <div class="text-weight-bold text-white q-mb-xs">{{ med.name }}</div>
+                            <div class="row items-center q-gutter-xs q-mb-xs">
+                              <q-chip dense dark color="grey-9" class="text-caption">{{ med.dosage }}</q-chip>
+                              <q-chip dense dark color="grey-9" class="text-caption">{{ med.frequency }}</q-chip>
+                              <q-chip dense dark color="grey-9" class="text-caption">{{ med.duration }}</q-chip>
+                            </div>
+                            <div v-if="med.notes" class="text-caption text-grey-6">{{ med.notes }}</div>
+                          </div>
+                        </div>
                       </div>
-                      <div v-if="med.notes" class="medication-notes text-grey-6">{{ med.notes }}</div>
+                    </div>
+                  </div>
+
+                  <q-separator dark style="opacity: 0.3;" class="q-my-md" v-if="rx.notes" />
+
+                  <div v-if="rx.notes">
+                    <div class="text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-md">Doctor's Notes</div>
+                    <div class="system-bubble">
+                      <div class="text-body2 text-white">{{ rx.notes }}</div>
                     </div>
                   </div>
                 </div>
-
-                <div v-if="rx.notes" class="doctor-notes-section">
-                  <div class="notes-title font-orbitron text-cyan-8">DOCTOR'S NOTES</div>
-                  <div class="notes-content-pro">
-                    <div class="notes-text text-grey-5">{{ rx.notes }}</div>
-                  </div>
-                </div>
-              </div>
-            </q-expansion-item>
+              </q-expansion-item>
+            </div>
           </div>
-        </div>
-      </q-tab-panel>
-    </q-tab-panels>
+        </q-tab-panel>
+        </q-tab-panels>
+      </div>
+    </div>
 
     <!-- Upload Dialog -->
     <q-dialog v-model="uploadDialog" persistent>
-      <q-card class="upload-dialog-pro">
-        <div class="dialog-header-pro">
-          <q-icon name="upload_file" color="cyan-4" size="1.5rem" />
-          <span class="font-orbitron text-white">UPLOAD MEDICAL REPORT</span>
-        </div>
+      <q-card class="glass-card">
+        <q-card-section class="row items-center q-pb-none">
+          <div class="text-h6 text-weight-bold text-white">Upload Medical Report</div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup />
+        </q-card-section>
 
-        <q-form @submit="doUploadReport" class="upload-form-pro">
-          <div class="form-field-pro">
-            <div class="field-label-pro">REPORT TITLE *</div>
-            <q-input v-model="rForm.title" placeholder="e.g. Blood Test Results" dark outlined color="cyan-4" class="nexus-field-pro" />
+        <q-form @submit="doUploadReport" class="q-pa-lg">
+          <div class="q-mb-md">
+            <div class="text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-sm">Report Title *</div>
+            <q-input v-model="rForm.title" placeholder="e.g., Blood Test Results" dark outlined color="blue-4" class="modern-input" />
           </div>
 
-          <div class="form-field-pro">
-            <div class="field-label-pro">DESCRIPTION</div>
-            <q-input v-model="rForm.description" placeholder="Optional details..." dark outlined color="cyan-4" class="nexus-field-pro" type="textarea" rows="3" />
+          <div class="q-mb-md">
+            <div class="text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-sm">Description</div>
+            <q-input v-model="rForm.description" type="textarea" rows="3" placeholder="Optional details..." dark outlined color="blue-4" class="modern-input" />
           </div>
 
-          <div class="form-field-pro">
-            <div class="field-label-pro">FILE (PDF or Image) *</div>
-            <q-file v-model="rForm.file" dark outlined color="cyan-4" class="nexus-field-pro" accept=".pdf,.jpg,.jpeg,.png">
-              <template #prepend><q-icon name="attach_file" color="cyan-8" /></template>
+          <div class="q-mb-lg">
+            <div class="text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-sm">File (PDF or Image) *</div>
+            <q-file v-model="rForm.file" dark outlined color="blue-4" class="modern-input" accept=".pdf,.jpg,.jpeg,.png" max-file-size="10485760">
+              <template #prepend>
+                <q-icon name="attach_file" color="blue-5" />
+              </template>
             </q-file>
           </div>
 
-          <div class="dialog-actions-pro">
-            <q-btn flat label="CANCEL" color="grey-6" class="font-orbitron" v-close-popup @click="resetRForm" />
-            <q-btn type="submit" label="UPLOAD" class="upload-submit-btn-pro font-orbitron" :loading="uploadingReport" />
+          <div class="row q-gutter-md justify-end">
+            <q-btn flat label="Cancel" color="grey-5" v-close-popup @click="resetRForm" />
+            <q-btn type="submit" unelevated label="Upload" color="blue-6" class="btn-primary-glow" :loading="uploadingReport" />
           </div>
         </q-form>
       </q-card>
@@ -430,7 +355,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import axios from 'axios'
@@ -467,9 +392,9 @@ const goToSymptoms = () => {
 }
 
 const goToVideoConsultation = () => {
-  const pId = profileData.value.patientId || profileData.value.id;
-  const pName = profileData.value.name;
-  window.location.href = `http://localhost:9000/patientVideo?patientId=${pId}&patientName=${pName}`;
+  const pId = profileData.value.patientId || profileData.value.id
+  const pName = profileData.value.name
+  window.location.href = `http://localhost:9000/patientVideo?patientId=${pId}&patientName=${pName}`
 }
 
 // API client
@@ -478,25 +403,7 @@ const api = axios.create({
   headers: { Authorization: `Bearer ${token}` }
 })
 
-// Computed stat cards
-const statCards = computed(() => [
-  { label: 'REPORTS', value: reports.value.length, icon: 'description', color: 'cyan-4', fill: `${Math.min(reports.value.length * 10, 100)}%` },
-  { label: 'PRESCRIPTIONS', value: prescriptions.value.length, icon: 'medication', color: 'green-4', fill: `${Math.min(prescriptions.value.length * 15, 100)}%` },
-  { label: 'BLOOD GROUP', value: profileData.value.bloodGroup || '—', icon: 'bloodtype', color: 'red-4', fill: '70%' },
-  { label: 'ALLERGIES', value: profileData.value.allergies?.length || 0, icon: 'warning_amber', color: 'orange-4', fill: `${Math.min((profileData.value.allergies?.length || 0) * 20, 100)}%` }
-])
-
 // Helper functions
-const getGradientColor = (color) => {
-  const colors = {
-    'cyan-4': '#00e5ff',
-    'green-4': '#69f0ae',
-    'red-4': '#ff5252',
-    'orange-4': '#ff9100'
-  }
-  return colors[color] || '#00e5ff'
-}
-
 const calculateAge = (dob) => {
   if (!dob) return null
   const birthDate = new Date(dob)
@@ -536,8 +443,6 @@ const loadProfile = async () => {
     editForm.bloodGroup = d.bloodGroup || ''
     editForm.allergies = d.allergies || []
     editForm.chronicConditions = d.chronicConditions || []
-    editForm.address = { city: '', district: '', postalCode: '', street: '', ...(d.address || {}) }
-    editForm.emergencyContact = { name: '', phone: '', relationship: '', ...(d.emergencyContact || {}) }
   } catch (e) {
     if (e.response?.status === 401) router.push('/login')
   }
@@ -566,7 +471,7 @@ const doSaveProfile = async () => {
   try {
     await api.put('/api/patient/profile', editForm)
     await loadProfile()
-    $q.notify({ icon: 'check_circle', color: 'cyan-9', message: 'Profile updated successfully', position: 'top-right', timeout: 2000 })
+    $q.notify({ icon: 'check_circle', color: 'blue-6', message: 'Profile updated successfully', position: 'top-right', timeout: 2000 })
   } catch (e) {
     $q.notify({ type: 'negative', message: e.response?.data?.message || 'Update failed', position: 'top-right' })
   } finally {
@@ -582,7 +487,7 @@ const doUploadImage = async (e) => {
   try {
     await api.post('/api/patient/profile/image', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
     await loadProfile()
-    $q.notify({ icon: 'check_circle', color: 'cyan-9', message: 'Photo updated', position: 'top-right' })
+    $q.notify({ icon: 'check_circle', color: 'blue-6', message: 'Photo updated', position: 'top-right' })
   } catch {
     $q.notify({ type: 'negative', message: 'Image upload failed', position: 'top-right' })
   }
@@ -603,7 +508,7 @@ const doUploadReport = async () => {
     uploadDialog.value = false
     resetRForm()
     await loadReports()
-    $q.notify({ icon: 'check_circle', color: 'cyan-9', message: 'Report uploaded', position: 'top-right' })
+    $q.notify({ icon: 'check_circle', color: 'blue-6', message: 'Report uploaded', position: 'top-right' })
   } catch {
     $q.notify({ type: 'negative', message: 'Upload failed', position: 'top-right' })
   } finally {
@@ -643,127 +548,296 @@ onMounted(() => {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&display=swap');
-.font-orbitron { font-family: 'Orbitron', sans-serif; }
-.capitalize { text-transform: capitalize; }
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+/* GLOBAL */
+.font-jakarta { font-family: 'Plus Jakarta Sans', sans-serif; }
+.max-width-1200 { max-width: 1200px; }
+.page-shell { padding-top: 80px; padding-bottom: 80px; }
+.mt-120 { margin-top: 30px; }
+.mx-auto { margin-left: auto; margin-right: auto; }
+.z-top { position: relative; z-index: 1; }
 .hidden { display: none; }
-
-/* Background */
-.patient-dashboard-bg {
-  background: linear-gradient(135deg, #0a1416 0%, #060e10 50%, #04080a 100%);
-  min-height: 100vh;
-  position: relative;
-}
-
-.patient-dashboard-bg::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background:
-    radial-gradient(circle at 20% 80%, rgba(0,229,255,0.05) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(0,188,212,0.03) 0%, transparent 50%),
-    radial-gradient(circle at 40% 40%, rgba(0,150,136,0.02) 0%, transparent 50%);
-  pointer-events: none;
-}
-
-/* Top Bar */
-.top-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 40px;
-  background: rgba(6,14,16,0.8);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(0,229,255,0.1);
-  position: relative;
-  z-index: 10;
-}
-
-.top-left {
-  display: flex;
-  align-items: center;
-  gap: 30px;
-}
-
-.logo-wrapper {
-  position: relative;
-}
-
-.logo-inner {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.logo-text {
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: 3px;
-}
-
-.logo-glow {
-  position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  width: 100px; height: 100px;
-  background: radial-gradient(circle, rgba(0,229,255,0.2), transparent);
-  filter: blur(20px);
-  z-index: -1;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.user-avatar {
-  width: 45px; height: 45px;
-  border-radius: 50%;
-  background: rgba(0,229,255,0.1);
-  border: 2px solid rgba(0,229,255,0.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.user-avatar img {
-  width: 100%; height: 100%;
-  object-fit: cover;
-}
-
-.user-name {
-  font-size: 1rem;
-  font-weight: 600;
-  letter-spacing: 1px;
-}
-
-.user-role {
-  font-size: 0.7rem;
-  letter-spacing: 2px;
-  margin-top: 2px;
-}
-
-.top-right {
-  display: flex;
-  align-items: center;
-}
-
-.top-btn {
-  width: 40px; height: 40px;
-  background: rgba(0,229,255,0.05);
-  border: 1px solid rgba(0,229,255,0.1);
-  transition: all 0.3s;
-}
-
-.top-btn:hover {
-  background: rgba(0,229,255,0.1);
-  border-color: rgba(0,229,255,0.3);
+.capitalize { text-transform: capitalize; }
+.letter-spacing-1 { letter-spacing: 1px; }
+.tracking-wider { letter-spacing: 1.5px; }
+.hover-glow { transition: all 0.3s ease; }
+.hover-glow:hover {
+  text-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
   transform: scale(1.1);
 }
 
-/* Quick Actions Bar */
+/* ATMOSPHERIC GRADIENTS */
+.page-bg-gradient {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 30%, rgba(37, 99, 235, 0.08), transparent 60%),
+    radial-gradient(circle at 10% 80%, rgba(56, 189, 248, 0.04), transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.05), transparent 50%);
+  z-index: 0;
+}
+
+/* TYPOGRAPHY */
+.page-title {
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  letter-spacing: -1px;
+  line-height: 1.1;
+  text-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+.text-gradient-primary {
+  background: linear-gradient(to right, #38bdf8, #818cf8, #e879f9);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* BADGES & ICONS */
+.trusted-badge {
+  border: 1px solid rgba(125, 211, 252, 0.3);
+  background: rgba(14, 165, 233, 0.1);
+  backdrop-filter: blur(12px);
+  border-radius: 50px;
+  box-shadow: 0 0 20px rgba(14, 165, 233, 0.15);
+}
+
+.header-icon-box {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.15), rgba(56, 189, 248, 0.1));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  flex-shrink: 0;
+}
+
+.action-icon-box {
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* CARDS & CONTAINERS */
+.glass-card {
+  background: rgba(10, 15, 30, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  position: relative;
+}
+
+.system-bubble {
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.15);
+  padding: 16px;
+  border-radius: 16px;
+}
+
+.shadow-glow {
+  box-shadow: 0 20px 60px rgba(59, 130, 246, 0.15);
+}
+
+/* QUICK ACTIONS */
+.quick-action-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  border-radius: 16px;
+  padding: 24px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+}
+.quick-action-card:hover {
+  background: rgba(59, 130, 246, 0.08);
+  border-color: rgba(59, 130, 246, 0.3);
+  transform: translateY(-4px);
+  box-shadow: 0 10px 30px rgba(59, 130, 246, 0.2);
+}
+.action-title {
+  font-size: 0.95rem;
+  margin-top: 12px;
+}
+.action-subtitle {
+  font-size: 0.8rem;
+  margin-top: 4px;
+}
+
+/* TABS */
+.modernized-tabs {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 0 20px;
+  background: transparent;
+}
+.modernized-tabs :deep(.q-tabs__content) {
+  color: rgba(255, 255, 255, 0.6);
+}
+.modernized-tabs :deep(.q-tab__label) {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* TAB PANELS */
+:deep(.q-tab-panels) {
+  background: transparent !important;
+}
+:deep(.q-tab-panel),
+.patient-panel {
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+/* PROFILE MAIN CARD */
+.profile-main-card {
+  background: linear-gradient(145deg, rgba(7, 16, 38, 0.88), rgba(8, 22, 52, 0.78)) !important;
+  border: 1px solid rgba(83, 156, 255, 0.22) !important;
+  box-shadow: 0 24px 70px rgba(0, 18, 51, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(22px) saturate(130%);
+}
+
+/* INPUTS */
+.modern-input :deep(.q-field__control) {
+  background: rgba(0, 0, 0, 0.2) !important;
+  border-radius: 12px;
+  padding: 12px 16px !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  transition: all 0.3s ease;
+}
+.modern-input :deep(.q-field__control:hover) {
+  border-color: rgba(59, 130, 246, 0.3) !important;
+}
+.modern-input :deep(.q-field__control:focus-within) {
+  border-color: rgba(59, 130, 246, 0.6) !important;
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.1) !important;
+}
+
+/* BUTTONS */
+.btn-primary-glow {
+  border-radius: 12px;
+  text-transform: none;
+  background: linear-gradient(135deg, #1d4ed8, #2563eb) !important;
+  box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.5);
+  transition: all 0.3s ease;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.btn-primary-glow:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 35px -5px rgba(37, 99, 235, 0.6);
+}
+
+/* PROFILE SECTION */
+.profile-avatar-modern {
+  border: 3px solid rgba(59, 130, 246, 0.3);
+  box-shadow: 0 0 30px rgba(59, 130, 246, 0.2);
+}
+.avatar-cam-btn-pro {
+  position: absolute !important;
+  bottom: -8px !important;
+  right: -8px !important;
+  background: rgba(10, 15, 30, 0.8) !important;
+  border: 2px solid rgba(59, 130, 246, 0.3) !important;
+  backdrop-filter: blur(10px) !important;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3) !important;
+}
+.avatar-cam-btn-pro:hover {
+  background: rgba(59, 130, 246, 0.2) !important;
+  border-color: rgba(59, 130, 246, 0.6) !important;
+}
+
+.info-block {
+  background: rgba(255, 255, 255, 0.02);
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.tag-section {
+  background: rgba(255, 255, 255, 0.02);
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* REPORT ITEMS */
+.report-item-modern {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 20px;
+  transition: all 0.3s ease;
+}
+.report-item-modern:hover {
+  background: rgba(59, 130, 246, 0.08);
+  border-color: rgba(59, 130, 246, 0.2);
+  transform: translateX(4px);
+}
+
+.report-icon-box {
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* PRESCRIPTION EXPANSION */
+.prescription-expansion :deep(.q-expansion-item__content) {
+  background: rgba(255, 255, 255, 0.02);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+.prescription-header-modern {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border-radius: 16px !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  transition: all 0.3s ease !important;
+}
+.prescription-header-modern:hover {
+  background: rgba(59, 130, 246, 0.08) !important;
+  border-color: rgba(59, 130, 246, 0.2) !important;
+}
+
+/* MEDICATION ITEMS */
+.medication-item-modern {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 16px;
+  transition: all 0.3s ease;
+}
+.medication-item-modern:hover {
+  background: rgba(59, 130, 246, 0.08);
+  border-color: rgba(59, 130, 246, 0.2);
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .page-shell { padding-top: 60px; padding-bottom: 60px; }
+  .page-title { font-size: 2rem; }
+  .glass-card { padding: 20px !important; }
+  .header-actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .header-buttons {
+    width: 100%;
+    justify-content: flex-end;
+    margin-top: 12px;
+  }
+}
+
 .quick-actions-bar {
   padding: 20px 40px;
   background: rgba(6,14,16,0.6);

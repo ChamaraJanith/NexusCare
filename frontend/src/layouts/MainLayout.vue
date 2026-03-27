@@ -60,7 +60,16 @@
           <template v-else>
             <q-btn flat round dense icon="notifications" class="q-mr-sm text-grey-4 hover-white" />
             <div class="avatar-ring cursor-pointer" @click="goProfile">
-              <img :src="profileImageUrl" alt="profile" class="avatar-img" />
+              <img
+                v-if="profileImageUrl && !avatarImageError"
+                :src="profileImageUrl"
+                alt="Profile image"
+                class="avatar-img"
+                @error="avatarImageError = true"
+              />
+              <div v-else class="avatar-fallback">
+                <q-icon name="person" size="20px" color="blue-2" />
+              </div>
               <q-menu anchor="bottom right" self="top right" class="bg-dark text-white border-dark">
                 <q-list style="min-width: 180px">
                   <q-item clickable v-close-popup @click="goProfile" class="hover-bg-light">
@@ -143,6 +152,7 @@ const leftDrawerOpen = ref(false)
 const isLoggedIn = ref(false)
 const currentUser = ref({})
 const isScrolled = ref(false)
+const avatarImageError = ref(false)
 
 const handleScroll = () => {
   isScrolled.value = window.scrollY > 20
@@ -162,12 +172,24 @@ const syncAuthState = () => {
   }
 }
 
+const toImageUrl = (imgValue) => {
+  if (!imgValue) return ''
+  if (typeof imgValue === 'string') return imgValue
+  if (typeof imgValue === 'object') {
+    return imgValue.url || imgValue.secure_url || imgValue.path || ''
+  }
+  return ''
+}
+
 const profileImageUrl = computed(() => {
-  return currentUser.value.profileImage
-    || currentUser.value.avatar
-    || currentUser.value.avatarUrl
-    || currentUser.value.photoUrl
-    || 'https://cdn.quasar.dev/img/avatar.png'
+  const user = currentUser.value || {}
+  return (
+    toImageUrl(user.profileImage)
+    || toImageUrl(user.avatar)
+    || toImageUrl(user.avatarUrl)
+    || toImageUrl(user.photoUrl)
+    || ''
+  )
 })
 
 const logout = () => {
@@ -221,6 +243,10 @@ onBeforeUnmount(() => {
 
 watch(() => route.fullPath, () => {
   syncAuthState()
+})
+
+watch(profileImageUrl, () => {
+  avatarImageError.value = false
 })
 </script>
 
@@ -347,6 +373,17 @@ watch(() => route.fullPath, () => {
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid #040710;
+}
+
+.avatar-fallback {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px solid #040710;
+  background: radial-gradient(circle at 30% 30%, #1e3a8a, #0f172a 70%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .mobile-drawer {
