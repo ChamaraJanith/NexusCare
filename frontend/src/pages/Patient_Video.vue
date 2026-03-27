@@ -1,61 +1,93 @@
 <template>
-  <q-page class="bg-black overflow-hidden">
-    <div v-if="!isInCall" class="q-pa-lg">
-      <div class="flex flex-center q-mb-xl">
-        <q-card class="nexus-card glass q-pa-xl" style="width: 500px; border: 1px solid rgba(0, 229, 255, 0.3); border-radius: 20px;">
-          <div class="text-center q-mb-xl">
-            <div class="text-h5 font-orbitron text-cyan-4 q-mb-xs tracking-widest">NEURAL ACCESS NODE</div>
-            <div class="text-caption text-cyan-9 font-orbitron uppercase">Secure Biometric Link</div>
-          </div>
+  <q-page class="text-white font-jakarta page-shell overflow-hidden relative-position">
+    <div class="page-bg-gradient"></div>
 
-          <div class="identity-box q-mb-lg q-pa-lg">
-            <div class="row items-center q-gutter-md">
-              <q-avatar size="60px" color="cyan-10" text-color="cyan-4" icon="person" class="avatar-glow" />
+    <div v-if="!isInCall" class="max-width-1200 q-mx-auto q-px-md z-top relative-position">
+      
+      <div class="row items-center justify-between q-mb-xl mt-120">
+        <div>
+          <div class="trusted-badge q-py-xs q-px-sm row items-center inline no-wrap q-mb-sm">
+            <q-icon name="network_check" color="blue-4" size="14px" class="q-mr-sm" />
+            <span class="text-caption text-weight-bolder tracking-wider text-blue-2 uppercase">PATIENT TERMINAL</span>
+          </div>
+          <h1 class="page-title q-ma-none text-weight-bolder">
+            Neural <span class="text-gradient-primary">Access</span> Node.
+          </h1>
+        </div>
+      </div>
+
+      <div class="row q-col-gutter-xl">
+        <div class="col-12 col-md-5">
+          <div class="glass-card q-pa-xl shadow-glow">
+            <div class="text-caption text-blue-3 q-mb-md uppercase letter-spacing-1 text-weight-bold">
+              Secure Biometric Link
+            </div>
+
+            <div class="identity-box q-mb-xl q-pa-md flex items-center shadow-glow-badge">
+              <q-avatar size="50px" color="blue-9" text-color="blue-2" icon="person" class="q-mr-md" />
               <div>
-                <div class="text-h6 text-white font-orbitron">{{ patientName }}</div>
-                <div class="text-caption text-grey-5 uppercase">UID: {{ patientId }}</div>
+                <div class="text-h6 text-white text-weight-bold">{{ patientName }}</div>
+                <div class="text-caption text-grey-4 uppercase tracking-wider">UID: {{ patientId }}</div>
               </div>
             </div>
-          </div>
 
-          <div class="column q-gutter-y-lg">
-            <q-input v-model="booking.doctorId" label="TARGET DOCTOR ID" dark filled color="cyan-4" class="font-orbitron" />
-            <q-btn
-              :label="isBooking ? 'SYNCHRONIZING...' : 'ESTABLISH NEURAL LINK'"
-              color="cyan-10" icon="bolt" @click="processBooking"
-              :loading="isBooking"
-              class="font-orbitron nexus-btn-glow full-width q-py-md"
-            />
+            <div class="column q-gutter-y-md">
+              <div class="text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1">Target Specialist ID</div>
+              <q-input
+                v-model="booking.doctorId"
+                dark
+                outlined
+                color="blue-4"
+                class="cinematic-input"
+                placeholder="Enter Practitioner Node ID"
+              />
+              <q-btn
+                :label="isBooking ? 'SYNCHRONIZING...' : 'Establish Neural Link'"
+                color="blue-6"
+                icon-right="bolt"
+                @click="processBooking"
+                :loading="isBooking"
+                class="btn-primary-glow full-width text-weight-bold q-py-sm q-mt-md"
+                unelevated
+              />
+            </div>
           </div>
-        </q-card>
+        </div>
+
+        <div class="col-12 col-md-7">
+          <div class="glass-card q-pa-xl h-full column">
+            <div class="text-h6 text-white text-weight-bold q-mb-lg">Consultation Archive</div>
+            
+            <div v-if="completedSessions.length > 0" class="scroll-area flex-1">
+              <div class="q-gutter-y-md">
+                <div v-for="session in completedSessions" :key="session._id" class="condition-item row items-center q-pa-md">
+                  <div class="q-mr-md">
+                    <q-icon name="history" color="blue-4" size="md" />
+                  </div>
+                  <div class="col">
+                    <div class="text-white text-weight-bold text-body1 q-mb-xs">Dr. {{ session.doctorId }}</div>
+                    <div class="text-grey-5 text-caption tracking-wider">
+                      {{ new Date(session.updatedAt).toLocaleString() }}
+                    </div>
+                  </div>
+                  <div class="col-auto">
+                    <q-badge outline color="blue-3" label="COMPLETED" class="text-weight-bold q-pa-sm text-caption tracking-wider" />
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div v-else class="text-center text-grey-6 flex flex-center flex-1 column">
+              <q-icon name="cloud_off" size="3rem" class="q-mb-md opacity-50" />
+              <div class="letter-spacing-1 text-weight-bold uppercase">No recent sessions found</div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div class="max-width-container q-mx-auto" style="max-width: 800px;">
-        <div class="text-subtitle1 text-cyan-4 font-orbitron q-mb-md">CONSULTATION LOGS (HISTORY)</div>
-        <div v-if="completedSessions.length > 0" class="glass rounded-borders overflow-hidden shadow-24">
-          <q-list separator>
-            <q-item v-for="session in completedSessions" :key="session._id" class="q-py-md nexus-item">
-              <q-item-section avatar>
-                <q-icon name="history" color="cyan-4" size="md" />
-              </q-item-section>
-              <q-item-section>
-                <q-item-label class="text-white font-orbitron uppercase">DOCTOR: {{ session.doctorId }}</q-item-label>
-                <q-item-label caption class="text-grey-5">
-                  DATE: {{ new Date(session.updatedAt).toLocaleString() }}
-                </q-item-label>
-              </q-item-section>
-              <q-item-section side>
-                <q-chip dense color="cyan-10" text-color="white" label="COMPLETED" size="sm" />
-              </q-item-section>
-            </q-item>
-          </q-list>
-        </div>
-        <div v-else class="text-center q-pa-xl glass rounded-borders text-grey-7 font-orbitron">
-          NO RECENT CONSULTATIONS FOUND
-        </div>
-      </div>
     </div>
 
+    <!-- Teleported Jitsi container handled in CSS -->
     <div v-show="isInCall" id="jitsi-container"></div>
   </q-page>
 </template>
@@ -194,20 +226,115 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.font-orbitron { font-family: 'Orbitron', sans-serif; }
-.glass { background: rgba(10, 10, 15, 0.9); backdrop-filter: blur(15px); }
-.identity-box { background: rgba(0, 229, 255, 0.05); border: 1px solid rgba(0, 229, 255, 0.2); border-radius: 12px; }
-.nexus-item { border-left: 3px solid #00e5ff; background: rgba(255, 255, 255, 0.02); transition: 0.3s; }
-.nexus-item:hover { background: rgba(0, 229, 255, 0.05); }
-.avatar-glow { box-shadow: 0 0 15px rgba(0, 229, 255, 0.3); }
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+/* GLOBAL */
+.font-jakarta { font-family: 'Plus Jakarta Sans', sans-serif; }
+.max-width-1200 { max-width: 1200px; }
+.page-shell { padding-top: 100px; padding-bottom: 100px; }
+.mt-120 { margin-top: 40px; }
+.h-full { height: 100%; min-height: 400px; }
+.flex-1 { flex: 1; }
+.scroll-area { max-height: 400px; overflow-y: auto; }
+.opacity-50 { opacity: 0.5; }
+
+/* ATMOSPHERIC GRADIENTS */
+.page-bg-gradient {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none;
+  background: 
+    radial-gradient(circle at 10% 20%, rgba(37, 99, 235, 0.08), transparent 60%),
+    radial-gradient(circle at 90% 80%, rgba(56, 189, 248, 0.04), transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.05), transparent 50%);
+  z-index: 0;
+}
+
+/* TYPOGRAPHY */
+.page-title {
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  letter-spacing: -2px;
+  line-height: 1.1;
+  text-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+.text-gradient-primary {
+  background: linear-gradient(to right, #38bdf8, #818cf8, #e879f9);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.tracking-wider { letter-spacing: 1.5px; }
+.letter-spacing-1 { letter-spacing: 1px; }
+
+/* BADGES & ICONS */
+.trusted-badge {
+  border: 1px solid rgba(125, 211, 252, 0.3);
+  background: rgba(14, 165, 233, 0.1);
+  backdrop-filter: blur(12px);
+  border-radius: 50px;
+  box-shadow: 0 0 20px rgba(14, 165, 233, 0.15);
+}
+.shadow-glow-badge { box-shadow: 0 0 15px rgba(59, 130, 246, 0.3); }
+
+/* CARDS & CONTAINERS */
+.glass-card {
+  background: rgba(10, 15, 30, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+}
+.identity-box {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+}
+
+.condition-item {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  transition: all 0.3s ease;
+}
+.condition-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  transform: translateX(4px);
+}
+
+/* INPUTS */
+.cinematic-input :deep(.q-field__control) {
+  background: rgba(0, 0, 0, 0.2) !important;
+  border-radius: 12px;
+}
+.cinematic-input :deep(.q-field__control:before) { border-color: rgba(255, 255, 255, 0.1); }
+.cinematic-input :deep(.q-field__control:hover:before) { border-color: rgba(255, 255, 255, 0.2); }
+.cinematic-input :deep(.q-field__control:focus-within) { box-shadow: 0 0 20px rgba(59, 130, 246, 0.1); }
+
+/* BUTTONS */
+.btn-primary-glow {
+  border-radius: 50px;
+  text-transform: none;
+  background: linear-gradient(135deg, #1d4ed8, #2563eb) !important;
+  box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.5);
+  transition: all 0.3s ease;
+}
+.btn-primary-glow:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 35px -5px rgba(37, 99, 235, 0.6);
+}
 
 #jitsi-container {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
   z-index: 9999;
   background: black;
+}
+
+@media (max-width: 768px) {
+  .page-shell { padding-top: 60px; padding-bottom: 60px; }
+  .page-title { font-size: 2.8rem; }
+  .glass-card { padding: 24px !important; }
 }
 </style>
