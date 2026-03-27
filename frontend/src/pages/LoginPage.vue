@@ -214,6 +214,21 @@ const initCanvas = () => {
   draw()
 }
 
+// ─── JWT Decoder Native Utility ───────────────────────────────────────────────
+const parseJwt = (token) => {
+  try {
+    const base64Url = token.split('.')[1]
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+    }).join(''))
+    return JSON.parse(jsonPayload)
+  } catch (err) {
+    console.error('JWT Parse Error:', err)
+    return null
+  }
+}
+
 // ─── Login handler ────────────────────────────────────────────────────────────
 const handleLogin = async () => {
   errorMsg.value = ''
@@ -226,32 +241,55 @@ const handleLogin = async () => {
     })
 
     if (data.token) {
-      // Verify role matches selected tab
-      if (data.user.role !== selectedRole.value) {
-        errorMsg.value = `Account is registered as "${data.user.role}", not "${selectedRole.value}".`
+      const token = data.token
+
+      // 1. Safe Native Decrypt
+      const decoded = parseJwt(token)
+      if (!decoded || !decoded.role) {
+        errorMsg.value = 'Security token invalid or corrupted.'
         return
       }
 
-      // Save session
-      localStorage.setItem('nexus_token', data.token)
-      localStorage.setItem('nexus_user', JSON.stringify(data.user))
+      // 2. Format Normalization (fix "Doctor" vs "doctor" bug)
+      const userRole = String(decoded.role).toLowerCase()
+      const roleId = decoded.roleId
+
+      // Debugging Checkpoint
+      console.log('--- LOGIN SUCCESS (JWT PARSED) ---')
+      console.log('Decoded Token:', decoded)
+      console.log('Active Role:', userRole, '| Identity Code:', roleId)
+
+      // 3. Verify Frontend Tabs mapping against REAL Backend configuration
+      if (userRole !== selectedRole.value.toLowerCase()) {
+        errorMsg.value = `Access denied: Identity configured as "${userRole.toUpperCase()}", not "${selectedRole.value.toUpperCase()}".`
+        return
+      }
+
+      // 4. Local Storage Standarization ('token' required by the dashboard module)
+      localStorage.setItem('token', token)
+      localStorage.setItem('nexus_token', token) // Backward compat
+      localStorage.setItem('nexus_user', JSON.stringify({ ...data.user, ...decoded }))
 
       $q.notify({
         icon: 'check_circle',
         color: 'cyan-9',
-        message: `Access granted — ${data.user.name}`,
+        message: `Security clearance granted — ${data.user?.name || userRole}`,
         position: 'top-right',
         timeout: 2500
       })
 
-      // Role-based redirect
+      // 5. Explicit Navigation
       const routes = {
         patient: '/patient/dashboard',
         doctor: '/doctor/dashboard',
         admin: '/admin/dashboard'
       }
 
-      router.push(routes[data.user.role] || '/')
+      const targetRoute = routes[userRole] || '/'
+      console.log('Executing Navigation Router Push to:', targetRoute)
+      
+      // Wait for router push to effectively trigger transition
+      await router.push(targetRoute)
     }
 
   } catch (err) {
