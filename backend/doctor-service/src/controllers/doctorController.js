@@ -1,53 +1,21 @@
 import * as doctorService from "../services/doctorService.js";
 
-// CREATE Doctor Profile
-export const createDoctor = async (req, res) => {
-  try {
-    // 🔥 Prevent duplicate profile
-    const existing = await doctorService.getDoctorByUserId(req.user.id);
-
-    if (existing) {
-      return res.status(400).json({
-        success: false,
-        message: "Doctor profile already exists"
-      });
-    }
-
-    const doctor = await doctorService.createDoctorProfile({
-      ...req.body,
-      userId: req.user.id,
-      doctorId: req.user.doctorId // 🔥 from auth token
-    });
-
-    res.status(201).json({
-      success: true,
-      data: doctor,
-      message: "Doctor profile created successfully"
-    });
-
-  } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: err.message
-    });
-  }
-};
-
-// GET Doctor by ID
+// GET Doctor by DoctorId (roleId)
 export const getDoctor = async (req, res) => {
   try {
-    const doctor = await doctorService.getDoctorById(req.params.id);
+    const doctor = await doctorService.getDoctorByDoctorId(req.params.id);
 
     if (!doctor) {
       return res.status(404).json({
         success: false,
-        message: "Doctor not found"
+        message: "Doctor profile not found"
       });
     }
 
     res.json({
       success: true,
-      data: doctor
+      data: doctor,
+      message: "Doctor profile retrieved successfully"
     });
 
   } catch (err) {
@@ -65,7 +33,8 @@ export const searchDoctors = async (req, res) => {
 
     res.json({
       success: true,
-      ...result
+      ...result,
+      message: "Doctors retrieved successfully"
     });
 
   } catch (err) {
@@ -76,65 +45,32 @@ export const searchDoctors = async (req, res) => {
   }
 };
 
-// UPDATE Doctor
+// UPDATE Doctor Profile
 export const updateDoctor = async (req, res) => {
   try {
-    const existingDoctor = await doctorService.getDoctorById(req.params.id);
+    const requestedDoctorId = req.params.id;
 
-    if (!existingDoctor) {
-      return res.status(404).json({
-        success: false,
-        message: "Doctor not found"
-      });
-    }
-
-    if (existingDoctor.userId !== req.user.id) {
+    // Strict Ownership Validation
+    if (requestedDoctorId !== req.user.doctorId) {
       return res.status(403).json({
         success: false,
-        message: "Not authorized"
+        message: "Forbidden: You can only update your own profile"
       });
     }
 
-    const updated = await doctorService.updateDoctor(req.params.id, req.body);
+    const updated = await doctorService.updateDoctorByDoctorId(requestedDoctorId, req.body);
+
+    if (!updated) {
+      return res.status(404).json({
+        success: false,
+        message: "Doctor profile not found"
+      });
+    }
 
     res.json({
       success: true,
       data: updated,
-      message: "Doctor profile updated"
-    });
-
-  } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: err.message
-    });
-  }
-};
-
-// DELETE Doctor
-export const deleteDoctor = async (req, res) => {
-  try {
-    const existingDoctor = await doctorService.getDoctorById(req.params.id);
-
-    if (!existingDoctor) {
-      return res.status(404).json({
-        success: false,
-        message: "Doctor not found"
-      });
-    }
-
-    if (existingDoctor.userId !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        message: "Not authorized"
-      });
-    }
-
-    await doctorService.deleteDoctor(req.params.id);
-
-    res.json({
-      success: true,
-      message: "Doctor profile deleted"
+      message: "Doctor profile updated successfully"
     });
 
   } catch (err) {

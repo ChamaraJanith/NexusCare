@@ -4,38 +4,29 @@ export const verifyToken = (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
 
-    // 1️⃣ Check header exists
-    if (!authHeader) {
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.status(401).json({
         success: false,
-        message: "Authorization header missing"
-      });
-    }
-
-    // 2️⃣ Check Bearer format
-    if (!authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid token format (Bearer required)"
+        message: "Authorization header missing or invalid format"
       });
     }
 
     const token = authHeader.split(" ")[1];
-
-    // 3️⃣ Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // 🔥 Attach full user info
+    // Extract doctorId from roleId ONLY if the user is actually a doctor
+    const doctorId = decoded.role === "doctor" ? decoded.roleId : null;
+
     req.user = {
       id: decoded.userId, 
       role: decoded.role,
-      doctorId: decoded.doctorId || null // 🔥 support doctorId
+      roleId: decoded.roleId,
+      doctorId: doctorId 
     };
 
     next();
 
   } catch (err) {
-    // 🔥 Better error handling
     if (err.name === "TokenExpiredError") {
       return res.status(401).json({
         success: false,
