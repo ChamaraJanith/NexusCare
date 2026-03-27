@@ -1,48 +1,36 @@
 <template>
-  <q-page class="bg-nexus text-white font-jakarta overflow-x-hidden page-shell">
+  <q-page class="text-white font-jakarta overflow-x-hidden page-shell">
 
-    <header class="top-nav-wrap">
-      <div class="top-nav-inner">
-        <div class="top-nav-logo">NEXUS</div>
-        <nav class="top-nav-links">
-          <a
-            v-for="item in sidebarItems"
-            :key="item.href"
-            :href="item.href"
-            class="top-nav-link"
-            :class="{ 'top-nav-link--active': activeSection === item.id }"
-          >
-            {{ item.label }}
-          </a>
-        </nav>
-      </div>
-    </header>
+
 
     <!-- HERO -->
     <section id="hero" class="hero-section flex flex-center relative-position">
-      <div class="hero-bg"></div>
+      <div class="hero-bg">
+        <div class="grid-overlay"></div>
+      </div>
 
       <div class="container hero-content text-center z-max q-px-md">
-        <div class="q-mb-lg">
-          <q-badge outline class="trusted-badge q-pa-sm text-caption text-weight-bold">
-            THE FUTURE OF CARE
-          </q-badge>
+        <div class="q-mb-lg flex justify-center">
+          <div class="trusted-badge q-py-xs q-px-sm row items-center no-wrap">
+            <q-icon name="auto_awesome" color="blue-4" size="14px" class="q-mr-sm" />
+            <span class="text-caption text-weight-bolder tracking-wider text-blue-2">THE FUTURE OF CARE</span>
+          </div>
         </div>
 
         <h1 class="hero-title q-ma-none text-weight-bolder">
-          Cinematic <br>
-          <span class="text-gradient">Intelligence</span> <br>
+          Cinematic<br>
+          <span class="text-gradient-primary">Intelligence</span><br>
           for Wellness.
         </h1>
 
-        <p class="hero-subtitle q-mx-auto q-mt-lg">
-          Step into a clinical sanctuary where cutting-edge AI meets human empathy.
+        <p class="hero-subtitle q-mx-auto q-mt-lg text-body1 text-grey-4">
+          Step into a clinical sanctuary where cutting-edge AI meets human empathy.<br class="gt-xs">
           Seamless consultations and insights, redefined for the elite patient experience.
         </p>
 
         <div class="row justify-center q-gutter-md q-mt-xl">
-          <q-btn unelevated color="blue-6" label="Start Your Journey" class="btn-pill q-px-xl q-py-md text-weight-bold" icon-right="arrow_forward" />
-          <q-btn outline color="white" label="Explore Platform" class="btn-pill q-px-xl q-py-md text-weight-bold" />
+          <q-btn to="/login" unelevated color="blue-6" label="Start Your Journey" class="btn-primary-glow q-px-xl q-py-md text-weight-bold" icon-right="arrow_forward" />
+          <q-btn outline color="white" label="Explore Platform" class="btn-outline-glow q-px-xl q-py-md text-weight-bold" />
         </div>
 
         <div
@@ -72,24 +60,6 @@
           </div>
         </div>
       </div>
-
-      <div class="accuracy-card hide-xs">
-        <div class="row items-center justify-between">
-          <div class="text-h5 text-weight-bolder">99.8%</div>
-          <q-icon name="show_chart" color="blue-4" size="sm" />
-        </div>
-        <div class="text-caption text-grey-5 uppercase letter-spacing-1 q-mt-xs text-weight-bold">AI Diagnostic Accuracy*</div>
-      </div>
-    </section>
-
-    <!-- PARTNERS -->
-    <section id="partners" class="q-py-xl border-y-dark">
-      <div class="max-width-1200 q-mx-auto flex justify-center items-center q-gutter-xl opacity-50">
-        <div class="text-h6 text-weight-bold partner-logo">PayHere</div>
-        <div class="text-h6 text-weight-bold partner-logo">stripe</div>
-        <div class="text-h6 text-weight-bold partner-logo">PayPal</div>
-        <div class="text-h6 text-weight-bold partner-logo">Agora</div>
-      </div>
     </section>
 
     <!-- WORKFLOW -->
@@ -106,45 +76,21 @@
           </div>
         </div>
 
-        <div class="row q-col-gutter-lg">
-          <div class="col-12 col-md-4" v-for="(step, i) in workflowSteps" :key="i">
-            <div class="glass-card full-height column">
-              <div class="card-num">{{ step.num }}</div>
-              <div class="text-h6 text-weight-bold q-mb-sm">{{ step.title }}</div>
-              <p class="text-grey-5 text-body2 line-height-1-6 q-mb-none">{{ step.desc }}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- UNIFIED PLATFORM -->
-    <section id="platform" class="section-padding q-px-md">
-      <div class="max-width-1200 q-mx-auto row q-col-gutter-xl items-center">
-        <div class="col-12 col-md-4">
-          <h2 class="section-title q-ma-none q-mb-md">Unified<br>Platform.</h2>
-          <p class="text-grey-5 text-body1 line-height-1-6">
-            One ecosystem designed for the complete healthcare lifecycle. We don't just build a portal; we build a sanctuary.
-          </p>
-        </div>
-
-        <div class="col-12 col-md-8">
-          <div class="row q-col-gutter-md">
-            <div class="col-12 col-sm-6">
-              <div class="platform-card platform-card--tall flex column justify-end">
-                <q-icon name="dashboard" color="blue-4" size="md" class="q-mb-md" />
-                <div class="text-h6 text-weight-bold q-mb-sm">Patient Elite</div>
-                <p class="text-grey-5 text-caption q-mb-md">Access all your records, vitals, and genetic data inside the most intuitive interface.</p>
-                <div class="text-blue-4 text-caption text-weight-bold cursor-pointer">Enter Portal <q-icon name="arrow_forward" /></div>
-              </div>
-            </div>
-            <div class="col-12 col-sm-6 platform-shift">
-              <div class="platform-card platform-card--tall flex column justify-end">
-                <div class="practitioner-img q-mb-auto"></div>
-                <q-icon name="medical_services" color="teal-4" size="md" class="q-mb-md" />
-                <div class="text-h6 text-weight-bold q-mb-sm">Practitioner Suite</div>
-                <p class="text-grey-5 text-caption q-mb-md">AI-optimized scheduling and real-time patient analytics to maximize clinical outcomes.</p>
-                <div class="text-white text-caption text-weight-bold cursor-pointer">Enter Suite <q-icon name="arrow_forward" /></div>
+        <div class="row q-col-gutter-lg q-pt-xl">
+          <div
+            class="col-12 col-md-4"
+            v-for="(step, i) in workflowSteps"
+            :key="i"
+          >
+            <div class="glass-card workflow-card full-height column justify-center" :class="{ 'card-active': i === 0, 'card-inactive-1': i === 1, 'card-inactive-2': i === 2 }">
+              <div class="card-bg-layer" :style="{ backgroundImage: `url(${step.img})` }"></div>
+              <div class="card-gradient-overlay"></div>
+              <div class="z-top relative-position">
+                <div class="card-num font-jakarta">{{ step.num }}</div>
+                <div class="q-mt-md">
+                  <div class="text-h6 text-weight-bolder q-mb-sm tracking-wider">{{ step.title }}</div>
+                  <p class="text-body2 line-height-1-6 q-mb-none font-weight-medium desc-text">{{ step.desc }}</p>
+                </div>
               </div>
             </div>
           </div>
@@ -372,20 +318,10 @@ const resetHeroMove = () => {
   spotlightY.value = 50
 }
 
-const sidebarItems = [
-  { id: 'hero', label: 'Hero', href: '#hero' },
-  { id: 'workflow', label: 'Workflow', href: '#workflow' },
-  { id: 'platform', label: 'Platform', href: '#platform' },
-  { id: 'triage', label: 'Triage', href: '#triage' },
-  { id: 'consultation', label: 'Consultation', href: '#consultation' },
-  { id: 'partners', label: 'Partners', href: '#partners' },
-  { id: 'contact', label: 'Contact', href: '#contact' }
-]
-
 const workflowSteps = [
-  { num: '01', title: 'Digital Twin Setup', desc: 'Our AI creates a dynamic, ever-evolving digital protocol of your health history, genetics, and vitals.' },
-  { num: '02', title: 'AI Triage Analysis', desc: 'Instant symptom processing through our neural resonance engine to match precise specialists.' },
-  { num: '03', title: 'HD Consultation', desc: 'Encrypted true-fidelity video link with the world\'s leading practitioners from any device.' }
+  { num: '01', title: 'Digital Twin Setup', desc: 'Our AI creates a dynamic, ever-evolving digital protocol of your health history, genetics, and vitals.', img: 'https://images.unsplash.com/photo-1530497610245-94d3c16cda28?q=80&w=800&auto=format&fit=crop' },
+  { num: '02', title: 'AI Triage Analysis', desc: 'Instant symptom processing through our neural resonance engine to match precise specialists.', img: 'https://images.unsplash.com/photo-1555255707-c07966088b7b?q=80&w=800&auto=format&fit=crop' },
+  { num: '03', title: 'HD Consultation', desc: 'Encrypted true-fidelity video link with the world\'s leading practitioners from any device.', img: 'https://images.unsplash.com/photo-1584982751601-97dcc096659c?q=80&w=800&auto=format&fit=crop' }
 ]
 
 onMounted(() => {
@@ -406,19 +342,9 @@ onMounted(() => {
     }
   )
 
-  sidebarItems.forEach((item) => {
-    const sectionEl = document.getElementById(item.id)
-    if (sectionEl) {
-      sectionObserver.observe(sectionEl)
-    }
-  })
+  gsap.from('.trusted-badge', { y: 20, opacity: 0, duration: 1, ease: 'power3.out', delay: 0.2 })
 
-  gsap.from('.top-nav-wrap', {
-    y: -18,
-    opacity: 0,
-    duration: 0.8,
-    ease: 'power2.out'
-  })
+
 
   gsap.from(['.hero-title', '.hero-subtitle', '.hero-visual', '.accuracy-card'], {
     opacity: 0,
@@ -428,7 +354,7 @@ onMounted(() => {
     ease: 'power3.out'
   })
 
-  gsap.from(['.glass-card', '.platform-card', '.triage-container', '.borderless-img-container'], {
+  gsap.from(['.platform-card', '.triage-container', '.borderless-img-container'], {
     opacity: 0,
     y: 26,
     duration: 0.75,
@@ -450,12 +376,38 @@ onBeforeUnmount(() => {
 
 /* GLOBAL */
 .font-jakarta { font-family: 'Plus Jakarta Sans', sans-serif; }
-.bg-nexus { background-color: #02040a; }
+.bg-nexus { background-color: transparent; }
 .max-width-1200 { max-width: 1200px; }
-.page-shell { padding-top: 78px; }
+.page-shell { padding-top: 0; }
 .section-padding { padding-top: 140px; padding-bottom: 140px; }
-.hero-content { max-width: 980px; margin: 0 auto; position: relative; z-index: 10; }
+.hero-content { max-width: 1000px; margin: 0 auto; position: relative; z-index: 10; }
 .btn-pill { border-radius: 50px; text-transform: none; letter-spacing: 0.5px; }
+
+.btn-primary-glow {
+  border-radius: 50px;
+  text-transform: none;
+  background: linear-gradient(135deg, #1d4ed8, #2563eb) !important;
+  box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.5);
+  transition: all 0.3s ease;
+}
+.btn-primary-glow:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 35px -5px rgba(37, 99, 235, 0.6);
+}
+
+.btn-outline-glow {
+  border-radius: 50px;
+  text-transform: none;
+  border: 1px solid rgba(255,255,255,0.2) !important;
+  transition: all 0.3s ease;
+  background: rgba(255,255,255,0.03);
+}
+.btn-outline-glow:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.5) !important;
+  box-shadow: 0 0 20px rgba(255,255,255,0.1);
+}
+
 .border-grey { border: 1px solid rgba(255,255,255,0.1); }
 .border-y-dark { border-top: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05); }
 .border-t-dark { border-top: 1px solid rgba(255,255,255,0.05); padding-top: 40px; }
@@ -464,6 +416,7 @@ onBeforeUnmount(() => {
 .hover-white:hover { color: #ffffff !important; transition: 0.3s; }
 .uppercase { text-transform: uppercase; }
 .letter-spacing-1 { letter-spacing: 1px; }
+.tracking-wider { letter-spacing: 1.5px; }
 .border-radius-16 { border-radius: 16px; }
 
 section[id] { scroll-margin-top: 96px; position: relative; }
@@ -478,86 +431,15 @@ section::before {
 }
 
 #workflow::before {
-  background: radial-gradient(circle at 10% 20%, rgba(37, 99, 235, 0.05), transparent 40%);
+  background: radial-gradient(circle at 10% 20%, rgba(37, 99, 235, 0.04), transparent 50%);
 }
 
 #platform::before {
-  background: radial-gradient(circle at 90% 80%, rgba(20, 184, 166, 0.05), transparent 40%);
+  background: radial-gradient(circle at 90% 80%, rgba(20, 184, 166, 0.04), transparent 50%);
 }
 
 #triage::before {
   background: radial-gradient(circle at 50% 50%, rgba(37, 99, 235, 0.03), transparent 60%);
-}
-
-/* TOP NAV */
-.top-nav-wrap {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 1200;
-  padding: 10px 14px;
-  background: linear-gradient(180deg, rgba(5, 9, 20, 0.94), rgba(5, 9, 20, 0.76));
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-}
-.top-nav-inner {
-  max-width: 1300px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 18px;
-}
-.top-nav-logo {
-  flex: 0 0 auto;
-  font-size: 0.8rem;
-  font-weight: 800;
-  letter-spacing: 2px;
-  color: #93c5fd;
-  padding: 8px 12px;
-  border-radius: 12px;
-  background: rgba(30, 58, 138, 0.18);
-  border: 1px solid rgba(147, 197, 253, 0.2);
-}
-.top-nav-links {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  overflow-x: auto;
-  white-space: nowrap;
-  scrollbar-width: thin;
-  padding-bottom: 2px;
-}
-.top-nav-links::-webkit-scrollbar {
-  height: 4px;
-}
-.top-nav-links::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.45);
-  border-radius: 8px;
-}
-.top-nav-link {
-  text-decoration: none;
-  color: #94a3b8;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.7px;
-  text-transform: uppercase;
-  padding: 8px 12px;
-  border-radius: 999px;
-  border: 1px solid transparent;
-  transition: all 0.25s ease;
-}
-.top-nav-link:hover {
-  color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.top-nav-link--active {
-  color: #e2e8f0;
-  border-color: rgba(125, 211, 252, 0.45);
-  background: linear-gradient(180deg, rgba(30, 58, 138, 0.32), rgba(14, 116, 144, 0.26));
-  box-shadow: inset 0 0 0 1px rgba(125, 211, 252, 0.14);
 }
 
 /* NEWSLETTER INPUT - native element replaces q-input */
@@ -587,29 +469,44 @@ section::before {
 }
 
 /* HERO */
-.hero-section { min-height: 100vh; padding-top: 120px; padding-bottom: 100px; }
+.hero-section { min-height: 100vh; padding-top: 140px; padding-bottom: 100px; }
 .hero-bg {
   position: absolute;
   top: 0; left: 0; width: 100%; height: 100%;
   background:
-    radial-gradient(circle at 50% 30%, rgba(37, 99, 235, 0.12), transparent 60%),
-    radial-gradient(circle at 10% 80%, rgba(20, 184, 166, 0.08), transparent 50%),
-    url('https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=2000&auto=format&fit=crop') center/cover;
-  opacity: 0.25;
+    radial-gradient(ellipse at center 0%, rgba(14, 165, 233, 0.15), transparent 60%),
+    radial-gradient(circle at 80% 80%, rgba(37, 99, 235, 0.1), transparent 50%);
+  opacity: 1;
   z-index: 0;
-  filter: grayscale(0.5) contrast(1.1);
 }
+
+.grid-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-image:
+    linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+  mask-image: radial-gradient(ellipse at top center, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 70%);
+  -webkit-mask-image: radial-gradient(ellipse at top center, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 70%);
+  pointer-events: none;
+}
+
 .hero-title {
-  font-size: clamp(3.8rem, 9vw, 6.5rem);
-  letter-spacing: -4px;
-  line-height: 0.95;
+  font-size: clamp(4rem, 9vw, 6.8rem);
+  letter-spacing: -3.5px;
+  line-height: 1.05;
+  text-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
-.text-gradient {
-  background: linear-gradient(to right, #5eead4, #3b82f6);
+
+.text-gradient-primary {
+  background: linear-gradient(to right, #38bdf8, #818cf8, #e879f9);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
-.hero-subtitle { max-width: 640px; color: #94a3b8; font-size: 1.2rem; line-height: 1.6; }
+
+.hero-subtitle { max-width: 720px; color: #94a3b8; font-size: 1.25rem; line-height: 1.6; }
 
 .hero-visual {
   position: relative;
@@ -679,11 +576,11 @@ section::before {
 }
 
 .trusted-badge {
-  border-color: rgba(255,255,255,0.15);
-  color: #fff;
-  background: rgba(255,255,255,0.05);
-  backdrop-filter: blur(4px);
-  letter-spacing: 1.5px;
+  border: 1px solid rgba(125, 211, 252, 0.3);
+  background: rgba(14, 165, 233, 0.1);
+  backdrop-filter: blur(12px);
+  border-radius: 50px;
+  box-shadow: 0 0 20px rgba(14, 165, 233, 0.15);
 }
 .accuracy-card {
   position: absolute;
@@ -700,52 +597,116 @@ section::before {
 /* WORKFLOW CARDS */
 .glass-card {
   background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  padding: 50px;
-  border-radius: 32px;
-  transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  transition: all 0.4s ease;
   position: relative;
   overflow: hidden;
 }
-.glass-card:hover {
-  transform: translateY(-10px);
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.1);
+
+.workflow-card {
+  height: 680px;
+  padding: 40px;
 }
-.card-num {
-  font-size: 6rem;
-  font-weight: 900;
-  color: rgba(255,255,255,0.03);
+
+.card-bg-layer {
   position: absolute;
-  top: 10px;
-  right: 20px;
-  line-height: 1;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.25;
+  transition: all 0.6s ease;
+  filter: grayscale(0.5) contrast(1.3);
+  z-index: 0;
 }
+
+.card-gradient-overlay {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: linear-gradient(to top, rgba(4, 7, 16, 0.85) 0%, rgba(4, 7, 16, 0.2) 60%, transparent 100%);
+  z-index: 1;
+}
+
+.glass-card:hover {
+  transform: translateY(-8px);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+}
+
+.glass-card:hover .card-bg-layer {
+  opacity: 0.4;
+  filter: grayscale(0.2) contrast(1.1);
+  transform: scale(1.05);
+}
+
+.card-num {
+  font-size: 4rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -2px;
+}
+
+.card-active .text-h6 { color: #ffffff; }
+.card-active .desc-text { color: #94a3b8; }
+.card-active .card-num { color: rgba(255, 255, 255, 0.05); }
+
+.card-inactive-1 .text-h6 { color: #cbd5e1; }
+.card-inactive-1 .desc-text { color: #64748b; }
+.card-inactive-1 .card-num { color: rgba(255, 255, 255, 0.03); }
+
+.card-inactive-2 .text-h6 { color: #64748b; }
+.card-inactive-2 .desc-text { color: #475569; }
+.card-inactive-2 .card-num { color: rgba(255, 255, 255, 0.015); }
 
 /* PLATFORM CARDS */
 .platform-card {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(10, 15, 30, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 32px;
   padding: 40px;
-  position: relative;
   overflow: hidden;
-  transition: all 0.4s ease;
+  transition: all 0.5s ease;
+}
+.platform-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(to top, rgba(4, 7, 16, 1) 0%, rgba(4, 7, 16, 0.8) 40%, rgba(4, 7, 16, 0.2) 100%);
+  z-index: 1;
 }
 .platform-card:hover {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(20, 184, 166, 0.4);
+  box-shadow: 0 20px 50px -10px rgba(0,0,0,0.8), 0 0 40px -10px rgba(20, 184, 166, 0.2);
+  transform: translateY(-8px);
 }
-.platform-card--tall { height: 420px; }
+.platform-card--tall { height: 460px; }
 .platform-shift { margin-top: 60px; }
-.practitioner-img {
-  width: 100%;
-  height: 180px;
-  border-radius: 20px;
-  background: url('https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?q=80&w=600&auto=format&fit=crop') center/cover;
-  margin-bottom: 30px;
-  filter: grayscale(0.3) contrast(1.1);
+
+.practitioner-img, .patient-img {
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 100%;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.35;
+  transition: all 0.6s ease;
+  filter: grayscale(0.6) contrast(1.1);
 }
+.practitioner-img { background-image: url('https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?q=80&w=800&auto=format&fit=crop'); }
+.patient-img { background-image: url('https://images.unsplash.com/photo-1551076805-e1869033e561?q=80&w=800&auto=format&fit=crop'); }
+
+.platform-card:hover .practitioner-img,
+.platform-card:hover .patient-img {
+  opacity: 0.6;
+  filter: grayscale(0.1) contrast(1.1);
+  transform: scale(1.05);
+}
+
+.drop-shadow-glow { filter: drop-shadow(0 0 12px rgba(96, 165, 250, 0.6)); }
+.drop-shadow-glow-teal { filter: drop-shadow(0 0 12px rgba(45, 212, 191, 0.6)); }
+.group-hover:hover .transition { transform: translateX(4px); }
+.transition { transition: all 0.3s ease; }
 
 /* NEURAL TRIAGE */
 .triage-container {

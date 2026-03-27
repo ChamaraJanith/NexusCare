@@ -1,9 +1,10 @@
 <template>
-  <q-layout view="hHh lpR fFf" class="nexus-layout bg-dark text-white">
+  <q-layout view="hHh lpR fFf" class="nexus-layout text-white font-jakarta">
 
-    <q-header class="nexus-header" bordered>
-      <q-toolbar class="q-py-sm q-px-lg">
+    <q-header class="nexus-header" :class="{ 'header-scrolled': isScrolled }">
+      <q-toolbar class="q-py-md q-px-xl max-width-1400 q-mx-auto">
 
+        <!-- Mobile Menu -->
         <q-btn
           flat
           dense
@@ -14,19 +15,22 @@
           @click="toggleLeftDrawer"
         />
 
+        <!-- Logo -->
         <q-toolbar-title
-          class="row items-center no-wrap text-weight-bold cursor-pointer font-plus-jakarta"
+          class="row items-center no-wrap text-weight-bold cursor-pointer font-jakarta"
           @click="$router.push('/')"
+          shrink
         >
-          <div class="nexus-logo-sm q-mr-sm">
-            <div class="logo-icon">N</div>
+          <div class="logo-circle q-mr-sm">
+            <span class="logo-letter">N</span>
           </div>
-          <span class="logo-text">Nexus Care</span>
+          <span class="logo-text text-h6 text-weight-bold tracking-tight">Nexus Care</span>
         </q-toolbar-title>
 
         <q-space />
 
-        <div class="gt-sm row items-center text-weight-medium text-caption font-plus-jakarta nav-strip">
+        <!-- Desktop Nav -->
+        <div class="gt-sm row items-center justify-center nav-links-container q-gutter-x-xl text-caption text-weight-bold text-uppercase tracking-wider text-grey-4">
           <span class="cursor-pointer nav-link" @click="$router.push('/appointment')">Book Appointment</span>
           <span class="cursor-pointer nav-link" @click="$router.push('/telemedicine')">Telemedicine</span>
           <span class="cursor-pointer nav-link" @click="$router.push('/symptoms')">AI Symptom Checker</span>
@@ -34,12 +38,13 @@
 
         <q-space class="gt-sm" />
 
-        <div class="row items-center q-gutter-sm font-plus-jakarta">
+        <!-- Auth -->
+        <div class="row items-center q-gutter-sm">
           <template v-if="!isLoggedIn">
             <q-btn
               flat
               label="Login"
-              class="text-capitalize text-weight-bold text-caption q-mr-sm"
+              class="text-capitalize text-weight-bold font-jakarta text-body2 login-btn q-mr-xs"
               to="/login"
             />
             <q-btn
@@ -47,23 +52,25 @@
               color="white"
               text-color="black"
               label="Register"
-              class="text-capitalize text-weight-bold rounded-borders q-px-md text-caption"
+              class="text-capitalize text-weight-bold rounded-pill q-px-lg q-py-xs font-jakarta text-body2 register-btn"
               to="/register"
             />
           </template>
 
           <template v-else>
-            <q-btn flat round dense icon="notifications" class="q-mr-sm" />
-            <div class="nexus-avatar cursor-pointer" @click="goProfile">
-              <img :src="profileImageUrl" alt="profile" />
-              <q-menu anchor="bottom right" self="top right">
-                <q-list style="min-width: 150px">
-                  <q-item clickable v-close-popup @click="goProfile">
-                    <q-item-section>Dashboard</q-item-section>
+            <q-btn flat round dense icon="notifications" class="q-mr-sm text-grey-4 hover-white" />
+            <div class="avatar-ring cursor-pointer" @click="goProfile">
+              <img :src="profileImageUrl" alt="profile" class="avatar-img" />
+              <q-menu anchor="bottom right" self="top right" class="bg-dark text-white border-dark">
+                <q-list style="min-width: 180px">
+                  <q-item clickable v-close-popup @click="goProfile" class="hover-bg-light">
+                    <q-item-section avatar><q-icon name="dashboard" size="sm" color="blue-4" /></q-item-section>
+                    <q-item-section class="text-weight-bold">Dashboard</q-item-section>
                   </q-item>
-                  <q-separator />
-                  <q-item clickable v-close-popup @click="logout" class="text-red">
-                    <q-item-section>Logout</q-item-section>
+                  <q-separator color="grey-9" />
+                  <q-item clickable v-close-popup @click="logout" class="hover-bg-light text-red-4">
+                    <q-item-section avatar><q-icon name="logout" size="sm" /></q-item-section>
+                    <q-item-section class="text-weight-bold">Logout</q-item-section>
                   </q-item>
                 </q-list>
               </q-menu>
@@ -79,37 +86,44 @@
       side="left"
       overlay
       behavior="mobile"
-      class="bg-dark text-white"
+      class="mobile-drawer text-white"
     >
-      <q-scroll-area class="fit">
-        <div class="q-pa-md">
-          <div class="text-h6 text-weight-bold q-mb-lg row items-center font-plus-jakarta">
-            <div class="nexus-logo-xs q-mr-sm">
-              <img src="https://cdn.quasar.dev/logo-v2/svg/logo-mono-white.svg" alt="logo" />
+      <div class="column full-height">
+        <div class="q-pa-lg row items-center justify-between">
+          <div class="row items-center">
+            <div class="logo-circle q-mr-sm" style="width: 28px; height: 28px;">
+              <span class="logo-letter" style="font-size: 14px;">N</span>
             </div>
-            Nexus Care
+            <span class="text-h6 text-weight-bold tracking-tight">Nexus Care</span>
           </div>
+          <q-btn flat round dense icon="close" @click="toggleLeftDrawer" />
+        </div>
 
-          <q-list padding class="font-plus-jakarta">
-            <q-item clickable v-ripple to="/">
-              <q-item-section avatar><q-icon name="home" /></q-item-section>
+        <q-scroll-area class="col q-px-md">
+          <q-list padding class="font-jakarta text-weight-bold text-uppercase tracking-wider">
+            <q-item clickable v-ripple to="/" class="drawer-item q-mb-sm">
+              <q-item-section avatar><q-icon name="home" color="blue-4" /></q-item-section>
               <q-item-section>Home</q-item-section>
             </q-item>
-            <q-item clickable v-ripple to="/appointment">
-              <q-item-section avatar><q-icon name="event" /></q-item-section>
+            <q-item clickable v-ripple to="/appointment" class="drawer-item q-mb-sm">
+              <q-item-section avatar><q-icon name="event" color="blue-4" /></q-item-section>
               <q-item-section>Book Appointment</q-item-section>
             </q-item>
-            <q-item clickable v-ripple to="/telemedicine">
-              <q-item-section avatar><q-icon name="videocam" /></q-item-section>
+            <q-item clickable v-ripple to="/telemedicine" class="drawer-item q-mb-sm">
+              <q-item-section avatar><q-icon name="videocam" color="blue-4" /></q-item-section>
               <q-item-section>Telemedicine</q-item-section>
             </q-item>
-            <q-item clickable v-ripple to="/symptoms">
-              <q-item-section avatar><q-icon name="health_and_safety" /></q-item-section>
+            <q-item clickable v-ripple to="/symptoms" class="drawer-item q-mb-sm">
+              <q-item-section avatar><q-icon name="health_and_safety" color="blue-4" /></q-item-section>
               <q-item-section>AI Symptom Checker</q-item-section>
             </q-item>
           </q-list>
+        </q-scroll-area>
+        
+        <div class="q-pa-lg">
+          <div class="text-caption text-grey-6 text-center">© 2026 Nexus Care</div>
         </div>
-      </q-scroll-area>
+      </div>
     </q-drawer>
 
     <q-page-container>
@@ -128,6 +142,11 @@ const route = useRoute()
 const leftDrawerOpen = ref(false)
 const isLoggedIn = ref(false)
 const currentUser = ref({})
+const isScrolled = ref(false)
+
+const handleScroll = () => {
+  isScrolled.value = window.scrollY > 20
+}
 
 const toggleLeftDrawer = () => {
   leftDrawerOpen.value = !leftDrawerOpen.value
@@ -177,11 +196,13 @@ onMounted(() => {
   syncAuthState()
   window.addEventListener('storage', onStorageChange)
   window.addEventListener('focus', syncAuthState)
+  window.addEventListener('scroll', handleScroll)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('storage', onStorageChange)
   window.removeEventListener('focus', syncAuthState)
+  window.removeEventListener('scroll', handleScroll)
 })
 
 watch(() => route.fullPath, () => {
@@ -190,120 +211,151 @@ watch(() => route.fullPath, () => {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-.font-plus-jakarta { font-family: 'Plus Jakarta Sans', sans-serif; }
+.font-jakarta { font-family: 'Plus Jakarta Sans', sans-serif; }
 
-.nexus-layout { background-color: #0b0f19; }
-
-.nexus-header {
-  background: rgba(5, 9, 20, 0.8);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+.nexus-layout {
+  background-color: transparent;
 }
 
-.logo-icon {
-  width: 32px;
-  height: 32px;
-  background: #2563eb;
+.max-width-1400 {
+  max-width: 1400px;
+  width: 100%;
+}
+
+.tracking-tight { letter-spacing: -0.5px; }
+.tracking-wider { letter-spacing: 1px; }
+
+.nexus-header {
+  background: transparent;
+  transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.header-scrolled {
+  background: rgba(4, 7, 16, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 0;
+  padding-bottom: 0;
+  box-shadow: 0 10px 40px -10px rgba(0,0,0,0.5);
+}
+
+.logo-circle {
+  width: 38px;
+  height: 38px;
+  background: linear-gradient(135deg, #3b82f6, #0ea5e9);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  font-weight: 900;
-  font-size: 18px;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
 
-.logo-text {
-  font-size: 1.2rem;
-  letter-spacing: -0.5px;
+.logo-letter {
+  color: white;
+  font-weight: 800;
+  font-size: 20px;
+}
+
+.nav-links-container {
+  gap: 32px;
 }
 
 .nav-link {
   transition: all 0.3s ease;
-  color: #94a3b8;
-  white-space: nowrap;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-weight: 600;
-}
-.nav-link:hover { color: #ffffff; }
-.rounded-borders { border-radius: 50px; }
-
-.nav-strip {
-  gap: 24px;
-  overflow-x: auto;
-  white-space: nowrap;
-  scrollbar-width: thin;
-}
-
-.nav-strip::-webkit-scrollbar {
-  height: 4px;
-}
-
-.nav-strip::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.25);
-  border-radius: 999px;
-}
-
-/* Logo icon - toolbar (32px) */
-.nexus-logo-sm {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  overflow: hidden;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.nexus-logo-sm img { width: 100%; height: 100%; object-fit: contain; }
-
-/* Logo icon - drawer (24px) */
-.nexus-logo-xs {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  overflow: hidden;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.nexus-logo-xs img { width: 100%; height: 100%; object-fit: contain; }
-
-/* User profile avatar (36px) */
-.nexus-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  overflow: hidden;
-  flex-shrink: 0;
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.nexus-avatar img { width: 100%; height: 100%; object-fit: cover; }
-
-@media (max-width: 1200px) {
-  .nav-strip {
-    gap: 16px;
-    max-width: 360px;
-  }
+  font-size: 0.72rem;
 }
 
-@media (max-width: 768px) {
-  .nexus-header .q-toolbar {
-    padding-left: 10px;
-    padding-right: 10px;
-  }
+.nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 0;
+  width: 0%;
+  height: 2px;
+  background: #3b82f6;
+  transition: width 0.3s ease;
+  border-radius: 2px;
+}
 
-  .nexus-header .q-toolbar-title {
-    font-size: 1rem;
-  }
+.nav-link:hover {
+  color: #ffffff !important;
+}
+
+.nav-link:hover::after {
+  width: 100%;
+}
+
+.login-btn {
+  border-radius: 50px;
+  transition: all 0.3s ease;
+  color: #e2e8f0 !important;
+}
+
+.login-btn:hover {
+  background: rgba(255,255,255,0.05);
+  color: #ffffff !important;
+}
+
+.register-btn {
+  border-radius: 50px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 14px rgba(255,255,255,0.15);
+}
+
+.register-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255,255,255,0.25);
+  background: #f8fafc !important;
+}
+
+.avatar-ring {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  padding: 2px;
+  background: linear-gradient(135deg, #3b82f6, #14b8a6);
+  transition: transform 0.3s ease;
+}
+
+.avatar-ring:hover {
+  transform: scale(1.05);
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #040710;
+}
+
+.mobile-drawer {
+  background: rgba(4, 7, 16, 0.95);
+  backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(255,255,255,0.05);
+}
+
+.drawer-item {
+  border-radius: 12px;
+  margin-bottom: 8px;
+  transition: all 0.3s ease;
+}
+
+.drawer-item:hover {
+  background: rgba(255,255,255,0.05);
+}
+
+.border-dark {
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.hover-bg-light:hover {
+  background: rgba(255,255,255,0.05);
 }
 </style>
