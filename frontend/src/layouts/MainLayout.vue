@@ -1,124 +1,117 @@
 <template>
-  <q-layout view="lHh Lpr lFf" class="bg-black text-white">
+  <q-layout view="hHh lpR fFf" class="nexus-layout bg-dark text-white">
 
-    <!-- HEADER -->
-    <q-header elevated class="nexus-header">
-      <q-toolbar class="q-py-md">
+    <q-header class="nexus-header" bordered>
+      <q-toolbar class="q-py-sm q-px-lg">
 
-        <q-btn flat dense round icon="menu" @click="toggleLeftDrawer" class="text-cyan-4" />
+        <q-btn
+          flat
+          dense
+          round
+          icon="menu"
+          aria-label="Menu"
+          class="lt-md q-mr-sm"
+          @click="toggleLeftDrawer"
+        />
 
-        <q-toolbar-title class="font-orbitron text-cyan-4 text-weight-bolder letter-spacing-3">
-          <q-icon name="hub" size="md" class="q-mr-sm glow-icon" />
-          NEXUS CARE
+        <q-toolbar-title
+          class="row items-center no-wrap text-weight-bold cursor-pointer font-plus-jakarta"
+          @click="$router.push('/')"
+        >
+          <div class="nexus-logo-sm q-mr-sm">
+            <div class="logo-icon">N</div>
+          </div>
+          <span class="logo-text">Nexus Care</span>
         </q-toolbar-title>
 
         <q-space />
 
-        <div class="row items-center q-gutter-md no-wrap">
+        <div class="gt-sm row items-center text-weight-medium text-caption font-plus-jakarta nav-strip">
+          <span class="cursor-pointer nav-link" @click="$router.push('/appointment')">Book Appointment</span>
+          <span class="cursor-pointer nav-link" @click="$router.push('/telemedicine')">Telemedicine</span>
+          <span class="cursor-pointer nav-link" @click="$router.push('/symptoms')">AI Symptom Checker</span>
+        </div>
 
-          <!-- SYSTEM STATUS -->
-          <div class="status-pill row items-center q-px-md q-py-xs hide-xs">
-            <q-badge rounded color="green" class="pulse-green q-mr-sm" />
-            <span class="text-overline text-cyan-2">SYSTEM: ONLINE</span>
-          </div>
+        <q-space class="gt-sm" />
 
-          <!-- LOGIN BUTTON (WHEN NOT LOGGED IN) -->
-          <q-btn
-            v-if="!isLoggedIn"
-            flat
-            dense
-            icon="login"
-            label="LOGIN"
-            class="text-cyan-4 font-orbitron"
-            to="/login"
-          />
+        <div class="row items-center q-gutter-sm font-plus-jakarta">
+          <template v-if="!isLoggedIn">
+            <q-btn
+              flat
+              label="Login"
+              class="text-capitalize text-weight-bold text-caption q-mr-sm"
+              to="/login"
+            />
+            <q-btn
+              unelevated
+              color="white"
+              text-color="black"
+              label="Register"
+              class="text-capitalize text-weight-bold rounded-borders q-px-md text-caption"
+              to="/register"
+            />
+          </template>
 
-          <!-- AVATAR (WHEN LOGGED IN) -->
-          <q-avatar
-            v-if="isLoggedIn"
-            size="42px"
-            class="border-cyan glow-avatar cursor-pointer"
-            @click="goProfile"
-          >
-            <img src="https://cdn.quasar.dev/img/avatar.png">
-          </q-avatar>
-
-          <!-- LOGOUT -->
-          <q-btn
-            v-if="isLoggedIn"
-            flat
-            dense
-            icon="logout"
-            class="text-red-4"
-            @click="logout"
-          />
-
+          <template v-else>
+            <q-btn flat round dense icon="notifications" class="q-mr-sm" />
+            <div class="nexus-avatar cursor-pointer" @click="goProfile">
+              <img :src="profileImageUrl" alt="profile" />
+              <q-menu anchor="bottom right" self="top right">
+                <q-list style="min-width: 150px">
+                  <q-item clickable v-close-popup @click="goProfile">
+                    <q-item-section>Dashboard</q-item-section>
+                  </q-item>
+                  <q-separator />
+                  <q-item clickable v-close-popup @click="logout" class="text-red">
+                    <q-item-section>Logout</q-item-section>
+                  </q-item>
+                </q-list>
+              </q-menu>
+            </div>
+          </template>
         </div>
 
       </q-toolbar>
     </q-header>
 
-    <!-- SIDEBAR -->
     <q-drawer
       v-model="leftDrawerOpen"
-      show-if-above
-      bordered
-      :width="280"
-      class="nexus-drawer"
+      side="left"
+      overlay
+      behavior="mobile"
+      class="bg-dark text-white"
     >
-      <div class="sidebar-content full-height bg-black-nexus">
-        <q-scroll-area class="fit">
-          <div class="q-pa-md">
-
-            <div class="text-cyan-4 text-weight-bold uppercase q-mb-xl">
-              Navigation Nodes
+      <q-scroll-area class="fit">
+        <div class="q-pa-md">
+          <div class="text-h6 text-weight-bold q-mb-lg row items-center font-plus-jakarta">
+            <div class="nexus-logo-xs q-mr-sm">
+              <img src="https://cdn.quasar.dev/logo-v2/svg/logo-mono-white.svg" alt="logo" />
             </div>
-
-            <q-list>
-
-              <q-item clickable v-ripple to="/" exact class="nexus-nav-item">
-                <q-item-section avatar>
-                  <q-icon name="dashboard" color="cyan-4" />
-                </q-item-section>
-                <q-item-section>Command Center</q-item-section>
-              </q-item>
-
-              <q-item clickable v-ripple to="/symptoms" class="nexus-nav-item active-node">
-                <q-item-section avatar>
-                  <q-icon name="auto_awesome" color="cyan-2" />
-                </q-item-section>
-                <q-item-section>Interaction Hub</q-item-section>
-              </q-item>
-
-              <q-separator dark class="q-my-lg" />
-
-              <q-item disable>
-                <q-item-section avatar><q-icon name="person" /></q-item-section>
-                <q-item-section>Patient MS1</q-item-section>
-              </q-item>
-
-              <q-item disable>
-                <q-item-section avatar><q-icon name="medical_services" /></q-item-section>
-                <q-item-section>Doctor MS2</q-item-section>
-              </q-item>
-
-              <q-item disable>
-                <q-item-section avatar><q-icon name="event" /></q-item-section>
-                <q-item-section>Schedule MS3</q-item-section>
-              </q-item>
-
-            </q-list>
-
+            Nexus Care
           </div>
-        </q-scroll-area>
 
-        <div class="absolute-bottom q-pa-md">
-          <q-btn flat dense class="full-width text-cyan-10" icon="terminal" label="VIEW LOGS" />
+          <q-list padding class="font-plus-jakarta">
+            <q-item clickable v-ripple to="/">
+              <q-item-section avatar><q-icon name="home" /></q-item-section>
+              <q-item-section>Home</q-item-section>
+            </q-item>
+            <q-item clickable v-ripple to="/appointment">
+              <q-item-section avatar><q-icon name="event" /></q-item-section>
+              <q-item-section>Book Appointment</q-item-section>
+            </q-item>
+            <q-item clickable v-ripple to="/telemedicine">
+              <q-item-section avatar><q-icon name="videocam" /></q-item-section>
+              <q-item-section>Telemedicine</q-item-section>
+            </q-item>
+            <q-item clickable v-ripple to="/symptoms">
+              <q-item-section avatar><q-icon name="health_and_safety" /></q-item-section>
+              <q-item-section>AI Symptom Checker</q-item-section>
+            </q-item>
+          </q-list>
         </div>
-      </div>
+      </q-scroll-area>
     </q-drawer>
 
-    <!-- PAGE -->
     <q-page-container>
       <router-view />
     </q-page-container>
@@ -127,71 +120,190 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 const router = useRouter()
+const route = useRoute()
 const leftDrawerOpen = ref(false)
+const isLoggedIn = ref(false)
+const currentUser = ref({})
 
 const toggleLeftDrawer = () => {
   leftDrawerOpen.value = !leftDrawerOpen.value
 }
 
-/* =========================
-   AUTH STATE
-========================= */
+const syncAuthState = () => {
+  isLoggedIn.value = !!localStorage.getItem('nexus_token')
 
-const isLoggedIn = computed(() => {
-  return !!localStorage.getItem('nexus_token')
+  try {
+    currentUser.value = JSON.parse(localStorage.getItem('nexus_user') || '{}')
+  } catch {
+    currentUser.value = {}
+  }
+}
+
+const profileImageUrl = computed(() => {
+  return currentUser.value.profileImage
+    || currentUser.value.avatar
+    || currentUser.value.avatarUrl
+    || currentUser.value.photoUrl
+    || 'https://cdn.quasar.dev/img/avatar.png'
 })
 
 const logout = () => {
   localStorage.removeItem('nexus_token')
   localStorage.removeItem('nexus_user')
+  syncAuthState()
   router.push('/login')
 }
 
 const goProfile = () => {
-  const user = JSON.parse(localStorage.getItem('nexus_user') || '{}')
+  const user = currentUser.value || {}
 
   if (user.role === 'patient') router.push('/patient/dashboard')
   else if (user.role === 'doctor') router.push('/doctor/dashboard')
   else if (user.role === 'admin') router.push('/admin/dashboard')
   else router.push('/')
 }
+
+const onStorageChange = (event) => {
+  if (event.key === 'nexus_token' || event.key === 'nexus_user' || event.key === null) {
+    syncAuthState()
+  }
+}
+
+onMounted(() => {
+  syncAuthState()
+  window.addEventListener('storage', onStorageChange)
+  window.addEventListener('focus', syncAuthState)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('storage', onStorageChange)
+  window.removeEventListener('focus', syncAuthState)
+})
+
+watch(() => route.fullPath, () => {
+  syncAuthState()
+})
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
-.font-orbitron { font-family: 'Orbitron', sans-serif; }
+.font-plus-jakarta { font-family: 'Plus Jakarta Sans', sans-serif; }
 
-:deep(.q-drawer) {
-  background: #00080a !important;
-}
+.nexus-layout { background-color: #0b0f19; }
 
 .nexus-header {
-  background: rgba(0, 8, 10, 0.9);
-  backdrop-filter: blur(15px);
-  border-bottom: 1px solid rgba(0, 255, 255, 0.1);
+  background: rgba(5, 9, 20, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.status-pill {
-  background: rgba(0, 255, 255, 0.05);
-  border: 1px solid rgba(0, 255, 255, 0.1);
+.logo-icon {
+  width: 32px;
+  height: 32px;
+  background: #2563eb;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 900;
+  font-size: 18px;
 }
 
-.pulse-green {
-  animation: pulse 2s infinite;
+.logo-text {
+  font-size: 1.2rem;
+  letter-spacing: -0.5px;
 }
 
-@keyframes pulse {
-  0% { box-shadow: 0 0 0 0 rgba(0,255,0,0.4); }
-  70% { box-shadow: 0 0 0 6px rgba(0,255,0,0); }
-  100% { box-shadow: 0 0 0 0 rgba(0,255,0,0); }
+.nav-link {
+  transition: all 0.3s ease;
+  color: #94a3b8;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+.nav-link:hover { color: #ffffff; }
+.rounded-borders { border-radius: 50px; }
+
+.nav-strip {
+  gap: 24px;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: thin;
 }
 
-.active-node {
-  background: rgba(0,255,255,0.1);
+.nav-strip::-webkit-scrollbar {
+  height: 4px;
+}
+
+.nav-strip::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+}
+
+/* Logo icon - toolbar (32px) */
+.nexus-logo-sm {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nexus-logo-sm img { width: 100%; height: 100%; object-fit: contain; }
+
+/* Logo icon - drawer (24px) */
+.nexus-logo-xs {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nexus-logo-xs img { width: 100%; height: 100%; object-fit: contain; }
+
+/* User profile avatar (36px) */
+.nexus-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nexus-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+@media (max-width: 1200px) {
+  .nav-strip {
+    gap: 16px;
+    max-width: 360px;
+  }
+}
+
+@media (max-width: 768px) {
+  .nexus-header .q-toolbar {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .nexus-header .q-toolbar-title {
+    font-size: 1rem;
+  }
 }
 </style>
