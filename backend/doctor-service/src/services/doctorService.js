@@ -1,66 +1,17 @@
-import mongoose from "mongoose";
 import Doctor from "../models/Doctor.js";
 import AvailabilitySlot from "../models/AvailabilitySlot.js";
 
-// CREATE
-export const createDoctorProfile = async (data) => {
-  return await Doctor.create(data);
-};
-
-// 🔥 GET by USER ID (important for duplicate check)
-export const getDoctorByUserId = async (userId) => {
-  return await Doctor.findOne({ userId, isDeleted: false });
-};
-
-// ✅ GET by ID (supports BOTH _id and doctorId)
-export const getDoctorById = async (id) => {
-  let doctor;
-
-  if (mongoose.Types.ObjectId.isValid(id)) {
-    doctor = await Doctor.findOne({ _id: id, isDeleted: false });
-  } else {
-    doctor = await Doctor.findOne({ doctorId: id, isDeleted: false });
-  }
-
-  return doctor;
-};
-
-// 🔥 GET by doctorId (business ID)
+// GET by doctorId (business ID)
 export const getDoctorByDoctorId = async (doctorId) => {
   return await Doctor.findOne({ doctorId, isDeleted: false });
 };
 
-// ✅ UPDATE (supports BOTH _id and doctorId)
-export const updateDoctor = async (id, data) => {
-  let query;
-
-  if (mongoose.Types.ObjectId.isValid(id)) {
-    query = { _id: id, isDeleted: false };
-  } else {
-    query = { doctorId: id, isDeleted: false };
-  }
-
+// UPDATE by doctorId
+export const updateDoctorByDoctorId = async (doctorId, data) => {
   return await Doctor.findOneAndUpdate(
-    query,
+    { doctorId, isDeleted: false },
     data,
     { new: true, runValidators: true }
-  );
-};
-
-// ✅ SOFT DELETE (supports BOTH _id and doctorId)
-export const deleteDoctor = async (id) => {
-  let query;
-
-  if (mongoose.Types.ObjectId.isValid(id)) {
-    query = { _id: id, isDeleted: false };
-  } else {
-    query = { doctorId: id, isDeleted: false };
-  }
-
-  return await Doctor.findOneAndUpdate(
-    query,
-    { isDeleted: true },
-    { new: true }
   );
 };
 
@@ -69,7 +20,7 @@ export const getAllDoctors = async (filter = {}) => {
   return await Doctor.find({ isDeleted: false, ...filter });
 };
 
-// 🔍 SEARCH + FILTER + PAGINATION + ADVANCED 🔥
+// 🔍 SEARCH + FILTER + PAGINATION + ADVANCED
 export const searchDoctors = async (queryParams) => {
   const {
     search,
@@ -84,7 +35,7 @@ export const searchDoctors = async (queryParams) => {
     order = "asc"
   } = queryParams;
 
-  const query = { isDeleted: false };
+  const query = { isDeleted: false, isActive: true };
 
   // 🔍 FULL-TEXT SEARCH
   if (search) {
@@ -108,14 +59,13 @@ export const searchDoctors = async (queryParams) => {
     if (maxExp) query.experience.$lte = Number(maxExp);
   }
 
-  // ⏰ Availability filter (FIXED 🔥)
+  // ⏰ Availability filter
   if (available === "true") {
     const slots = await AvailabilitySlot.find({ isBooked: false }).select("doctorId");
-
     const doctorIds = [...new Set(slots.map(slot => slot.doctorId))];
 
     if (doctorIds.length > 0) {
-      query.doctorId = { $in: doctorIds }; // ✅ FIXED
+      query.doctorId = { $in: doctorIds };
     } else {
       return {
         total: 0,
