@@ -56,10 +56,12 @@
         </q-toolbar-title>
         <q-space />
         <q-btn flat round dense icon="notifications_none" color="grey-7" class="q-mr-md" />
-        <div class="row items-center no-wrap">
-          <q-avatar size="36px" class="q-mr-sm" style="background: #e8e8e8;">
-            <img v-if="doctor.profileImage" :src="doctor.profileImage" />
-            <img v-else src="https://cdn.quasar.dev/img/avatar.png" />
+        <div class="row items-center no-wrap cursor-pointer" @click="$router.push('/doctor/profile')">
+          <q-avatar size="36px" class="q-mr-sm" style="background: #e8e8e8; color: #555;">
+            <img v-if="getAvatarUrl" :src="getAvatarUrl" />
+            <div v-else class="text-weight-bold" style="font-size: 16px;">
+              {{ doctor.name ? doctor.name.charAt(0).toUpperCase() : 'DR' }}
+            </div>
           </q-avatar>
           <div class="column gt-xs">
             <div class="text-weight-bold text-dark" style="font-size: 13px; line-height: 1.2;">
@@ -96,6 +98,12 @@ const toggleLeftDrawer = () => { leftDrawerOpen.value = !leftDrawerOpen.value; }
 
 const loading = ref(true);
 const doctor = ref({});
+
+const getAvatarUrl = computed(() => {
+  if (!doctor.value?.profileImage) return null;
+  if (typeof doctor.value.profileImage === 'string') return doctor.value.profileImage;
+  return doctor.value.profileImage.url || null;
+});
 
 const parseJwt = (t) => {
   try { return JSON.parse(atob(t.split('.')[1])); }

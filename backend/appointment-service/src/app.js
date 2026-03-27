@@ -1,11 +1,17 @@
 import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import cors from "cors";
 import appointmentRoutes from "./routes/appointmentRoutes.js";
 
 dotenv.config();
 
 const app = express();
+
+app.use(cors({
+  origin: "http://localhost:9000",
+  credentials: true
+}));
 
 // 🔹 Body parser (important)
 app.use(express.json());
