@@ -4,24 +4,44 @@ const slotSchema = new mongoose.Schema(
   {
     doctorId: {
       type: String,
-      ref: "Doctor",
       required: true,
       index: true
     },
 
+    // ONE-TIME slot: a specific calendar date
     date: {
       type: Date,
-      required: true
+      default: null
+    },
+
+    // RECURRING slot: which day of the week (e.g. "Monday", "Tuesday")
+    dayOfWeek: {
+      type: String,
+      enum: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+      default: null
+    },
+
+    isRecurring: {
+      type: Boolean,
+      default: false,
+      index: true
     },
 
     startTime: {
       type: String,
       required: true
+      // Format: "HH:MM" (24-hour), e.g. "09:00"
     },
 
     endTime: {
       type: String,
       required: true
+    },
+
+    hospital: {
+      type: String,
+      trim: true,
+      default: ""
     },
 
     isBooked: {
