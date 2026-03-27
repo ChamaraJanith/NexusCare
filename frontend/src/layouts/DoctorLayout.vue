@@ -22,7 +22,7 @@
           :key="item.path"
           clickable
           v-ripple
-          :to="item.path"
+          :to="item.to || item.path"
           active-class="sidebar-active-item"
           class="sidebar-nav-item q-mb-xs text-grey-4"
           style="border-radius: 8px; min-height: 44px;"
@@ -97,17 +97,31 @@ const toggleLeftDrawer = () => { leftDrawerOpen.value = !leftDrawerOpen.value; }
 const loading = ref(true);
 const doctor = ref({});
 
-const sidebarItems = [
-  { label: 'Dashboard',       icon: 'dashboard',        path: '/doctor/dashboard' },
-  { label: 'My Schedule',     icon: 'calendar_today',   path: '/doctor/schedule' },
-  { label: 'Patient Records', icon: 'group',            path: '/doctor/patients' },
-  { label: 'Consultations',   icon: 'chat',             path: '/doctor/consultations' },
-  { label: 'Availability',    icon: 'event_available',  path: '/doctor/availability' },
-  { label: 'Reports',         icon: 'description',      path: '/doctor/reports' },
-];
+const parseJwt = (t) => {
+  try { return JSON.parse(atob(t.split('.')[1])); }
+  catch { return null; }
+};
+
+const getDoctorId = () => {
+  const token = localStorage.getItem('token') || localStorage.getItem('nexus_token');
+  return parseJwt(token)?.roleId || null;
+};
+
+const sidebarItems = computed(() => {
+  const docId = getDoctorId();
+  return [
+    { label: 'Dashboard',       icon: 'dashboard',        path: '/doctor/dashboard' },
+    { label: 'My Schedule',     icon: 'calendar_today',   path: '/doctor/schedule' },
+    { label: 'Patient Records', icon: 'group',            path: '/doctor/patients' },
+    { label: 'Consultations',   icon: 'chat',             path: '/doctor/consultations' },
+    { label: 'Availability',    icon: 'event_available',  path: '/doctor/availability' },
+    { label: 'Video Conference',icon: 'videocam',         path: '/doctorVideo', to: { path: '/doctorVideo', query: { doctorId: docId } } },
+    { label: 'Reports',         icon: 'description',      path: '/doctor/reports' },
+  ];
+});
 
 const currentPageTitle = computed(() => {
-  const item = sidebarItems.find(i => route.path === i.path);
+  const item = sidebarItems.value.find(i => route.path === i.path);
   return item ? item.label : 'Doctor Portal';
 });
 
