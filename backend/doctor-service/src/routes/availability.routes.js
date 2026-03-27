@@ -8,38 +8,19 @@ import {
 
 import { verifyToken } from "../middleware/authMiddleware.js";
 import { allowRoles } from "../middleware/roleMiddleware.js";
-import { validate } from "../middleware/validate.js";
-import { slotSchema } from "../validators/availabilityValidator.js";
 
 const router = express.Router();
 
-// ✅ CREATE SLOT
-router.post(
-  "/",
-  verifyToken,
-  allowRoles("doctor"),
-  validate(slotSchema),
-  createSlot
-);
+// CREATE slot (doctor only)
+router.post("/", verifyToken, allowRoles("doctor"), createSlot);
 
-// ✅ GET SLOTS BY DOCTOR
+// GET slots by doctor (any authenticated user — patients/admins can view)
 router.get("/:doctorId", verifyToken, getSlots);
 
-// 🔥 UPDATE SLOT
-router.put(
-  "/",
-  verifyToken,
-  allowRoles("doctor"),
-  validate(slotSchema), // 🔥 ADD THIS
-  updateSlot
-);
+// UPDATE slot by _id (doctor only)
+router.put("/:slotId", verifyToken, allowRoles("doctor"), updateSlot);
 
-// 🔥 DELETE SLOT
-router.delete(
-  "/",
-  verifyToken,
-  allowRoles("doctor"),
-  deleteSlot
-);
+// DELETE slot by _id — soft delete (doctor only)
+router.delete("/:slotId", verifyToken, allowRoles("doctor"), deleteSlot);
 
 export default router;

@@ -54,10 +54,9 @@ export const fetchAppointments = async (doctorId) => {
   }
 };
 
-// ─── Availability ────────────────────────────────────────────────
+// ─── Availability (CRUD) ───────────────────────────────────────────
 export const fetchAvailability = async (doctorId) => {
   try {
-    console.log('[doctorApi] GET /api/availability/' + doctorId);
     const res = await doctorApi.get(`/api/availability/${doctorId}`);
     const data = res.data?.data || res.data || [];
     return Array.isArray(data) ? data : [];
@@ -65,6 +64,21 @@ export const fetchAvailability = async (doctorId) => {
     console.warn('[doctorApi] Availability failed:', err.message);
     return [];
   }
+};
+
+export const createAvailabilitySlot = async (payload) => {
+  const res = await doctorApi.post('/api/availability', payload);
+  return res.data?.data;
+};
+
+export const updateAvailabilitySlot = async (slotId, payload) => {
+  const res = await doctorApi.put(`/api/availability/${slotId}`, payload);
+  return res.data?.data;
+};
+
+export const deleteAvailabilitySlot = async (slotId) => {
+  const res = await doctorApi.delete(`/api/availability/${slotId}`);
+  return res.data;
 };
 
 // ─── Prescriptions ───────────────────────────────────────────────
