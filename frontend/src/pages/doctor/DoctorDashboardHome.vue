@@ -100,10 +100,10 @@
 </template>
 
 <script setup>
-import { ref, inject, onMounted, computed } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { fetchAppointments } from 'src/services/doctorApi';
 
-const props = defineProps({ doctor: Object, loading: Boolean });
+defineProps({ doctor: Object, loading: Boolean });
 const appointments = ref([]);
 const dataLoading = ref(true);
 
