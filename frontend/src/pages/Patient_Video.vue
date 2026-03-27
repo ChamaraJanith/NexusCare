@@ -1,9 +1,9 @@
 <template>
-  <q-page class="text-white font-jakarta page-shell overflow-hidden relative-position">
+  <q-page class="text-white font-jakarta page-shell overflow-x-hidden relative-position">
     <div class="page-bg-gradient"></div>
 
     <div v-if="!isInCall" class="max-width-1200 q-mx-auto q-px-md z-top relative-position">
-      
+
       <div class="row items-center justify-between q-mb-xl mt-120">
         <div>
           <div class="trusted-badge q-py-xs q-px-sm row items-center inline no-wrap q-mb-sm">
@@ -32,14 +32,41 @@
             </div>
 
             <div class="column q-gutter-y-md">
-              <div class="text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1">Target Specialist ID</div>
+              <div class="text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1">Select Specialist</div>
+              <div class="doctor-dropdown-wrap">
+                <button
+                  type="button"
+                  class="doctor-dropdown-trigger"
+                  @click="toggleDoctorList"
+                  :disabled="doctorOptions.length === 0"
+                >
+                  <span class="doctor-dropdown-trigger-text">
+                    {{ selectedDoctor ? `${selectedDoctor.name || selectedDoctor.doctorId} - ${selectedDoctor.specialization || 'General Consultation'}` : 'Choose Specialist' }}
+                  </span>
+                  <q-icon :name="showDoctorList ? 'keyboard_arrow_up' : 'keyboard_arrow_down'" color="grey-4" size="20px" />
+                </button>
+
+                <div v-if="showDoctorList && doctorOptions.length > 0" class="doctor-dropdown-list">
+                  <button
+                    v-for="doctor in doctorOptions"
+                    :key="doctor.doctorId"
+                    type="button"
+                    class="doctor-option"
+                    @click="selectDoctor(doctor)"
+                  >
+                    <div class="doctor-option-name">{{ doctor.name || doctor.doctorId }}</div>
+                    <div class="doctor-option-meta">{{ doctor.specialization || 'General Consultation' }} • {{ doctor.doctorId }}</div>
+                  </button>
+                </div>
+              </div>
               <q-input
+                v-if="doctorOptions.length === 0"
                 v-model="booking.doctorId"
                 dark
                 outlined
                 color="blue-4"
                 class="cinematic-input"
-                placeholder="Enter Practitioner Node ID"
+                placeholder="No list available - Enter Doctor ID (e.g., DOC-0002)"
               />
               <q-btn
                 :label="isBooking ? 'SYNCHRONIZING...' : 'Establish Neural Link'"
@@ -57,7 +84,7 @@
         <div class="col-12 col-md-7">
           <div class="glass-card q-pa-xl h-full column">
             <div class="text-h6 text-white text-weight-bold q-mb-lg">Consultation Archive</div>
-            
+
             <div v-if="completedSessions.length > 0" class="scroll-area flex-1">
               <div class="q-gutter-y-md">
                 <div v-for="session in completedSessions" :key="session._id" class="condition-item row items-center q-pa-md">
@@ -76,7 +103,7 @@
                 </div>
               </div>
             </div>
-            
+
             <div v-else class="text-center text-grey-6 flex flex-center flex-1 column">
               <q-icon name="cloud_off" size="3rem" class="q-mb-md opacity-50" />
               <div class="letter-spacing-1 text-weight-bold uppercase">No recent sessions found</div>
@@ -93,7 +120,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, onBeforeUnmount } from 'vue'
+import { ref, onMounted, computed, onBeforeUnmount, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
 import { useQuasar } from 'quasar'
@@ -108,6 +135,8 @@ const storedUser = storedUserStr ? JSON.parse(storedUserStr) : null
 const isBooking = ref(false)
 const isInCall = ref(false)
 const sessions = ref([])
+const doctors = ref([])
+const showDoctorList = ref(false)
 let jitsiApi = null
 
 // --- User Data (Route එකෙන් හෝ Default අගයන් ලබා ගැනීම) ---
@@ -117,6 +146,20 @@ const patientName = ref(route.query.patientName || (storedUser && storedUser.nam
 const patientEmail = ref(route.query.patientEmail || (storedUser && storedUser.email) || '')
 const doctorEmail = ref(route.query.doctorEmail || '')
 const booking = ref({ patientId: patientId.value, doctorId: '', patientEmail: patientEmail.value, doctorEmail: doctorEmail.value })
+
+const doctorOptions = computed(() => {
+  return doctors.value.map((doctor) => ({
+    doctorId: doctor.doctorId,
+    name: doctor.name || doctor.doctorId,
+    specialization: doctor.specialization || null,
+    doctorEmail: doctor.email || '',
+    label: doctor.label || `${doctor.name || doctor.doctorId} - ${doctor.specialization || 'General Consultation'} (${doctor.doctorId})`
+  }))
+})
+
+const selectedDoctor = computed(() => {
+  return doctorOptions.value.find((doctor) => doctor.doctorId === booking.value.doctorId) || null
+})
 
 // --- Computed: Filter History ---
 const completedSessions = computed(() => {
@@ -136,6 +179,40 @@ const fetchSessions = async () => {
   } catch (err) {
     console.error("Fetch Sessions Error:", err)
   }
+}
+
+const fetchDoctors = async () => {
+  try {
+    const videoRes = await axios.get('http://localhost:5005/api/video/doctors')
+
+    if (videoRes.data.success) {
+      doctors.value = Array.isArray(videoRes.data.data) ? videoRes.data.data : []
+
+      if (!doctors.value.length) {
+        $q.notify({
+          color: 'warning',
+          message: 'Doctor list is empty in doctor-service.'
+        })
+      }
+    }
+  } catch (err) {
+    console.error('Fetch Doctors Error:', err)
+    $q.notify({
+      color: 'warning',
+      message: 'Could not load doctors list from doctor-service.'
+    })
+  }
+}
+
+const toggleDoctorList = () => {
+  if (!doctorOptions.value.length) return
+  showDoctorList.value = !showDoctorList.value
+}
+
+const selectDoctor = (doctor) => {
+  booking.value.doctorId = doctor.doctorId
+  booking.value.doctorEmail = doctor.doctorEmail || ''
+  showDoctorList.value = false
 }
 
 const startJitsiCall = (roomName) => {
@@ -198,7 +275,9 @@ const processBooking = async () => {
       doctorId: String(booking.value.doctorId).trim(),
       patientEmail: patientEmail.value, // 👈 Dynamic Email from logged in user
       patientPhone: "+94767691846",      // 👈 ඔයාගේ Twilio Verified Phone Number එක
-      doctorEmail: activeDoctorEmail || ''
+      doctorEmail: activeDoctorEmail || '',
+      doctorName: selectedDoctor.value?.name || '',
+      doctorSpecialization: selectedDoctor.value?.specialization || ''
     });
 
     if (response.data.success) {
@@ -217,8 +296,18 @@ const processBooking = async () => {
 }
 
 onMounted(() => {
+  fetchDoctors()
   fetchSessions()
 })
+
+watch(
+  () => booking.value.doctorId,
+  (selectedDoctorId) => {
+    const selected = doctorOptions.value.find((doctor) => doctor.doctorId === selectedDoctorId)
+    booking.value.doctorEmail = selected?.doctorEmail || ''
+    if (selectedDoctorId) showDoctorList.value = false
+  }
+)
 
 onBeforeUnmount(() => {
   if (jitsiApi) jitsiApi.dispose()
@@ -243,7 +332,7 @@ onBeforeUnmount(() => {
   position: absolute;
   top: 0; left: 0; width: 100%; height: 100%;
   pointer-events: none;
-  background: 
+  background:
     radial-gradient(circle at 10% 20%, rgba(37, 99, 235, 0.08), transparent 60%),
     radial-gradient(circle at 90% 80%, rgba(56, 189, 248, 0.04), transparent 50%),
     radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.05), transparent 50%);
@@ -322,6 +411,74 @@ onBeforeUnmount(() => {
 .btn-primary-glow:hover {
   transform: translateY(-2px);
   box-shadow: 0 15px 35px -5px rgba(37, 99, 235, 0.6);
+}
+
+.doctor-dropdown-wrap {
+  position: relative;
+}
+
+.doctor-dropdown-trigger {
+  width: 100%;
+  min-height: 56px;
+  border-radius: 16px;
+  border: 2px solid rgba(56, 189, 248, 0.9);
+  background: rgba(0, 12, 36, 0.85);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  cursor: pointer;
+}
+
+.doctor-dropdown-trigger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.doctor-dropdown-trigger-text {
+  text-align: left;
+  font-size: 1.05rem;
+  line-height: 1.3;
+}
+
+.doctor-dropdown-list {
+  margin-top: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+  border-radius: 14px;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  background: rgba(7, 16, 34, 0.95);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
+}
+
+.doctor-option {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #ffffff;
+  text-align: left;
+  padding: 12px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.doctor-option:last-child {
+  border-bottom: none;
+}
+
+.doctor-option:hover {
+  background: rgba(59, 130, 246, 0.18);
+}
+
+.doctor-option-name {
+  font-weight: 700;
+}
+
+.doctor-option-meta {
+  color: #93c5fd;
+  font-size: 0.82rem;
+  margin-top: 2px;
 }
 
 #jitsi-container {

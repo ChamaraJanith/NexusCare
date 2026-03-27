@@ -124,4 +124,16 @@ const getSessions = async (req, res) => {
     }
 };
 
-module.exports = { initializeSession, endSession, getSessions };
+// 4. Doctors List for Patient Video Booking
+const getDoctors = async (req, res) => {
+    try {
+        const doctors = await videoService.getDoctorsForVideo();
+
+        res.status(200).json({ success: true, total: doctors.length, data: doctors });
+    } catch (error) {
+        console.error('❌ Get Doctors Error:', error.message);
+        res.status(500).json({ success: false, message: error.message || 'Failed to fetch doctors' });
+    }
+};
+
+module.exports = { initializeSession, endSession, getSessions, getDoctors };

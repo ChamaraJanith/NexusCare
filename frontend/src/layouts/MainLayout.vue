@@ -32,7 +32,7 @@
         <!-- Desktop Nav -->
         <div class="gt-sm row items-center justify-center nav-links-container q-gutter-x-xl text-caption text-weight-bold text-uppercase tracking-wider text-grey-4">
           <span class="cursor-pointer nav-link" @click="$router.push('/appointment')">Book Appointment</span>
-          <span class="cursor-pointer nav-link" @click="$router.push('/telemedicine')">Telemedicine</span>
+          <span class="cursor-pointer nav-link" @click="goTelemedicine">Telemedicine</span>
           <span class="cursor-pointer nav-link" @click="$router.push('/symptoms')">AI Symptom Checker</span>
         </div>
 
@@ -109,7 +109,7 @@
               <q-item-section avatar><q-icon name="event" color="blue-4" /></q-item-section>
               <q-item-section>Book Appointment</q-item-section>
             </q-item>
-            <q-item clickable v-ripple to="/telemedicine" class="drawer-item q-mb-sm">
+            <q-item clickable v-ripple class="drawer-item q-mb-sm" @click="goTelemedicine">
               <q-item-section avatar><q-icon name="videocam" color="blue-4" /></q-item-section>
               <q-item-section>Telemedicine</q-item-section>
             </q-item>
@@ -119,7 +119,7 @@
             </q-item>
           </q-list>
         </q-scroll-area>
-        
+
         <div class="q-pa-lg">
           <div class="text-caption text-grey-6 text-center">© 2026 Nexus Care</div>
         </div>
@@ -184,6 +184,20 @@ const goProfile = () => {
   else if (user.role === 'doctor') router.push('/doctor/dashboard')
   else if (user.role === 'admin') router.push('/admin/dashboard')
   else router.push('/')
+}
+
+const goTelemedicine = () => {
+  syncAuthState()
+
+  if (leftDrawerOpen.value) {
+    leftDrawerOpen.value = false
+  }
+
+  if (isLoggedIn.value) {
+    router.push('/patientVideo')
+  } else {
+    router.push('/login')
+  }
 }
 
 const onStorageChange = (event) => {
