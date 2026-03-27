@@ -4,6 +4,7 @@ const router = express.Router();
 const videoController = require('../controllers/videoController');
 
 router.post('/initialize-link', videoController.initializeSession);
+router.get('/doctors', videoController.getDoctors);
 
 router.get('/sessions', videoController.getSessions);
 
