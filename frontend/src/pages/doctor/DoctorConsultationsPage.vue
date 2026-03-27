@@ -32,7 +32,7 @@
 import { ref, onMounted } from 'vue';
 import { fetchAppointments } from 'src/services/doctorApi';
 
-const props = defineProps({ doctor: Object });
+defineProps({ doctor: Object });
 const consultations = ref([]);
 const loading = ref(true);
 

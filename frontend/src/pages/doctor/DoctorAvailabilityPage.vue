@@ -52,7 +52,7 @@
 import { ref, onMounted } from 'vue';
 import { fetchAvailability } from 'src/services/doctorApi';
 
-const props = defineProps({ doctor: Object });
+defineProps({ doctor: Object });
 const slots = ref([]);
 const loading = ref(true);
 const showAdd = ref(false);
