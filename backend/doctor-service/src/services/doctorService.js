@@ -1,6 +1,8 @@
 import Doctor from "../models/Doctor.js";
 import AvailabilitySlot from "../models/AvailabilitySlot.js";
 import { getUserByToken } from "./userServiceClient.js";
+import cloudinary from "../config/cloudinary.js";
+// Force restart: 1
 
 // GET by doctorId (business ID)
 export const getDoctorByDoctorId = async (doctorId) => {
@@ -25,13 +27,21 @@ export const getDoctorFullProfile = async (doctorId, bearerToken) => {
   // Build merged profile
   return {
     doctorId,
-    // Identity fields from user-patient-service
+
+    // Identity fields
     name: userIdentity?.name || null,
     email: userIdentity?.email || null,
-    profileImage: userIdentity?.profileImage || null,
+    profileImage: doctorRecord?.profileImage?.url
+      ? doctorRecord.profileImage
+      : (userIdentity?.profileImage || null),
     phone: userIdentity?.phone || null,
-    // Professional fields from doctor-service DB
-    specialization: doctorRecord?.specialization || null,
+
+    // 🔥 FIXED PROFESSIONAL FIELDS
+    specialization:
+      doctorRecord?.specialization ||
+      doctorRecord?.specialty ||
+      null,
+
     qualifications: doctorRecord?.qualifications || null,
     experience: doctorRecord?.experience || null,
     hospital: doctorRecord?.hospital || null,
@@ -49,6 +59,34 @@ export const updateDoctorByDoctorId = async (doctorId, data) => {
     data,
     { new: true, runValidators: true }
   );
+};
+
+// UPDATE Doctor Profile details
+export const updateDoctorProfile = async (doctorId, updateData) => {
+  return await Doctor.findOneAndUpdate(
+    { doctorId, isDeleted: false },
+    updateData,
+    { new: true, runValidators: true }
+  );
+};
+
+// UPDATE Profile Image
+export const updateProfileImage = async (doctorId, fileUrl, publicId) => {
+  const doctor = await getDoctorByDoctorId(doctorId);
+  if (!doctor) throw new Error("Doctor not found");
+
+  // If there's an existing image, delete it from Cloudinary
+  if (doctor.profileImage && doctor.profileImage.publicId) {
+    try {
+      await cloudinary.uploader.destroy(doctor.profileImage.publicId);
+    } catch (err) {
+      console.error("[Cloudinary] Failed to delete old image:", err);
+    }
+  }
+
+  // Save new image details
+  doctor.profileImage = { url: fileUrl, publicId };
+  return await doctor.save();
 };
 
 // GET ALL

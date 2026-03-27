@@ -37,6 +37,7 @@ const routes = [
       { path: 'patients',      component: () => import('pages/doctor/DoctorPatientsPage.vue') },
       { path: 'consultations', component: () => import('pages/doctor/DoctorConsultationsPage.vue') },
       { path: 'availability',  component: () => import('pages/doctor/DoctorAvailabilityPage.vue') },
+      { path: 'profile',       component: () => import('pages/doctor/DoctorProfilePage.vue') },
       { path: 'reports',       component: () => import('pages/doctor/DoctorReportsPage.vue') },
     ]
   },

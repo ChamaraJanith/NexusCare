@@ -1,6 +1,8 @@
 import express from "express";
 import {
   getDoctorMe,
+  updateDoctorMe,
+  uploadProfileImage,
   getDoctor,
   updateDoctor,
   searchDoctors
@@ -10,6 +12,7 @@ import { verifyToken } from "../middleware/authMiddleware.js";
 import { allowRoles } from "../middleware/roleMiddleware.js";
 import { validate } from "../middleware/validate.js";
 import { updateDoctorSchema } from "../validators/doctorValidator.js";
+import { upload } from "../middleware/uploadMiddleware.js";
 
 const router = express.Router();
 
@@ -20,6 +23,12 @@ router.get("/", searchDoctors);
 // MUST be before /:id to prevent "me" being treated as an ID
 router.get("/me", verifyToken, allowRoles("doctor"), getDoctorMe);
 
+// ✏️ UPDATE own profile
+router.put("/me", verifyToken, allowRoles("doctor"), updateDoctorMe);
+
+// 📸 UPLOAD own profile image
+router.post("/me/image", verifyToken, allowRoles("doctor"), upload.single("image"), uploadProfileImage);
+//router.post("/me/image", upload.single("image"), uploadProfileImage);
 // 🔍 Get doctor profile (any logged user)
 router.get("/:id", verifyToken, getDoctor);
 
@@ -32,4 +41,4 @@ router.put(
   updateDoctor
 );
 
-export default router;
+export default router;
