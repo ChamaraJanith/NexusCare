@@ -7,9 +7,11 @@ export const verifyUser = async (token) => {
       { token }
     );
 
-    return res.data;
+    // 🔥 HANDLE BOTH STRUCTURES
+    return res.data.user || res.data;
 
   } catch (error) {
+    console.error("Auth error:", error.response?.data || error.message);
     throw new Error("Unauthorized");
   }
 };

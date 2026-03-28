@@ -7,30 +7,33 @@ import {
 
 import { verifyUser } from "../services/authService.js";
 
-// ✅ Book Appointment (UPDATED 🔥)
+
+// ✅ Book Appointment
 export const bookAppointment = async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
 
-    // ❌ No token
     if (!authHeader) {
       return res.status(401).json({ error: "No token provided" });
     }
 
     const token = authHeader.split(" ")[1];
 
-    // 🔥 Call MS1 (User Service)
+    console.log("TOKEN:", token);
+
     const userData = await verifyUser(token);
 
-    // ❌ Only patients allowed
-    if (userData.role !== "patient") {
-      return res.status(403).json({ error: "Only patients can book appointments" });
+    console.log("USER DATA:", userData);
+
+    if (!userData || userData.role !== "patient") {
+      return res.status(403).json({
+        error: "Only patients can book appointments"
+      });
     }
 
-    // ✅ Use patientId from MS1
     const data = {
       ...req.body,
-      patientId: userData.roleId   // PAT-0001
+      patientId: userData.roleId
     };
 
     const appointment = await createAppointment(data);
@@ -41,10 +44,14 @@ export const bookAppointment = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error booking appointment:", error.message);
-    res.status(401).json({ error: "Unauthorized" });
+    console.error("🔥 REAL ERROR:", error.response?.data || error.message);
+
+    res.status(500).json({
+      error: error.response?.data || error.message
+    });
   }
 };
+
 
 // ✅ Get Appointments
 export const getAppointments = async (req, res) => {
@@ -61,6 +68,7 @@ export const getAppointments = async (req, res) => {
   }
 };
 
+
 // ✅ Update Appointment
 export const updateAppointment = async (req, res) => {
   try {
@@ -76,16 +84,18 @@ export const updateAppointment = async (req, res) => {
 
     const updated = await updateAppointmentService(
       req.params.id,
-      userData.roleId, // 🔥 patientId
+      userData.roleId,
       req.body
     );
 
     res.status(200).json(updated);
 
   } catch (error) {
-    res.status(403).json({ error: error.message });
+    console.error("UPDATE ERROR:", error.message);
+    res.status(500).json({ error: error.message });
   }
 };
+
 
 // ✅ Cancel Appointment
 export const cancelAppointment = async (req, res) => {
@@ -102,12 +112,13 @@ export const cancelAppointment = async (req, res) => {
 
     const cancelled = await cancelAppointmentService(
       req.params.id,
-      userData.roleId // 🔥 patientId
+      userData.roleId
     );
 
     res.status(200).json(cancelled);
 
   } catch (error) {
-    res.status(403).json({ error: error.message });
+    console.error("CANCEL ERROR:", error.message);
+    res.status(500).json({ error: error.message });
   }
 };
