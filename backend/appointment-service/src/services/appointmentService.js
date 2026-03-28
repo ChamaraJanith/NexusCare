@@ -1,5 +1,6 @@
 import Appointment from "../models/Appointment.js";
 import axios from "axios"; // 🔥 IMPORTANT (missing in your code)
+import { io } from "../app.js";
 
 
 // 🔥 STEP 3 → ADD THIS AT TOP (charges function)
@@ -29,12 +30,23 @@ const generateAppointmentId = async () => {
   return `APP-${number.toString().padStart(4, "0")}`;
 };
 
+// 🔥 NEW → Get next queue number (same doctor + same date)
+export const getNextQueueNumber = async (doctorId, date) => {
+  const count = await Appointment.countDocuments({
+    doctorId,
+    date,
+    status: { $ne: "CANCELLED" }
+  });
 
-// ✅ Create Appointment (🔥 UPDATED)
+  return count + 1;
+};
+
+
+// ✅ CREATE APPOINTMENT (FINAL 🔥)
 export const createAppointment = async (data) => {
   const { doctorId, date, time, appointmentType } = data;
 
-  // ❌ check duplicate
+  // ❌ check duplicate slot
   const existing = await Appointment.findOne({
     doctorId,
     date,
@@ -46,13 +58,22 @@ export const createAppointment = async (data) => {
     throw new Error("Slot already booked");
   }
 
-  // 🔥 LOCK SLOT (doctor-service)
+  // 🔥 LOCK SLOT (Doctor Service)
   await axios.put(
     "http://localhost:5002/api/availability/book",
     { doctorId, date, time }
   );
 
-  // 🔥 CALCULATE CHARGES
+  // 🔢 QUEUE NUMBER (same doctor + same date)
+  const count = await Appointment.countDocuments({
+    doctorId,
+    date,
+    status: { $ne: "CANCELLED" }
+  });
+
+  const queueNumber = count + 1;
+
+  // 💰 CALCULATE CHARGES
   const charges = calculateCharges(appointmentType);
 
   const appointmentId = await generateAppointmentId();
@@ -60,14 +81,19 @@ export const createAppointment = async (data) => {
   const appointment = new Appointment({
     ...data,
     appointmentId,
-    charges,                 // 🔥 NEW
-    paymentStatus: "PENDING",// 🔥 NEW
+    queueNumber,              // 🔥 NEW (STEP 6)
+    charges,                  // 🔥 STEP 7 ready
+    paymentStatus: "PENDING", // 🔥 STEP 7 ready
     status: "PENDING"
   });
 
-  return await appointment.save();
-};
+  const saved = await appointment.save();
 
+  // ⚡ REAL-TIME EMIT
+  io.emit("appointmentBooked", saved);
+
+  return saved;
+};
 
 // ✅ Get appointments
 export const getAppointmentsByPatient = async (patientId) => {
@@ -75,7 +101,7 @@ export const getAppointmentsByPatient = async (patientId) => {
 };
 
 
-// ✅ Update appointment
+// ✅ Update appointment (FINAL 🔥)
 export const updateAppointment = async (id, patientId, data) => {
   const appointment = await Appointment.findById(id);
 
@@ -83,15 +109,58 @@ export const updateAppointment = async (id, patientId, data) => {
     throw new Error("Appointment not found");
   }
 
+  // 🔐 ownership check
   if (appointment.patientId !== patientId) {
     throw new Error("Unauthorized: Not your appointment");
   }
 
-  return await Appointment.findByIdAndUpdate(id, data, { new: true });
+  // ❌ cannot update cancelled or completed
+  if (["CANCELLED", "COMPLETED"].includes(appointment.status)) {
+    throw new Error("Cannot update this appointment");
+  }
+
+  // 🧠 24 hour validation
+  const appointmentDateTime = new Date(
+    `${appointment.date} ${appointment.time}`
+  );
+
+  const now = new Date();
+  const diffHours = (appointmentDateTime - now) / (1000 * 60 * 60);
+
+  if (diffHours < 24) {
+    throw new Error(
+      "Cannot modify appointment within 24 hours of scheduled time"
+    );
+  }
+
+  // 🔄 OPTIONAL: if doctor/date changed → recalc queue
+  if (data.doctorId || data.date) {
+    const newDoctorId = data.doctorId || appointment.doctorId;
+    const newDate = data.date || appointment.date;
+
+    const count = await Appointment.countDocuments({
+      doctorId: newDoctorId,
+      date: newDate,
+      status: { $ne: "CANCELLED" }
+    });
+
+    appointment.queueNumber = count + 1;
+  }
+
+  // ✅ update fields
+  Object.assign(appointment, data);
+
+  const updated = await appointment.save();
+
+  // ⚡ REAL-TIME EMIT
+  io.emit("appointmentUpdated", updated);
+
+  return updated;
 };
 
 
-// ✅ Cancel appointment
+
+// ✅ Cancel appointment (FINAL 🔥)
 export const cancelAppointment = async (id, patientId) => {
   const appointment = await Appointment.findById(id);
 
@@ -99,23 +168,48 @@ export const cancelAppointment = async (id, patientId) => {
     throw new Error("Appointment not found");
   }
 
+  // 🔐 ownership check
   if (appointment.patientId !== patientId) {
     throw new Error("Unauthorized: Not your appointment");
   }
 
-  return await Appointment.findByIdAndUpdate(
-    id,
-    { status: "CANCELLED" },
-    { new: true }
-  );
+  // ❌ cannot cancel completed
+  if (appointment.status === "COMPLETED") {
+    throw new Error("Cannot cancel a completed appointment");
+  }
+
+  // ❌ already cancelled
+  if (appointment.status === "CANCELLED") {
+    throw new Error("Appointment already cancelled");
+  }
+
+  // 🔄 update status
+  appointment.status = "CANCELLED";
+
+  const cancelled = await appointment.save();
+
+  // ⚡ REAL-TIME EMIT
+  io.emit("appointmentCancelled", cancelled);
+
+  return cancelled;
 };
 
 
-// 🔥 GET SLOTS (FIXED - NO TOKEN)
-export const getDoctorSlots = async (doctorId, date) => {
-  const res = await axios.get(
-    `http://localhost:5002/api/availability/${doctorId}/by-date?date=${date}`
-  );
 
-  return res.data;
+// 🔥 GET DOCTOR SLOTS (clean version)
+export const getDoctorSlots = async (doctorId, date) => {
+  try {
+    const res = await axios.get(
+      `http://localhost:5002/api/availability/${doctorId}/by-date`,
+      {
+        params: { date }
+      }
+    );
+
+    return res.data;
+
+  } catch (error) {
+    console.error("Error fetching slots:", error.message);
+    throw new Error("Failed to fetch doctor slots");
+  }
 };

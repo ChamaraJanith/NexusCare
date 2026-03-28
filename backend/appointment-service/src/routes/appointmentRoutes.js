@@ -14,6 +14,7 @@ import {
 import * as doctorService from "../services/doctorService.js";
 import { verifyUser } from "../services/authService.js";
 import Appointment from "../models/Appointment.js";
+import { getNextQueue } from "../controllers/appointmentController.js";
 
 const router = express.Router();
 
@@ -38,6 +39,8 @@ router.get("/search", async (req, res) => {
   }
 });
 
+// 🔥 Next available queue number
+router.get("/queue/next", getNextQueue);
 
 // 📅 GET DOCTOR SLOTS (🔥 FIXED - NO TOKEN NEEDED)
 router.get("/doctor/:doctorId/slots", async (req, res) => {
