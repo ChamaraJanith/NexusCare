@@ -60,7 +60,11 @@ const appointmentSchema = new mongoose.Schema({
     type: String,
     enum: ["PENDING", "VERIFIED", "CONFIRMED", "COMPLETED", "CANCELLED"],
     default: "PENDING"
-  }
+  },
+
+  queueNumber: {
+  type: Number
+}
 
 }, { timestamps: true });
 

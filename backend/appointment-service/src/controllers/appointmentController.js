@@ -8,6 +8,32 @@ import {
 import { verifyUser } from "../services/authService.js";
 
 
+// 🔥 NEW → Get next queue number
+import { getNextQueueNumber } from "../services/appointmentService.js";
+
+export const getNextQueue = async (req, res) => {
+  try {
+    const { doctorId, date } = req.query;
+
+    if (!doctorId || !date) {
+      return res.status(400).json({
+        error: "doctorId and date are required"
+      });
+    }
+
+    const nextNumber = await getNextQueueNumber(doctorId, date);
+
+    res.json({
+      nextQueueNumber: nextNumber
+    });
+
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: "Failed to get queue number" });
+  }
+};
+
+
 // ✅ Book Appointment
 export const bookAppointment = async (req, res) => {
   try {
