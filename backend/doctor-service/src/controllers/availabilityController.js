@@ -1,4 +1,5 @@
 import * as availabilityService from "../services/availabilityService.js";
+import AvailabilitySlot from "../models/AvailabilitySlot.js";
 
 // POST /api/availability
 export const createSlot = async (req, res) => {
@@ -53,5 +54,59 @@ export const deleteSlot = async (req, res) => {
   } catch (err) {
     const status = err.message.startsWith("Forbidden") ? 403 : 400;
     res.status(status).json({ success: false, message: err.message });
+  }
+};
+
+// 🔥 NEW: get slots by doctor + date + split types
+export const getSlotsByDoctorAndDate = async (req, res) => {
+  try {
+    const { doctorId } = req.params;
+    const { date } = req.query;
+
+    const slots = await AvailabilitySlot.find({
+      doctorId,
+      date: new Date(date),
+      isDeleted: false,
+      isBooked: false
+    });
+
+    // 🔥 SPLIT TYPES
+    const physical = slots.filter(s => s.slotType === "PHYSICAL");
+    const online = slots.filter(s => s.slotType === "ONLINE");
+
+    res.json({
+      physical,
+      online
+    });
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+//🔥 NEW: lock slot when appointment created
+export const bookSlot = async (req, res) => {
+  try {
+    const { doctorId, date, time } = req.body;
+
+    const slot = await AvailabilitySlot.findOneAndUpdate(
+      {
+        doctorId,
+        date: new Date(date),
+        startTime: time,
+        isBooked: false
+      },
+      { isBooked: true },
+      { new: true }
+    );
+
+    if (!slot) {
+      return res.status(400).json({ message: "Slot already booked" });
+    }
+
+    res.json({ message: "Slot booked" });
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };

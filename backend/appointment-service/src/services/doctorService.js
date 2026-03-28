@@ -22,3 +22,19 @@ export const searchDoctors = async (filters) => {
     return [];
   }
 };
+
+// 🔥 FIXED VERSION
+
+export const getDoctorSlots = async (doctorId, date) => {
+  try {
+    const res = await axios.get(
+      `http://localhost:5002/api/availability/${doctorId}/by-date?date=${date}`
+    );
+
+    return res.data;
+
+  } catch (error) {
+    console.error("❌ ERROR fetching slots:", error.message);
+    throw error;
+  }
+};

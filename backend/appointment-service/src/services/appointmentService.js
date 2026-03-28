@@ -11,17 +11,23 @@ const generateAppointmentId = async () => {
 export const createAppointment = async (data) => {
   const { doctorId, date, time } = data;
 
-  // 🔥 Check if slot already booked
+  // 🔥 check DB
   const existing = await Appointment.findOne({
     doctorId,
     date,
     time,
-    status: { $ne: "CANCELLED" } // ignore cancelled
+    status: { $ne: "CANCELLED" }
   });
 
   if (existing) {
-    throw new Error("This time slot is already booked");
+    throw new Error("Slot already booked");
   }
+
+  // 🔥 CALL DOCTOR SERVICE → mark slot booked
+  await axios.put(
+    `http://localhost:5002/api/availability/book`,
+    { doctorId, date, time }
+  );
 
   const appointmentId = await generateAppointmentId();
 
@@ -73,4 +79,18 @@ export const cancelAppointment = async (id, patientId) => {
     { status: "CANCELLED" },
     { new: true }
   );
+};
+
+// 🔥 NEW: get slots from doctor-service
+export const getDoctorSlots = async (doctorId, date, token) => {
+  const res = await axios.get(
+    `http://localhost:5002/api/availability/${doctorId}/by-date?date=${date}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }
+  );
+
+  return res.data;
 };
