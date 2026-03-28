@@ -13,31 +13,55 @@ import {
 
 import * as doctorService from "../services/doctorService.js";
 
+// 🔥 ADD THIS (missing before)
+import { verifyUser } from "../services/authService.js";
+import Appointment from "../models/Appointment.js";
+
 const router = express.Router();
 
-// ✅ Search doctors FIRST
-router.get("/search/:specialty", async (req, res) => {
+router.get("/search", async (req, res) => {
   try {
-    const doctors = await doctorService.searchDoctors(req.params.specialty);
+    const { name, specialty, hospital, date } = req.query;
+
+    const doctors = await doctorService.searchDoctors({
+      name,
+      specialty,
+      hospital,
+      date
+    });
+
+    console.log("🔥 DOCTORS:", doctors);
+
+    // ✅ RETURN FULL ARRAY
     res.json(doctors);
+
   } catch (error) {
-    console.error("Error fetching doctors:", error.message);
-    res.status(500).json({ error: "Failed to fetch doctors" });
+    console.error("❌ ERROR:", error.message);
+
+    res.status(500).json({
+      error: "Failed to fetch doctors"
+    });
   }
 });
 
-// ✅ Book appointment (NO middleware now)
+
+// ✅ Book appointment
 router.post("/", validateAppointment, bookAppointment);
 
+
 // ✅ Get appointments
-router.get("/:patientId", getAppointments);
+router.get("/patient/:patientId", getAppointments);
+
 
 // ✅ Update appointment
 router.put("/:id", validateUpdateAppointment, updateAppointment);
 
+
 // ✅ Cancel appointment
 router.delete("/:id", cancelAppointment);
 
+
+// ✅ Admin verify appointment
 router.put("/admin/verify/:id", async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
