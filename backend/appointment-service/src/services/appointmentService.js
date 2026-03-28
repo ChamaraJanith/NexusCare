@@ -9,6 +9,20 @@ const generateAppointmentId = async () => {
 
 // ✅ Create Appointment
 export const createAppointment = async (data) => {
+  const { doctorId, date, time } = data;
+
+  // 🔥 Check if slot already booked
+  const existing = await Appointment.findOne({
+    doctorId,
+    date,
+    time,
+    status: { $ne: "CANCELLED" } // ignore cancelled
+  });
+
+  if (existing) {
+    throw new Error("This time slot is already booked");
+  }
+
   const appointmentId = await generateAppointmentId();
 
   const appointment = new Appointment({
