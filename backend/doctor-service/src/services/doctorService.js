@@ -94,78 +94,61 @@ export const getAllDoctors = async (filter = {}) => {
   return await Doctor.find({ isDeleted: false, ...filter });
 };
 
-// 🔍 SEARCH + FILTER + PAGINATION + ADVANCED
+//search doctors with filters
 export const searchDoctors = async (queryParams) => {
-  const {
-    search,
-    specialization,
-    location,
-    available,
-    minExp,
-    maxExp,
-    page = 1,
-    limit = 10,
-    sort = "createdAt",
-    order = "asc"
-  } = queryParams;
+  try {
+    const params = queryParams.query ? queryParams.query : queryParams;
 
-  const query = { isDeleted: false, isActive: true };
+    console.log("🔥 PARAMS:", params);
 
-  // 🔍 FULL-TEXT SEARCH
-  if (search) {
-    query.$text = { $search: search };
-  }
+    const query = {};
 
-  // 📍 Location filter
-  if (location) {
-    query.location = { $regex: location, $options: "i" };
-  }
-
-  // 🎯 Specialization filter
-  if (specialization) {
-    query.specialization = specialization;
-  }
-
-  // 📊 Experience range filter
-  if (minExp || maxExp) {
-    query.experience = {};
-    if (minExp) query.experience.$gte = Number(minExp);
-    if (maxExp) query.experience.$lte = Number(maxExp);
-  }
-
-  // ⏰ Availability filter
-  if (available === "true") {
-    const slots = await AvailabilitySlot.find({ isBooked: false }).select("doctorId");
-    const doctorIds = [...new Set(slots.map(slot => slot.doctorId))];
-
-    if (doctorIds.length > 0) {
-      query.doctorId = { $in: doctorIds };
-    } else {
-      return {
-        total: 0,
-        page: Number(page),
-        limit: Number(limit),
-        totalPages: 0,
-        data: []
+    // 🔥 SIMPLE & SAFE FILTER
+    if (params.specialty) {
+      query.specialty = {
+        $regex: params.specialty.trim(),
+        $options: "i"
       };
     }
+
+    if (params.hospital) {
+      query.hospital = {
+        $regex: params.hospital.trim(),
+        $options: "i"
+      };
+    }
+
+    // NAME FILTER (optional)
+if (params.name) {
+  query.$text = { $search: params.name };
+}
+
+// DATE FILTER (important)
+if (params.date) {
+  const slots = await AvailabilitySlot.find({
+    date: params.date,
+    isBooked: false
+  }).select("doctorId");
+
+  const doctorIds = [...new Set(slots.map(s => s.doctorId))];
+
+  if (doctorIds.length > 0) {
+    query.doctorId = { $in: doctorIds };
+  } else {
+    return { data: [] };
   }
+}
 
-  const skip = (Number(page) - 1) * Number(limit);
-  const sortOrder = order === "desc" ? -1 : 1;
+    const doctors = await Doctor.find(query);
 
-  const doctors = await Doctor.find(query)
-    .sort({ [sort]: sortOrder })
-    .skip(skip)
-    .limit(Number(limit));
+    console.log("✅ FOUND:", doctors.length);
 
-  const total = await Doctor.countDocuments(query);
+    return {
+      data: doctors
+    };
 
-  return {
-    total,
-    page: Number(page),
-    limit: Number(limit),
-    totalPages: Math.ceil(total / limit),
-    data: doctors
-  };
+  } catch (error) {
+    console.error("❌ ERROR:", error);
+    throw error;
+  }
 };

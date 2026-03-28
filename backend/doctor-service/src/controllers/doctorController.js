@@ -173,20 +173,19 @@ export const getDoctor = async (req, res) => {
 };
 
 
-// SEARCH doctors
+// 🔍 SEARCH + FILTER
 export const searchDoctors = async (req, res) => {
   try {
     const result = await doctorService.searchDoctors(req.query);
 
-    res.json({
-      success: true,
-      ...result,
-    });
+    // 🔥 RETURN ONLY ARRAY
+    res.json(result.data);
 
-  } catch (err) {
+  } catch (error) {
+    console.error("❌ ERROR:", error);
+
     res.status(500).json({
-      success: false,
-      message: err.message,
+      error: error.message
     });
   }
 };
