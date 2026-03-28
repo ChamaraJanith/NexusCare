@@ -79,4 +79,4 @@ doctorSchema.index({
   location: "text",
 });
 
-export default mongoose.model("Doctor", doctorSchema);
+export default mongoose.model("Doctor", doctorSchema, "doctorprofiles");
