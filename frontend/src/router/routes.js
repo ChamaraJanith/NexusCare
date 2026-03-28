@@ -16,6 +16,10 @@ const routes = [
       // Admin
       { path: 'admin/dashboard', component: () => import('pages/AdminDashboard.vue') },
 
+      { path: 'payment', component: () => import('pages/PaymentPage.vue') },
+      { path: 'payment/success', redirect: '/payment?status=success' },
+      { path: 'payment/cancel',  redirect: '/payment?status=cancel' },
+
       // AI Symptom Checker
       { path: 'symptoms', component: () => import('pages/SymptomChecker.vue') },
 
@@ -41,6 +45,9 @@ const routes = [
       { path: 'reports',       component: () => import('pages/doctor/DoctorReportsPage.vue') },
     ]
   },
+
+
+  
 
   // ❗ ALWAYS LAST
   {
