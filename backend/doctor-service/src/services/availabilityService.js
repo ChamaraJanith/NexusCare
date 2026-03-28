@@ -2,12 +2,13 @@ import AvailabilitySlot from "../models/AvailabilitySlot.js";
 
 // ─── CREATE SLOT ────────────────────────────────────────────────
 export const addSlot = async (body, doctorId) => {
-  const { type, date, dayOfWeek, startTime, endTime, hospital } = body;
+  const { type, date, dayOfWeek, startTime, endTime, hospital,slotType } = body;
 
   if (!startTime || !endTime) throw new Error("startTime and endTime are required");
   if (startTime >= endTime) throw new Error("startTime must be before endTime");
+  if (!slotType) throw new Error("slotType required (ONLINE / PHYSICAL)");
 
-  let slotData = { doctorId, startTime, endTime, hospital: hospital || "" };
+  let slotData = { doctorId, startTime, endTime, hospital: hospital || "" ,slotType};
 
   if (type === "recurring") {
     if (!dayOfWeek) throw new Error("dayOfWeek is required for recurring slots");

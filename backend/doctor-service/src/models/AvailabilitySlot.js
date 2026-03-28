@@ -38,6 +38,13 @@ const slotSchema = new mongoose.Schema(
       required: true
     },
 
+      // 🔥 NEW
+    slotType: {
+    type: String,
+    enum: ["ONLINE", "PHYSICAL"],
+    required: true
+    },
+    
     hospital: {
       type: String,
       trim: true,

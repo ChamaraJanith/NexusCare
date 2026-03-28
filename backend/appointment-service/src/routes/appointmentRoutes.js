@@ -12,13 +12,13 @@ import {
 } from "../validators/appointmentValidator.js";
 
 import * as doctorService from "../services/doctorService.js";
-
-// 🔥 ADD THIS (missing before)
 import { verifyUser } from "../services/authService.js";
 import Appointment from "../models/Appointment.js";
 
 const router = express.Router();
 
+
+// 🔍 SEARCH DOCTORS
 router.get("/search", async (req, res) => {
   try {
     const { name, specialty, hospital, date } = req.query;
@@ -30,38 +30,56 @@ router.get("/search", async (req, res) => {
       date
     });
 
-    console.log("🔥 DOCTORS:", doctors);
-
-    // ✅ RETURN FULL ARRAY
     res.json(doctors);
 
   } catch (error) {
     console.error("❌ ERROR:", error.message);
-
-    res.status(500).json({
-      error: "Failed to fetch doctors"
-    });
+    res.status(500).json({ error: "Failed to fetch doctors" });
   }
 });
 
 
-// ✅ Book appointment
+// 📅 GET DOCTOR SLOTS (🔥 FIXED - NO TOKEN NEEDED)
+router.get("/doctor/:doctorId/slots", async (req, res) => {
+  try {
+    const { doctorId } = req.params;
+    const { date } = req.query;
+
+    if (!date) {
+      return res.status(400).json({ error: "Date is required" });
+    }
+
+    const slots = await doctorService.getDoctorSlots(
+      doctorId,
+      date
+    );
+
+    res.json(slots);
+
+  } catch (err) {
+    console.error("❌ SLOT ERROR:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// 📝 BOOK APPOINTMENT
 router.post("/", validateAppointment, bookAppointment);
 
 
-// ✅ Get appointments
+// 📄 GET PATIENT APPOINTMENTS
 router.get("/patient/:patientId", getAppointments);
 
 
-// ✅ Update appointment
+// ✏️ UPDATE APPOINTMENT
 router.put("/:id", validateUpdateAppointment, updateAppointment);
 
 
-// ✅ Cancel appointment
+// ❌ CANCEL APPOINTMENT
 router.delete("/:id", cancelAppointment);
 
 
-// ✅ Admin verify appointment
+// 👨‍💼 ADMIN VERIFY APPOINTMENT
 router.put("/admin/verify/:id", async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -74,7 +92,6 @@ router.put("/admin/verify/:id", async (req, res) => {
 
     const userData = await verifyUser(token);
 
-    // 🔥 Only admin allowed
     if (userData.role !== "admin") {
       return res.status(403).json({ error: "Admin only" });
     }
@@ -88,6 +105,7 @@ router.put("/admin/verify/:id", async (req, res) => {
     res.json(updated);
 
   } catch (error) {
+    console.error("❌ ADMIN VERIFY ERROR:", error.message);
     res.status(500).json({ error: error.message });
   }
 });
