@@ -1,3 +1,5 @@
+// 🔥 STEP 3 UPDATE → patient + charges + payment
+
 import mongoose from "mongoose";
 
 const appointmentSchema = new mongoose.Schema({
@@ -16,8 +18,6 @@ const appointmentSchema = new mongoose.Schema({
     required: true
   },
 
-  specialty: String,
-
   date: {
     type: String,
     required: true
@@ -26,6 +26,34 @@ const appointmentSchema = new mongoose.Schema({
   time: {
     type: String,
     required: true
+  },
+
+  // 🔥 NEW → patient details
+  patientName: String,
+  email: String,
+  phone: String,
+  age: Number,
+  gender: String,
+
+  // 🔥 NEW → ONLINE / PHYSICAL
+  appointmentType: {
+    type: String,
+    enum: ["ONLINE", "PHYSICAL"],
+    required: true
+  },
+
+  // 🔥 NEW → charges
+  charges: {
+    doctorFee: Number,
+    hospitalFee: Number,
+    serviceFee: Number,
+    total: Number
+  },
+
+  paymentStatus: {
+    type: String,
+    enum: ["PENDING", "PAID"],
+    default: "PENDING"
   },
 
   status: {
