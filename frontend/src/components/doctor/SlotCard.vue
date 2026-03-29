@@ -34,10 +34,10 @@
         <span style="font-size: 14px; font-weight: 500;">{{ formatTime(slotData.startTime) }} — {{ formatTime(slotData.endTime) }}</span>
       </div>
 
-      <!-- Hospital -->
-      <div v-if="slotData.hospital" class="row items-center text-grey-6">
-        <q-icon name="local_hospital" size="16px" class="q-mr-xs text-red-3" />
-        <span style="font-size: 13px;">{{ slotData.hospital }}</span>
+      <!-- Location / Platform -->
+      <div v-if="getSlotDisplayText(slotData)" class="row items-center text-grey-6">
+        <q-icon :name="getSlotIcon(slotData)" size="16px" :class="['q-mr-xs', getSlotIconColor(slotData)]" />
+        <span style="font-size: 13px;">{{ getSlotDisplayText(slotData) }}</span>
       </div>
     </q-card-section>
 
@@ -53,8 +53,14 @@
 </template>
 
 <script setup>
-defineProps({ slotData: Object });
+import { onMounted } from 'vue';
+
+const props = defineProps({ slotData: Object });
 defineEmits(['edit', 'delete']);
+
+onMounted(() => {
+  console.log('SlotData Rendered:', props.slotData);
+});
 
 const formatDate = (dateStr) => {
   if (!dateStr) return '';
@@ -69,6 +75,21 @@ const formatTime = (t) => {
   const ampm = hour >= 12 ? 'PM' : 'AM';
   const h12 = hour % 12 || 12;
   return `${h12}:${m} ${ampm}`;
+};
+
+const getSlotDisplayText = (slot) => {
+  if (slot.slotType === "ONLINE") {
+    return slot.platform ? `Online - ${slot.platform}` : "Online";
+  }
+  return slot.location || slot.hospital || null;
+};
+
+const getSlotIcon = (slot) => {
+  return slot.slotType === "ONLINE" ? "videocam" : "local_hospital";
+};
+
+const getSlotIconColor = (slot) => {
+  return slot.slotType === "ONLINE" ? "text-blue-4" : "text-red-3";
 };
 </script>
 

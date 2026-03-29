@@ -51,6 +51,18 @@ const slotSchema = new mongoose.Schema(
       default: ""
     },
 
+    location: {
+      type: String,
+      trim: true,
+      default: ""
+    },
+
+    platform: {
+      type: String,
+      trim: true,
+      default: ""
+    },
+
     isBooked: {
       type: Boolean,
       default: false

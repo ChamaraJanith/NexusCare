@@ -2,13 +2,21 @@ import AvailabilitySlot from "../models/AvailabilitySlot.js";
 
 // ─── CREATE SLOT ────────────────────────────────────────────────
 export const addSlot = async (body, doctorId) => {
-  const { type, date, dayOfWeek, startTime, endTime, hospital,slotType } = body;
+  const { type, date, dayOfWeek, startTime, endTime, hospital, location, platform, slotType } = body;
 
   if (!startTime || !endTime) throw new Error("startTime and endTime are required");
   if (startTime >= endTime) throw new Error("startTime must be before endTime");
   if (!slotType) throw new Error("slotType required (ONLINE / PHYSICAL)");
 
-  let slotData = { doctorId, startTime, endTime, hospital: hospital || "" ,slotType};
+  let slotData = { 
+    doctorId, 
+    startTime, 
+    endTime, 
+    hospital: hospital || location || "", // preserve backwards compatibility if hospital is explicitly passed
+    location: location || hospital || "",
+    platform: platform || "",
+    slotType 
+  };
 
   if (type === "recurring") {
     if (!dayOfWeek) throw new Error("dayOfWeek is required for recurring slots");
@@ -46,12 +54,15 @@ export const updateSlot = async (slotId, body, doctorId) => {
   if (!slot) throw new Error("Slot not found");
   if (slot.doctorId !== doctorId) throw new Error("Forbidden: You can only update your own slots");
 
-  const { type, date, dayOfWeek, startTime, endTime, hospital } = body;
+  const { type, date, dayOfWeek, startTime, endTime, hospital, location, platform, slotType } = body;
 
   const updates = {};
   if (startTime) updates.startTime = startTime;
   if (endTime) updates.endTime = endTime;
   if (hospital !== undefined) updates.hospital = hospital;
+  if (location !== undefined) updates.location = location;
+  if (platform !== undefined) updates.platform = platform;
+  if (slotType !== undefined) updates.slotType = slotType;
 
   if (type === "recurring") {
     if (!dayOfWeek) throw new Error("dayOfWeek required for recurring slots");

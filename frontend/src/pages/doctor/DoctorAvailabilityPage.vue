@@ -198,11 +198,59 @@
             </div>
           </div>
 
-          <!-- Hospital -->
+          <!-- Online / Physical Type -->
           <div>
+            <div class="text-weight-bold text-dark q-mb-sm" style="font-size: 13px;">SLOT TYPE (ONLINE / PHYSICAL)</div>
+            <q-btn-toggle
+              v-model="form.slotType"
+              spread
+              no-caps
+              toggle-color="primary"
+              color="white"
+              text-color="grey-7"
+              :options="[
+                {label: 'ONLINE', value: 'ONLINE', icon: 'videocam'},
+                {label: 'PHYSICAL', value: 'PHYSICAL', icon: 'person'}
+              ]"
+              style="border: 1px solid #e0e0e0; border-radius: 10px;"
+              @update:model-value="onSlotTypeChange"
+            />
+          </div>
+
+          <!-- Platform (ONLINE) -->
+          <div v-if="form.slotType === 'ONLINE'">
+            <div class="text-weight-bold text-dark q-mb-sm" style="font-size: 13px;">PLATFORM</div>
+            <q-select
+              v-model="form.platform"
+              :options="platformOptions"
+              outlined
+              use-input
+              hide-selected
+              fill-input
+              input-debounce="0"
+              label="Select Platform"
+              color="primary"
+              bg-color="grey-1"
+              style="border-radius: 10px;"
+              popup-content-class="bg-white shadow-3"
+              options-dense
+              @filter="filterPlatforms"
+              @input-value="form.platform = $event"
+            >
+              <template v-slot:prepend><q-icon name="videocam" color="blue-4" /></template>
+              <template v-slot:no-option>
+                <q-item>
+                  <q-item-section class="text-grey-5">Type to add custom platform</q-item-section>
+                </q-item>
+              </template>
+            </q-select>
+          </div>
+
+          <!-- Hospital (PHYSICAL) -->
+          <div v-if="form.slotType === 'PHYSICAL'">
             <div class="text-weight-bold text-dark q-mb-sm" style="font-size: 13px;">LOCATION</div>
             <q-select
-              v-model="form.hospital"
+              v-model="form.location"
               :options="hospitalOptions"
               outlined
               use-input
@@ -216,7 +264,7 @@
               popup-content-class="bg-white shadow-3"
               options-dense
               @filter="filterHospitals"
-              @input-value="form.hospital = $event"
+              @input-value="form.location = $event"
             >
               <template v-slot:prepend><q-icon name="local_hospital" color="red-4" /></template>
               <template v-slot:no-option>
@@ -314,6 +362,15 @@ const allHospitals = [
 ];
 const hospitalOptions = ref([...allHospitals]);
 
+const allPlatforms = [
+  "Zoom",
+  "Microsoft Teams",
+  "Google Meet",
+  "WhatsApp Call",
+  "Other"
+];
+const platformOptions = ref([...allPlatforms]);
+
 const defaultForm = () => ({
   _id: null,
   type: 'single',
@@ -321,9 +378,19 @@ const defaultForm = () => ({
   dayOfWeek: '',
   startTime: '',
   endTime: '',
-  hospital: '',
+  location: '',
+  platform: '',
+  slotType: '',
 });
 const form = ref(defaultForm());
+
+const onSlotTypeChange = (val) => {
+  if (val === 'ONLINE') {
+    form.value.location = '';
+  } else if (val === 'PHYSICAL') {
+    form.value.platform = '';
+  }
+};
 
 // ─── Computed ─────────────────────────────────────────────────────
 const timeError = computed(() => {
@@ -335,7 +402,11 @@ const timeError = computed(() => {
 
 const isFormValid = computed(() => {
   if (!form.value.startTime || !form.value.endTime || timeError.value) return false;
-  if (!form.value.hospital) return false;
+  if (!form.value.slotType) return false;
+  
+  if (form.value.slotType === 'PHYSICAL' && !form.value.location) return false;
+  if (form.value.slotType === 'ONLINE' && !form.value.platform) return false;
+
   if (form.value.type === 'single' && !form.value.date) return false;
   if (form.value.type === 'recurring' && !form.value.dayOfWeek) return false;
   return true;
@@ -387,7 +458,9 @@ const openDialog = (slot = null) => {
       dayOfWeek: slot.dayOfWeek || '',
       startTime: slot.startTime || '',
       endTime: slot.endTime || '',
-      hospital: slot.hospital || '',
+      location: slot.location || slot.hospital || '',
+      platform: slot.platform || '',
+      slotType: slot.slotType || '',
     };
   } else {
     editMode.value = false;
@@ -406,6 +479,18 @@ const submitSlot = async () => {
   dialogError.value = '';
 
   // Validate
+  if (!form.value.slotType) {
+    dialogError.value = 'slotType required (ONLINE / PHYSICAL)';
+    return;
+  }
+  if (form.value.slotType === 'PHYSICAL' && !form.value.location) {
+    dialogError.value = 'Location required';
+    return;
+  }
+  if (form.value.slotType === 'ONLINE' && !form.value.platform) {
+    dialogError.value = 'Platform required';
+    return;
+  }
   if (!form.value.startTime || !form.value.endTime) {
     dialogError.value = 'Please set both start and end time.';
     return;
@@ -425,7 +510,9 @@ const submitSlot = async () => {
       type: form.value.type,
       startTime: form.value.startTime,
       endTime: form.value.endTime,
-      hospital: form.value.hospital,
+      slotType: form.value.slotType,
+      location: form.value.slotType === 'PHYSICAL' ? form.value.location : null,
+      platform: form.value.slotType === 'ONLINE' ? form.value.platform : null,
       ...(form.value.type === 'single'
         ? { date: form.value.date.replace(/\//g, '-') }
         : { dayOfWeek: form.value.dayOfWeek }
@@ -469,12 +556,20 @@ const executeDelete = async () => {
   }
 };
 
-// ─── Hospital filter ──────────────────────────────────────────────
+// ─── Filter methods ──────────────────────────────────────────────
 const filterHospitals = (val, update) => {
   update(() => {
     hospitalOptions.value = val === ''
       ? allHospitals
       : allHospitals.filter(h => h.toLowerCase().includes(val.toLowerCase()));
+  });
+};
+
+const filterPlatforms = (val, update) => {
+  update(() => {
+    platformOptions.value = val === ''
+      ? allPlatforms
+      : allPlatforms.filter(p => p.toLowerCase().includes(val.toLowerCase()));
   });
 };
 
