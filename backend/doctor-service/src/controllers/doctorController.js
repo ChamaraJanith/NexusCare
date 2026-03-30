@@ -149,8 +149,78 @@ export const getDoctor = async (req, res) => {
 // ─── GET /api/doctors/search ──────────────────────────────────────────────────
 export const searchDoctors = async (req, res) => {
   try {
-    const result = await doctorService.searchDoctors(req.query);
-    return res.status(200).json(result.data);
+    const { name, specialization, hospital } = req.query;
+
+    const matchStage = {};
+
+    let mappedSpecialty = specialization;
+    if (mappedSpecialty) {
+      if (mappedSpecialty === "Cardiology") {
+        mappedSpecialty = "Cardio";
+      } else if (mappedSpecialty === "Dermatology") {
+        mappedSpecialty = "Dermato";
+      } else if (mappedSpecialty === "Neurology") {
+        mappedSpecialty = "Neuro";
+      } else if (mappedSpecialty === "Pediatrics") {
+        mappedSpecialty = "Pediatr";
+      } else if (mappedSpecialty === "Psychiatry") {
+        mappedSpecialty = "Psychiatr";
+      } else if (mappedSpecialty === "Orthopedics") {
+        mappedSpecialty = "Orthoped";
+      }
+      matchStage.specialization = { $regex: mappedSpecialty, $options: "i" };
+    }
+
+    if (hospital) {
+      matchStage.hospital = { $regex: hospital, $options: "i" };
+    }
+
+    console.log("FILTER:", matchStage);
+
+    const pipeline = [];
+
+    if (Object.keys(matchStage).length > 0) {
+      pipeline.push({ $match: matchStage });
+    }
+
+    pipeline.push(
+      {
+        $lookup: {
+          from: "users",
+          localField: "doctorId",
+          foreignField: "roleId",
+          as: "user"
+        }
+      },
+      {
+        $unwind: "$user"
+      }
+    );
+
+    if (name) {
+      pipeline.push({
+        $match: { "user.name": { $regex: name, $options: "i" } }
+      });
+    }
+
+    pipeline.push({
+      $project: {
+        doctorId: 1,
+        specialization: 1,
+        hospital: 1,
+        experience: 1,
+        consultationFee: 1,
+        name: "$user.name",
+        profileImage: "$user.profileImage"
+      }
+    });
+
+    const doctors = await Doctor.aggregate(pipeline);
+
+    console.log("RESULT:", doctors);
+
+    // strictly returning flat array as requested
+    return res.status(200).json(doctors);
   } catch (err) {
     console.error("[searchDoctors] ERROR:", err.message);
     return res.status(500).json({
