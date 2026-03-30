@@ -84,6 +84,16 @@ const slotSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
       index: true
+    },
+
+    // Link instance slots (per-date) back to their recurring template parent.
+    // Template slots: parentSlotId = null
+    // Instance slots: parentSlotId = _id of the recurring template
+    parentSlotId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "AvailabilitySlot",
+      default: null,
+      index: true
     }
   },
   { timestamps: true }

@@ -1,4 +1,5 @@
 import * as availabilityService from "../services/availabilityService.js";
+import { getOrCreateSlotInstance } from "../services/availabilityService.js";
 import AvailabilitySlot from "../models/AvailabilitySlot.js";
 
 // POST /api/availability
@@ -57,7 +58,7 @@ export const deleteSlot = async (req, res) => {
   }
 };
 
-// 🔥 NEW: get slots by doctor + date + split types (expired slots excluded)
+// 🔥 Resolves recurring templates into per-date instances + merges one-time slots
 export const getSlotsByDoctorAndDate = async (req, res) => {
   try {
     const { doctorId } = req.params;
@@ -69,24 +70,61 @@ export const getSlotsByDoctorAndDate = async (req, res) => {
     const nextDate = new Date(selectedDate);
     nextDate.setDate(nextDate.getDate() + 1);
 
-    const slots = await AvailabilitySlot.find({
+    // Determine the day-of-week label for matching recurring templates
+    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const dayOfWeek = dayNames[selectedDate.getDay()];
+
+    // --- Fetch 1: One-time slots on the exact date (already instances / non-recurring)
+    const oneTimeSlots = await AvailabilitySlot.find({
       doctorId,
       date: { $gte: selectedDate, $lt: nextDate },
       isDeleted: false,
-      // Filter only slots that still have capacity (bookedCount < slotCount)
+      parentSlotId: null,          // exclude already-created instances (avoid duplication)
+      isRecurring: false,
       $expr: { $lt: ["$bookedCount", "$slotCount"] }
     });
 
+    // --- Fetch 2: Recurring templates that match this day of week
+    const recurringTemplates = await AvailabilitySlot.find({
+      doctorId,
+      isRecurring: true,
+      dayOfWeek,
+      isDeleted: false,
+      parentSlotId: null
+    });
+
+    // --- Resolve each recurring template into a date-specific instance (lazy creation)
+    const instancePromises = recurringTemplates.map(template =>
+      getOrCreateSlotInstance(doctorId, selectedDate, template)
+    );
+    const recurringInstances = await Promise.all(instancePromises);
+
+    // --- Also fetch any already-existing instances for this date (created earlier)
+    const existingInstances = await AvailabilitySlot.find({
+      doctorId,
+      date: { $gte: selectedDate, $lt: nextDate },
+      isDeleted: false,
+      parentSlotId: { $ne: null },
+      $expr: { $lt: ["$bookedCount", "$slotCount"] }
+    });
+
+    // Deduplicate: use a Map keyed by _id string
+    const seen = new Map();
+    [...oneTimeSlots, ...recurringInstances, ...existingInstances].forEach(s => {
+      seen.set(s._id.toString(), s);
+    });
+    const allSlots = [...seen.values()];
+
     // Filter out expired slots (past date+time)
     const now = new Date();
-    const validSlots = slots.filter(slot => {
+    const validSlots = allSlots.filter(slot => {
       const slotDateTime = new Date(slot.date);
       const [h, m] = slot.startTime.split(":");
       slotDateTime.setHours(parseInt(h), parseInt(m), 0, 0);
       return slotDateTime >= now;
     });
 
-    // 🔥 SPLIT TYPES
+    // Split by type
     const physical = validSlots.filter(s => s.slotType === "PHYSICAL");
     const online   = validSlots.filter(s => s.slotType === "ONLINE");
 
@@ -112,6 +150,13 @@ export const bookSlot = async (req, res) => {
 
     if (!slot) {
       return res.status(404).json({ message: "Slot not found" });
+    }
+
+    // 2. Block booking on raw recurring templates — always book instances
+    if (slot.isRecurring) {
+      return res.status(400).json({
+        message: "Cannot book a recurring template directly. Select a specific date slot."
+      });
     }
 
     // 2. Block booking if slot has already expired

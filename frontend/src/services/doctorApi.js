@@ -115,6 +115,27 @@ export const fetchAvailability = async (doctorId) => {
   }
 };
 
+export const fetchAvailabilityByDate = async (doctorId, date) => {
+  try {
+    const res = await doctorApi.get(`/api/availability/${doctorId}/by-date`, { params: { date } });
+    
+    // Support either { data: [...] } or { data: { physical: [...], online: [...] } }
+    let data = res.data?.data || res.data || [];
+    
+    if (!Array.isArray(data)) {
+        // if the API returns { physical: [], online: [] } instead of flat array
+        const physical = Array.isArray(data.physical) ? data.physical : [];
+        const online = Array.isArray(data.online) ? data.online : [];
+        data = [...physical, ...online];
+    }
+
+    return Array.isArray(data) ? data : [];
+  } catch (err) {
+    console.warn('[doctorApi] Availability by date failed:', err.message);
+    return [];
+  }
+};
+
 export const createAvailabilitySlot = async (payload) => {
   const res = await doctorApi.post('/api/availability', payload);
   return res.data?.data;

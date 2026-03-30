@@ -18,6 +18,48 @@
       />
     </div>
 
+    <!-- View Mode Toggle & Badge -->
+    <div class="row items-center justify-between q-mb-lg">
+      <div>
+        <q-chip v-if="viewMode === 'ALL'" color="primary" text-color="white" icon="view_list" label="Overview" class="text-weight-bold" />
+        <q-chip v-else color="teal" text-color="white" icon="visibility" label="Live Capacity" class="text-weight-bold" />
+      </div>
+      <q-btn-toggle
+        v-model="viewMode"
+        no-caps
+        rounded
+        toggle-color="primary"
+        color="white"
+        text-color="grey-8"
+        :options="[
+          {label: 'All Slots', value: 'ALL', icon: 'view_list'},
+          {label: 'By Date', value: 'DATE', icon: 'event'}
+        ]"
+        style="border: 1px solid #e0e0e0; box-shadow: 0 2px 8px rgba(0,0,0,0.05);"
+      />
+    </div>
+
+    <!-- Date Selector (Only in DATE mode) -->
+    <div v-if="viewMode === 'DATE'" class="q-mb-lg bg-white q-pa-md shadow-1" style="border-radius: 12px; border: 1px solid #e0e0e0;">
+      <div class="row items-center justify-between">
+        <div class="row items-center">
+          <q-icon name="event" size="24px" color="primary" class="q-mr-md" />
+          <div>
+            <div class="text-weight-bold" style="font-size: 16px;">Selected Date: <span class="text-primary">[ {{ selectedDateStr }} ]</span></div>
+            <div class="text-grey-6 text-caption">Viewing capacity and queue for this specific date</div>
+          </div>
+        </div>
+        <q-input
+          outlined
+          dense
+          type="date"
+          v-model="selectedDateStr"
+          color="primary"
+          style="min-width: 200px;"
+        />
+      </div>
+    </div>
+
     <!-- Loading Skeleton -->
     <div v-if="loading" class="row q-col-gutter-md">
       <div v-for="n in 4" :key="n" class="col-12 col-sm-6 col-md-4">
@@ -37,41 +79,79 @@
       {{ error }}
     </q-banner>
 
-    <!-- Empty State -->
-    <div v-else-if="slots.length === 0" class="column items-center justify-center q-pa-xl" style="min-height: 50vh;">
-      <q-icon name="event_available" size="80px" color="grey-4" class="q-mb-lg" />
-      <div class="text-h6 text-weight-bold text-grey-6 q-mb-sm">No availability slots yet</div>
-      <div class="text-grey-5 q-mb-lg text-center" style="max-width: 320px;">
-        Click "Add Slot" to set your one-time or recurring availability for patients to book.
-      </div>
-      <q-btn unelevated color="primary" icon="add" label="Add Your First Slot" class="text-capitalize" style="border-radius: 10px;" @click="openDialog()" />
-    </div>
+    <!-- Main Content -->
+    <div v-if="!loading && !error">
+      
+      <!-- DATE MODE -->
+      <template v-if="viewMode === 'DATE'">
+        <!-- Date Slots Section -->
+        <div class="q-mb-xl">
+          <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-md row items-center">
+            <q-icon name="event_available" size="20px" class="q-mr-sm text-teal" /> Slots for {{ formattedSelectedDate }}
+          </div>
+          
+          <!-- Empty State for Date -->
+          <div v-if="slots.length === 0" class="column items-center justify-center q-pa-xl bg-white shadow-1" style="min-height: 25vh; border-radius: 14px;">
+            <div class="text-h6 text-weight-bold text-orange-6 q-mb-sm">⚠️ No slots available for selected date</div>
+            <div class="text-grey-5 q-mb-lg text-center" style="max-width: 320px;">
+              There are no available slots scheduled on {{ formattedSelectedDate }}.
+            </div>
+            <q-btn unelevated color="primary" icon="add" label="Add Slot" class="text-capitalize" style="border-radius: 10px;" @click="openDialog()" />
+          </div>
 
-    <!-- Slots Grid -->
-    <div v-else>
-      <!-- Recurring Slots Section -->
-      <div v-if="recurringSlots.length > 0" class="q-mb-lg">
-        <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-md row items-center">
-          <q-icon name="repeat" size="20px" class="q-mr-sm text-primary" /> Weekly Recurring Slots
-        </div>
-        <div class="row q-col-gutter-md">
-          <div v-for="slot in recurringSlots" :key="slot._id" class="col-12 col-sm-6 col-md-4">
-            <SlotCard :slotData="slot" @edit="openDialog(slot)" @delete="confirmDelete(slot)" />
+          <!-- Slots Grid -->
+          <div v-else class="row q-col-gutter-md">
+            <div v-for="slot in slots" :key="slot._id" class="col-12 col-sm-6 col-md-4">
+              <SlotCard :slotData="slot" @edit="openDialog(slot)" @delete="confirmDelete(slot)" />
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- One-Time Slots Section -->
-      <div v-if="oneTimeSlots.length > 0">
-        <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-md row items-center">
-          <q-icon name="event" size="20px" class="q-mr-sm text-teal" /> One-Time Slots
-        </div>
-        <div class="row q-col-gutter-md">
-          <div v-for="slot in oneTimeSlots" :key="slot._id" class="col-12 col-sm-6 col-md-4">
-            <SlotCard :slotData="slot" @edit="openDialog(slot)" @delete="confirmDelete(slot)" />
+        <!-- Recurring Templates Section -->
+        <div v-if="templateSlots.length > 0">
+          <q-separator color="grey-3" class="q-mb-md" />
+          <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-md row items-center">
+            <q-icon name="repeat" size="20px" class="q-mr-sm text-grey-6" /> Recurring Templates
+          </div>
+          <div class="row q-col-gutter-md">
+            <div v-for="slot in templateSlots" :key="slot._id" class="col-12 col-sm-6 col-md-4">
+              <SlotCard :slotData="slot" @edit="openDialog(slot)" @delete="confirmDelete(slot)" />
+            </div>
           </div>
         </div>
-      </div>
+      </template>
+
+      <!-- ALL MODE -->
+      <template v-else-if="viewMode === 'ALL'">
+        <div v-if="recurringSlots.length > 0" class="q-mb-xl">
+          <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-md row items-center">
+            <q-icon name="repeat" size="20px" class="q-mr-sm text-primary" /> Recurring Slots
+          </div>
+          <div class="row q-col-gutter-md">
+            <div v-for="slot in recurringSlots" :key="slot._id" class="col-12 col-sm-6 col-md-4">
+              <SlotCard :slotData="slot" @edit="openDialog(slot)" @delete="confirmDelete(slot)" />
+            </div>
+          </div>
+        </div>
+
+        <div v-if="oneTimeSlots.length > 0" class="q-mb-xl">
+          <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-md row items-center">
+            <q-icon name="event" size="20px" class="q-mr-sm text-teal" /> One-Time Slots
+          </div>
+          <div class="row q-col-gutter-md">
+            <div v-for="slot in oneTimeSlots" :key="slot._id" class="col-12 col-sm-6 col-md-4">
+              <SlotCard :slotData="slot" @edit="openDialog(slot)" @delete="confirmDelete(slot)" />
+            </div>
+          </div>
+        </div>
+        
+        <div v-if="allSlots.length === 0" class="column items-center justify-center q-pa-xl bg-white shadow-1" style="min-height: 25vh; border-radius: 14px;">
+          <q-icon name="event_available" size="60px" color="grey-4" class="q-mb-md" />
+          <div class="text-h6 text-weight-bold text-grey-6 q-mb-sm">No availability slots yet</div>
+          <q-btn unelevated color="primary" icon="add" label="Add Your First Slot" class="text-capitalize" style="border-radius: 10px;" @click="openDialog()" />
+        </div>
+      </template>
+
     </div>
 
     <!-- ────────────── ADD / EDIT DIALOG ────────────── -->
@@ -339,9 +419,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useQuasar } from 'quasar';
-import { fetchAvailability, createAvailabilitySlot, updateAvailabilitySlot, deleteAvailabilitySlot } from 'src/services/doctorApi';
+import { fetchAvailability, fetchAvailabilityByDate, createAvailabilitySlot, updateAvailabilitySlot, deleteAvailabilitySlot } from 'src/services/doctorApi';
 import SlotCard from 'src/components/doctor/SlotCard.vue';
 
 defineProps({ doctor: Object });
@@ -349,9 +429,26 @@ defineProps({ doctor: Object });
 const $q = useQuasar();
 
 // ─── State ────────────────────────────────────────────────────────
+const viewMode = ref('ALL');
+const allSlots = ref([]);
+const selectedDateStr = ref(new Date().toISOString().slice(0, 10)); // YYYY-MM-DD
+const formattedSelectedDate = computed(() => {
+  const d = new Date(selectedDateStr.value);
+  return isNaN(d.getTime()) ? selectedDateStr.value : d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+});
+
+watch(selectedDateStr, () => {
+  if (viewMode.value === 'DATE') loadSlots();
+});
+
+watch(viewMode, () => {
+  loadSlots();
+});
+
 const loading = ref(true);
 const error = ref('');
 const slots = ref([]);
+const templateSlots = ref([]);
 const showDialog = ref(false);
 const showDeleteConfirm = ref(false);
 const editMode = ref(false);
@@ -437,8 +534,9 @@ const isFormValid = computed(() => {
   return true;
 });
 
-const recurringSlots = computed(() => slots.value.filter(s => s.isRecurring));
-const oneTimeSlots   = computed(() => slots.value.filter(s => !s.isRecurring));
+// Computed for ALL view
+const recurringSlots = computed(() => allSlots.value.filter(s => s.isRecurring));
+const oneTimeSlots   = computed(() => allSlots.value.filter(s => !s.isRecurring));
 
 const futureDatesOnly = (date) => {
   const today = new Date().toISOString().slice(0, 10).replace(/-/g, '/');
@@ -463,7 +561,17 @@ const loadSlots = async () => {
   try {
     const doctorId = getDoctorId();
     if (!doctorId) throw new Error('Could not determine doctor ID');
-    slots.value = await fetchAvailability(doctorId);
+    
+    if (viewMode.value === 'ALL') {
+      allSlots.value = await fetchAvailability(doctorId);
+    } else {
+      // Fetch date-specific slots
+      slots.value = await fetchAvailabilityByDate(doctorId, selectedDateStr.value);
+      
+      // Fetch generic templates
+      const apiAllSlots = await fetchAvailability(doctorId);
+      templateSlots.value = apiAllSlots.filter(s => s.isRecurring && !s.parentSlotId && !s.date);
+    }
   } catch (err) {
     error.value = err.message;
   } finally {

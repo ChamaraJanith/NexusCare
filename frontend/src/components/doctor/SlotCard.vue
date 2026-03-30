@@ -13,13 +13,14 @@
       <div class="row items-center justify-between q-mb-md">
         <q-chip
           dense
-          :color="slotData.isRecurring ? 'blue-1' : 'teal-1'"
-          :text-color="slotData.isRecurring ? 'primary' : 'teal'"
-          :icon="slotData.isRecurring ? 'repeat' : 'event'"
-          :label="slotData.isRecurring ? 'Recurring' : 'One-Time'"
+          :color="isTemplate ? 'grey-3' : 'green-1'"
+          :text-color="isTemplate ? 'grey-8' : 'positive'"
+          :icon="isTemplate ? 'tune' : 'check_circle'"
+          :label="isTemplate ? 'Template' : 'Live Slot'"
           style="font-weight: 600; border-radius: 6px; font-size: 11px;"
         />
         <q-chip
+          v-if="!isTemplate"
           dense
           :color="capacityChipColor"
           :text-color="capacityChipTextColor"
@@ -40,7 +41,8 @@
 
       <!-- Date / Day -->
       <div class="text-weight-bold text-dark" style="font-size: 17px; line-height: 1.3; margin-bottom: 6px;">
-        {{ slotData.isRecurring ? `Every ${slotData.dayOfWeek}` : formatDate(slotData.date) }}
+        <span v-if="slotData.isRecurring && !slotData.date">Every {{ slotData.dayOfWeek }} (Template)</span>
+        <span v-else>{{ formatDate(slotData.date) }}</span>
       </div>
 
       <!-- Time -->
@@ -56,7 +58,7 @@
       </div>
 
       <!-- ─── Capacity Usage ──────────────────────────────────────── -->
-      <div class="capacity-container">
+      <div v-if="!isTemplate" class="capacity-container">
         <!-- Counter row -->
         <div class="row items-center justify-between q-mb-xs">
           <div class="row items-center" style="gap: 4px;">
@@ -109,6 +111,8 @@ defineEmits(['edit', 'delete']);
 onMounted(() => {
   console.log('SlotData Rendered:', props.slotData);
 });
+
+const isTemplate = computed(() => props.slotData?.isRecurring && !props.slotData?.date);
 
 // ─── Capacity Computed ────────────────────────────────────────────
 const total      = computed(() => props.slotData?.slotCount   || 1);
