@@ -1,10 +1,15 @@
 <template>
-  <q-card flat bordered style="border-radius: 14px; transition: box-shadow 0.2s;" class="slot-card">
+  <q-card
+    flat bordered
+    style="border-radius: 14px; transition: box-shadow 0.2s, opacity 0.2s;"
+    :style="isExpired ? 'opacity: 0.6;' : ''"
+    class="slot-card"
+  >
     <!-- Color accent bar -->
     <div :style="`height: 5px; background: ${slotData.isRecurring ? '#1976d2' : '#1abc9c'}; border-radius: 14px 14px 0 0;`" />
 
     <q-card-section>
-      <!-- Top row: badge + actions -->
+      <!-- Top row: badge + status chips -->
       <div class="row items-center justify-between q-mb-md">
         <q-chip
           dense
@@ -16,9 +21,19 @@
         />
         <q-chip
           dense
-          :color="slotData.isBooked ? 'orange-1' : 'green-1'"
-          :text-color="slotData.isBooked ? 'orange' : 'positive'"
-          :label="slotData.isBooked ? 'Booked' : 'Available'"
+          :color="capacityChipColor"
+          :text-color="capacityChipTextColor"
+          :label="capacityChipLabel"
+          style="font-weight: 600; border-radius: 6px; font-size: 11px;"
+        />
+        <!-- Expired badge -->
+        <q-chip
+          v-if="isExpired"
+          dense
+          color="grey-3"
+          text-color="grey-7"
+          icon="schedule_send"
+          label="Expired"
           style="font-weight: 600; border-radius: 6px; font-size: 11px;"
         />
       </div>
@@ -35,9 +50,42 @@
       </div>
 
       <!-- Location / Platform -->
-      <div v-if="getSlotDisplayText(slotData)" class="row items-center text-grey-6">
+      <div v-if="getSlotDisplayText(slotData)" class="row items-center text-grey-6 q-mb-md">
         <q-icon :name="getSlotIcon(slotData)" size="16px" :class="['q-mr-xs', getSlotIconColor(slotData)]" />
         <span style="font-size: 13px;">{{ getSlotDisplayText(slotData) }}</span>
+      </div>
+
+      <!-- ─── Capacity Usage ──────────────────────────────────────── -->
+      <div class="capacity-container">
+        <!-- Counter row -->
+        <div class="row items-center justify-between q-mb-xs">
+          <div class="row items-center" style="gap: 4px;">
+            <q-icon name="people" size="14px" :style="`color: ${barColor}`" />
+            <span style="font-size: 12px; font-weight: 600; color: #374151;">
+              {{ booked }} / {{ total }} booked
+            </span>
+          </div>
+          <span
+            v-if="remaining === 0"
+            style="font-size: 11px; font-weight: 700; color: #ef4444; text-transform: uppercase; letter-spacing: 0.5px;"
+          >
+            FULL
+          </span>
+          <span
+            v-else
+            style="font-size: 11px; color: #6b7280;"
+          >
+            {{ remaining }} left
+          </span>
+        </div>
+
+        <!-- Progress bar -->
+        <div class="progress-bar-container">
+          <div
+            class="progress-bar-fill"
+            :style="`width: ${percentage}%; background-color: ${barColor};`"
+          />
+        </div>
       </div>
     </q-card-section>
 
@@ -53,7 +101,7 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue';
+import { computed, onMounted } from 'vue';
 
 const props = defineProps({ slotData: Object });
 defineEmits(['edit', 'delete']);
@@ -62,6 +110,33 @@ onMounted(() => {
   console.log('SlotData Rendered:', props.slotData);
 });
 
+// ─── Capacity Computed ────────────────────────────────────────────
+const total      = computed(() => props.slotData?.slotCount   || 1);
+const booked     = computed(() => props.slotData?.bookedCount || 0);
+const remaining  = computed(() => total.value - booked.value);
+const percentage = computed(() => Math.min((booked.value / total.value) * 100, 100));
+
+// ─── Expiry Detection ────────────────────────────────────────────
+const isExpired = computed(() => {
+  if (!props.slotData?.date || !props.slotData?.startTime) return false;
+  const slotDateTime = new Date(props.slotData.date);
+  const [h, m] = props.slotData.startTime.split(':');
+  slotDateTime.setHours(parseInt(h), parseInt(m), 0, 0);
+  return slotDateTime < new Date();
+});
+
+const barColor = computed(() => {
+  if (percentage.value > 80) return '#ef4444'; // red
+  if (percentage.value > 50) return '#f59e0b'; // amber
+  return '#10b981';                             // green
+});
+
+// Status chip — replaces old isBooked chip with capacity-aware state
+const capacityChipLabel     = computed(() => remaining.value === 0 ? 'Slot Full' : 'Available');
+const capacityChipColor     = computed(() => remaining.value === 0 ? 'red-1' : 'green-1');
+const capacityChipTextColor = computed(() => remaining.value === 0 ? 'negative' : 'positive');
+
+// ─── Formatting ──────────────────────────────────────────────────
 const formatDate = (dateStr) => {
   if (!dateStr) return '';
   const d = new Date(dateStr);
@@ -96,5 +171,23 @@ const getSlotIconColor = (slot) => {
 <style scoped>
 .slot-card:hover {
   box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+}
+
+.capacity-container {
+  margin-top: 4px;
+}
+
+.progress-bar-container {
+  width: 100%;
+  height: 6px;
+  background-color: #e5e7eb;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.4s ease, background-color 0.3s ease;
 }
 </style>
