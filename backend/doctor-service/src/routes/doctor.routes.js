@@ -17,7 +17,7 @@ import { upload } from "../middleware/uploadMiddleware.js";
 const router = express.Router();
 
 // 🔍 SEARCH + FILTER Doctors (public or protected based on requirement)
-router.get("/", searchDoctors);
+router.get("/search", searchDoctors);
 
 // 👤 GET aggregated doctor profile (identity + professional data)
 // MUST be before /:id to prevent "me" being treated as an ID

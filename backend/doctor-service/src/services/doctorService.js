@@ -1,6 +1,6 @@
 import Doctor from "../models/Doctor.js";
 import AvailabilitySlot from "../models/AvailabilitySlot.js";
-import { getUserByToken } from "./userServiceClient.js";
+import { getUserByToken, searchDoctorsByName } from "./userServiceClient.js";
 import cloudinary from "../config/cloudinary.js";
 
 // ─── READ ────────────────────────────────────────────────────────────────────
@@ -125,43 +125,118 @@ export const getAllDoctors = async (filter = {}) => {
 
 /**
  * Search doctors with filters (specialization, hospital, location, date).
+ * Orchestrates cross-service identity hydration to avoid N+1 queries.
  */
 export const searchDoctors = async (queryParams) => {
   try {
     const params = queryParams.query ? queryParams.query : queryParams;
 
-    const query = { isDeleted: false };
+    const dbQuery = { isDeleted: false };
+    const andConditions = [];
 
+    // 1. MS2 Text Field Filters
+    // Note: Mongoose schema uses "specialty", not "specialization"
     if (params.specialization) {
-      query.specialization = { $regex: params.specialization.trim(), $options: "i" };
+      andConditions.push({ specialty: { $regex: params.specialization.trim(), $options: "i" } });
     }
-
     if (params.hospital) {
-      query.hospital = { $regex: params.hospital.trim(), $options: "i" };
+      andConditions.push({ hospital: { $regex: params.hospital.trim(), $options: "i" } });
+    }
+    if (params.location) {
+      andConditions.push({ location: { $regex: params.location.trim(), $options: "i" } });
     }
 
-    if (params.location) {
-      query.location = { $regex: params.location.trim(), $options: "i" };
+    // 2. Identity Resolution & Name Filtering (MS1)
+    // Fetch MS1 identities. If params.name exists, MS1 pre-filters it using regex.
+    // Otherwise, it returns all active doctors for O(1) payload hydration.
+    // Wrapped in try-catch: if MS1 is down, return safe empty fallback rather than crashing.
+    let ms1Identities = [];
+    try {
+      ms1Identities = await searchDoctorsByName(params.name ? params.name.trim() : "");
+    } catch (err) {
+      console.error("[MS1 ERROR] searchDoctorsByName failed:", err.message);
+      return { data: [] }; // safe fallback — MS1 unreachable
     }
+    if (!ms1Identities || ms1Identities.length === 0) return { data: [] };
+
+    const ms1Dict = {};
+    const ms1Ids = [];
+    ms1Identities.forEach((d) => {
+      ms1Dict[d.doctorId] = d;
+      ms1Ids.push(d.doctorId);
+    });
+
+    // 3. Date & Availability Filtering
+    let availableIds = null;
+    let slotIds = null;
 
     if (params.date) {
-      const slots = await AvailabilitySlot.find({
-        date: params.date,
+      // Timezone-safe date range: use $gte start-of-day and $lt start-of-next-day
+      // Avoids single-point match bugs caused by UTC offset differences
+      const selectedDate = new Date(params.date);
+      selectedDate.setHours(0, 0, 0, 0);
+      const nextDate = new Date(selectedDate);
+      nextDate.setDate(nextDate.getDate() + 1);
+
+      const strictSlots = await AvailabilitySlot.find({
+        date: { $gte: selectedDate, $lt: nextDate },
         isBooked: false,
+        isDeleted: false,
       }).select("doctorId");
 
-      const doctorIds = [...new Set(slots.map((s) => s.doctorId))];
-
-      if (doctorIds.length > 0) {
-        query.doctorId = { $in: doctorIds };
-      } else {
-        return { data: [] };
-      }
+      slotIds = [...new Set(strictSlots.map((s) => s.doctorId))];
+      if (slotIds.length === 0) return { data: [] };
     }
 
-    const doctors = await Doctor.find(query);
+    // 4. Resolve Aggregate Intersections
+    if (slotIds !== null) {
+      // Intersect MS1 name hits with MS2 strict slot hits
+      // Uses Set for O(n) lookup instead of O(n²) Array.includes()
+      const slotSet = new Set(slotIds);
+      const intersect = ms1Ids.filter(id => slotSet.has(id));
+      if (intersect.length === 0) return { data: [] };
+      andConditions.push({ doctorId: { $in: intersect } });
+    } else {
+      // Just constrain strictly to known MS1 identities
+      andConditions.push({ doctorId: { $in: ms1Ids } });
+    }
 
-    return { data: doctors };
+    if (andConditions.length > 0) {
+      dbQuery.$and = andConditions;
+    }
+
+    // 5. Query Core Profiles (MS2)
+    const rawDoctors = await Doctor.find(dbQuery).lean();
+    if (rawDoctors.length === 0) return { data: [] };
+
+    // 6. Generic Availability Flagging
+    // Determine the 'isAvailable' boundary for all returned records
+    let availableDoctorIdsSet;
+    if (params.date) {
+      // Since we strictly filtered by date above, all returned doctors are inherently available
+      availableDoctorIdsSet = new Set(rawDoctors.map(d => d.doctorId));
+    } else {
+      // Pull forward-looking generalized slot availability
+      const futureSlots = await AvailabilitySlot.find({
+        isBooked: false,
+        isDeleted: false,
+        date: { $gte: new Date().setHours(0, 0, 0, 0) }
+      }).select("doctorId");
+      availableDoctorIdsSet = new Set(futureSlots.map(s => s.doctorId));
+    }
+
+    // 7. Data Hydration & Return formatting
+    const hydratedDoctors = rawDoctors.map((doc) => {
+      const identity = ms1Dict[doc.doctorId] || {};
+      return {
+        ...doc,
+        name: identity.name || `Doctor ${doc.doctorId}`,
+        profileImage: doc.profileImage?.url ? doc.profileImage : (identity.profileImage || null),
+        isAvailable: availableDoctorIdsSet.has(doc.doctorId),
+      };
+    });
+
+    return { data: hydratedDoctors };
   } catch (error) {
     console.error("[searchDoctors] error:", error);
     throw error;

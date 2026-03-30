@@ -4,22 +4,24 @@ export const searchDoctors = async (filters) => {
   try {
     const query = new URLSearchParams();
 
-    if (filters.specialty) query.append("specialty", filters.specialty);
+    if (filters.name) query.append("name", filters.name);
+    if (filters.specialization) query.append("specialization", filters.specialization);
     if (filters.hospital) query.append("hospital", filters.hospital);
+    if (filters.location) query.append("location", filters.location);
     if (filters.date) query.append("date", filters.date);
 
     const res = await axios.get(
-      `http://localhost:5002/api/doctors?${query.toString()}`
+      `http://localhost:5002/api/doctors/search?${query.toString()}`
     );
 
     console.log("🔥 DOCTOR SERVICE RESPONSE:", res.data);
 
-    // ✅ FINAL FIX
+    // ✅ FINAL FIX: The backend will return { data: [...] }
     return res.data;
 
   } catch (error) {
     console.error("❌ ERROR CALLING DOCTOR SERVICE:", error.message);
-    return [];
+    return { data: [] }; // returning an empty payload structure mimicking res.data
   }
 };
 
