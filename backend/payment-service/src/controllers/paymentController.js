@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const axios  = require("axios");                          // ✅ ADD THIS if not already there
 const Payment = require("../models/Payment");
 const { generateHash, verifyWebhookHash } = require("../config/payhere");
 
@@ -43,7 +44,6 @@ const initiatePayment = async (req, res, next) => {
         orderId,
         checkout: {
           merchant_id: process.env.PAYHERE_MERCHANT_ID,
-          // return_url carries orderId so we can verify on landing
           return_url:  `${frontendUrl}/payment?status=success&order_id=${orderId}`,
           cancel_url:  `${frontendUrl}/payment?status=cancel&order_id=${orderId}`,
           notify_url:  `${selfUrl}/api/payments/webhook`,
@@ -93,7 +93,29 @@ const payhereWebhook = async (req, res, next) => {
     );
 
     if (!payment) return res.status(404).send("Order not found");
+
     console.log(`✅ Webhook: ${order_id} → ${newStatus}`);
+
+    // ✅ NEW — notify appointment-service to mark PAID after successful payment
+    if (newStatus === "success" && payment.appointmentId) {
+      try {
+        await axios.patch(
+          `${process.env.APPOINTMENT_SERVICE_URL || "http://localhost:5003"}/api/appointments/${payment.appointmentId}/payment`,
+          { paymentStatus: "PAID" },
+          {
+            headers: {
+              "x-internal-service-key": process.env.INTERNAL_SERVICE_KEY
+            },
+            timeout: 5000
+          }
+        );
+        console.log(`✅ Appointment ${payment.appointmentId} marked as PAID`);
+      } catch (notifyErr) {
+        // Log but don't fail — if we return non-200, PayHere will keep retrying
+        console.error("Failed to notify appointment service:", notifyErr.message);
+      }
+    }
+
     res.status(200).send("OK");
   } catch (error) {
     console.error("Webhook error:", error);
@@ -102,9 +124,6 @@ const payhereWebhook = async (req, res, next) => {
 };
 
 // ─── CONFIRM PAYMENT (called from return_url) ─────────────────────────────────
-// POST /api/payments/confirm
-// Called by frontend when user lands on return_url after PayHere success
-// Only marks success if payment is still pending (webhook hasn't hit yet)
 const confirmPayment = async (req, res, next) => {
   try {
     const { orderId } = req.body;

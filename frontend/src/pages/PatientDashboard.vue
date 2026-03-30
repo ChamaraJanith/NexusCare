@@ -45,7 +45,7 @@
             </div>
           </div>
           <div class="col-12 col-sm-4">
-            <div class="quick-action-card" @click="$q.notify('Appointments coming soon')">
+            <div class="quick-action-card" @click="$router.push('/appointment')">
               <div class="action-icon-box">
                 <q-icon name="event" size="1.5rem" color="purple-4" />
               </div>
