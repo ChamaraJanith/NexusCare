@@ -1,361 +1,646 @@
 <template>
-  <q-page class="text-white font-jakarta flex flex-center relative-position page-shell overflow-hidden">
-    <!-- Atmospheric Background -->
-    <div class="page-bg-gradient"></div>
+  <q-page class="patient-dashboard-page">
 
-    <div class="row justify-center full-width z-top max-width-1200 q-px-md">
-      <div class="col-12 col-md-10 col-lg-9">
+    <!-- Background Orbs -->
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+    <div class="bg-orb orb-3"></div>
 
-        <!-- Header area -->
-        <div class="text-center q-mb-xl mt-120">
-          <div class="header-actions row items-center justify-between q-mb-lg">
-            <div class="trusted-badge q-py-xs q-px-sm row items-center inline no-wrap">
-              <q-icon name="verified_user" color="blue-4" size="14px" class="q-mr-sm" />
-              <span class="text-caption text-weight-bolder tracking-wider text-blue-2 uppercase">Patient Dashboard</span>
+    <div class="dashboard-container">
+
+      <!-- ═══════════════════════════════════════
+           HEADER / HERO SECTION
+      ═══════════════════════════════════════ -->
+      <div class="dashboard-header">
+        <div class="header-left">
+          <div class="avatar-section" @click="triggerAvatarUpload">
+            <div class="avatar-outer-ring">
+              <q-avatar size="76px" class="patient-avatar">
+                <img
+                  v-if="profileData.profileImage?.url && !avatarErr"
+                  :src="profileData.profileImage.url"
+                  @error="avatarErr = true"
+                />
+                <div v-else class="avatar-fallback">
+                  <span>{{ getInitials(profileData.name) }}</span>
+                </div>
+              </q-avatar>
             </div>
-            <div class="header-buttons row items-center q-gutter-sm">
-              <q-btn flat round icon="settings" color="blue-4" size="sm" @click="tab = 'profile'" class="hover-glow" />
-              <q-btn flat round icon="logout" color="red-5" size="sm" @click="logout" class="hover-glow" />
+            <div class="avatar-cam">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 15.5a3.5 3.5 0 0 1 0-7 3.5 3.5 0 0 1 0 7zm7.5-11H17l-1.5-2h-7L7 4.5H4.5C3.1 4.5 2 5.6 2 7v13c0 1.4 1.1 2.5 2.5 2.5h15c1.4 0 2.5-1.1 2.5-2.5V7c0-1.4-1.1-2.5-2.5-2.5z"/>
+              </svg>
+            </div>
+            <input ref="avatarInputRef" type="file" accept="image/*" class="d-none" @change="handleAvatarUpload" />
+          </div>
+
+          <div class="header-info">
+            <div class="greeting-badge">
+              <div class="badge-dot"></div>
+              <span>Patient Portal</span>
+            </div>
+            <h1 class="welcome-title">
+              Hey, <span class="name-highlight">{{ profileData.name?.split(' ')[0] || 'Patient' }}</span> 👋
+            </h1>
+            <div class="header-meta">
+              <span class="meta-chip">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                {{ profileData.patientId || 'Loading...' }}
+              </span>
+              <span class="meta-chip" v-if="profileData.bloodGroup && profileData.bloodGroup !== 'Unknown'">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c-5.33 4.55-8 8.48-8 11.8 0 4.98 3.8 8.2 8 8.2s8-3.22 8-8.2c0-3.32-2.67-7.25-8-11.8z"/></svg>
+                {{ profileData.bloodGroup }}
+              </span>
+              <span class="meta-chip">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+                {{ profileData.email || '—' }}
+              </span>
             </div>
           </div>
-          <h1 class="page-title q-ma-none text-weight-bolder">
-            Welcome, <span class="text-gradient-primary">{{ profileData.name || 'Patient' }}</span>
-          </h1>
-          <p class="text-grey-4 text-body1 q-mt-md mx-auto">Your medical profile, reports, and prescriptions in one place</p>
         </div>
 
-        <!-- Quick Actions -->
-        <div class="row q-col-gutter-md q-mb-xl">
-          <div class="col-12 col-sm-4">
-            <div class="quick-action-card" @click="goToSymptoms">
-              <div class="action-icon-box">
-                <q-icon name="medical_services" size="1.5rem" color="blue-4" />
-              </div>
-              <div class="action-title font-weight-bold text-white">AI Symptom</div>
-              <div class="action-subtitle text-grey-5">Check Now</div>
-            </div>
-          </div>
-          <div class="col-12 col-sm-4">
-            <div class="quick-action-card" @click="goToVideoConsultation">
-              <div class="action-icon-box">
-                <q-icon name="videocam" size="1.5rem" color="green-4" />
-              </div>
-              <div class="action-title font-weight-bold text-white">Video Call</div>
-              <div class="action-subtitle text-grey-5">Consult</div>
-            </div>
-          </div>
-          <div class="col-12 col-sm-4">
-            <div class="quick-action-card" @click="$router.push('/appointment')">
-              <div class="action-icon-box">
-                <q-icon name="event" size="1.5rem" color="purple-4" />
-              </div>
-              <div class="action-title font-weight-bold text-white">Book</div>
-              <div class="action-subtitle text-grey-5">Appointment</div>
-            </div>
-          </div>
+        <div class="header-actions">
+          <q-btn flat round icon="notifications_none" class="header-icon-btn" @click="showNotifDialog = true">
+            <q-badge v-if="unreadCount > 0" color="red" floating rounded style="font-size:9px">{{ unreadCount }}</q-badge>
+            <q-tooltip>Notifications</q-tooltip>
+          </q-btn>
+          <q-btn flat round icon="settings" class="header-icon-btn" @click="activeTab = 'profile'">
+            <q-tooltip>Settings</q-tooltip>
+          </q-btn>
+          <q-btn unelevated class="logout-btn" @click="logout">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
+            Logout
+          </q-btn>
         </div>
-
-        <!-- Tabs ═════════════════════════════════════════════════════ -->
-        <div class="glass-card q-pa-none shadow-glow relative-position q-mb-xl">
-          <q-tabs v-model="tab" dense class="modernized-tabs" indicator-color="blue-6" active-color="blue-6" inactive-color="grey-6">
-            <q-tab name="profile" icon="person" label="PROFILE" class="text-weight-bold" />
-            <q-tab name="reports" icon="folder" label="REPORTS" class="text-weight-bold" />
-            <q-tab name="prescriptions" icon="medication" label="PRESCRIPTIONS" class="text-weight-bold" />
-          </q-tabs>
-        </div>
-
-        <q-tab-panels v-model="tab" animated class="q-pa-none">
-          <!-- PROFILE TAB ═══════════════════════════════════════════════ -->
-          <q-tab-panel name="profile" class="q-pa-none patient-panel">
-          <div class="glass-card q-pa-xl shadow-glow profile-main-card">
-            <!-- Avatar Section -->
-            <div class="text-center q-mb-xl">
-              <div class="avatar-wrapper-pro relative-position inline-block q-mb-md">
-                <q-avatar size="120px" class="profile-avatar-modern">
-                  <img v-if="profileData.profileImage?.url" :src="profileData.profileImage.url" />
-                  <q-icon v-else name="person" color="blue-4" size="3.5rem" />
-                </q-avatar>
-                <q-btn
-                  round flat icon="photo_camera" color="blue-4" size="sm"
-                  class="avatar-cam-btn-pro"
-                  @click="$refs.imgFile.click()"
-                />
-                <input ref="imgFile" type="file" accept="image/*" class="hidden" @change="doUploadImage" />
-              </div>
-              <div class="profile-name text-h4 text-weight-bold text-white q-mb-sm">{{ profileData.name }}</div>
-              <div class="profile-email text-grey-5">{{ profileData.email }}</div>
-              <div class="profile-phone text-grey-6">{{ profileData.phone || '—' }}</div>
-            </div>
-
-            <q-separator dark class="q-my-lg" style="opacity: 0.3;" />
-
-            <!-- Info Grid -->
-            <div class="row q-col-gutter-lg q-mb-xl">
-              <div class="col-12 col-sm-6">
-                <div class="info-block">
-                  <div class="info-label text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-xs">Gender</div>
-                  <div class="text-h6 text-white">{{ profileData.gender ? profileData.gender.charAt(0).toUpperCase() + profileData.gender.slice(1) : '—' }}</div>
-                </div>
-              </div>
-              <div class="col-12 col-sm-6">
-                <div class="info-block">
-                  <div class="info-label text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-xs">Blood Group</div>
-                  <div class="text-h6 text-white">{{ profileData.bloodGroup || '—' }}</div>
-                </div>
-              </div>
-              <div class="col-12 col-sm-6">
-                <div class="info-block">
-                  <div class="info-label text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-xs">Age</div>
-                  <div class="text-h6 text-white">{{ calculateAge(profileData.dateOfBirth) || '—' }} years</div>
-                </div>
-              </div>
-              <div class="col-12 col-sm-6">
-                <div class="info-block">
-                  <div class="info-label text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-xs">Allergies</div>
-                  <div class="text-h6 text-white">{{ profileData.allergies?.length || 0 }}</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Allergies & Conditions -->
-            <div class="row q-col-gutter-lg q-mb-xl">
-              <div class="col-12 col-sm-6">
-                <div class="tag-section">
-                  <div class="tag-title text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-md">Known Allergies</div>
-                  <div v-if="profileData.allergies?.length" class="q-gutter-sm">
-                    <q-chip v-for="a in profileData.allergies" :key="a" dark color="red-10" text-color="white" dense class="q-pa-md">{{ a }}</q-chip>
-                  </div>
-                  <div v-else class="text-grey-6">No allergies recorded</div>
-                </div>
-              </div>
-              <div class="col-12 col-sm-6">
-                <div class="tag-section">
-                  <div class="tag-title text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-md">Chronic Conditions</div>
-                  <div v-if="profileData.chronicConditions?.length" class="q-gutter-sm">
-                    <q-chip v-for="c in profileData.chronicConditions" :key="c" dark color="orange-10" text-color="white" dense class="q-pa-md">{{ c }}</q-chip>
-                  </div>
-                  <div v-else class="text-grey-6">No chronic conditions recorded</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Edit Form -->
-            <q-separator dark class="q-my-lg" style="opacity: 0.3;" />
-
-            <div class="text-weight-bold text-h6 text-white q-mb-lg">Edit Profile</div>
-            <q-form @submit="doSaveProfile" class="row q-col-gutter-md">
-              <div class="col-12 col-sm-6">
-                <div class="text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-sm">Full Name</div>
-                <q-input v-model="editForm.name" dark outlined color="blue-4" class="modern-input" />
-              </div>
-              <div class="col-12 col-sm-6">
-                <div class="text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-sm">Phone</div>
-                <q-input v-model="editForm.phone" dark outlined color="blue-4" class="modern-input" />
-              </div>
-              <div class="col-12 col-sm-6">
-                <div class="text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-sm">Date of Birth</div>
-                <q-input v-model="editForm.dateOfBirth" type="date" dark outlined color="blue-4" class="modern-input" />
-              </div>
-              <div class="col-12 col-sm-6">
-                <div class="text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-sm">Gender</div>
-                <q-select v-model="editForm.gender" :options="['male', 'female', 'other']" dark outlined color="blue-4" class="modern-input" />
-              </div>
-              <div class="col-12 col-sm-6">
-                <div class="text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-sm">Blood Group</div>
-                <q-select v-model="editForm.bloodGroup" :options="bloodGroups" dark outlined color="blue-4" class="modern-input" />
-              </div>
-              <div class="col-12">
-                <div class="text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-sm">Allergies</div>
-                <q-select
-                  v-model="editForm.allergies" multiple use-chips use-input new-value-mode="add-unique"
-                  placeholder="Add allergies..."
-                  dark outlined color="blue-4" class="modern-input"
-                />
-              </div>
-              <div class="col-12">
-                <div class="text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-sm">Chronic Conditions</div>
-                <q-select
-                  v-model="editForm.chronicConditions" multiple use-chips use-input new-value-mode="add-unique"
-                  placeholder="Add conditions..."
-                  dark outlined color="blue-4" class="modern-input"
-                />
-              </div>
-              <div class="col-12 text-right q-mt-md">
-                <q-btn type="submit" unelevated label="Save Changes" color="blue-6" icon-right="save" class="btn-primary-glow q-px-lg" :loading="savingProfile" />
-              </div>
-            </q-form>
-          </div>
-        </q-tab-panel>
-
-        <!-- REPORTS TAB ═══════════════════════════════════════════════ -->
-        <q-tab-panel name="reports" class="q-pa-none">
-          <div class="glass-card q-pa-xl shadow-glow">
-            <div class="row items-center justify-between q-mb-lg">
-              <div>
-                <div class="text-h6 text-weight-bold text-white q-mb-xs">Medical Reports</div>
-                <div class="text-caption text-grey-5">{{ reports.length }} document{{ reports.length !== 1 ? 's' : '' }} uploaded</div>
-              </div>
-              <q-btn unelevated label="Upload Report" color="blue-6" icon="upload_file" class="btn-primary-glow" @click="uploadDialog = true" />
-            </div>
-
-            <q-separator dark class="q-my-lg" style="opacity: 0.3;" />
-
-            <div v-if="reports.length === 0" class="text-center q-py-xl">
-              <q-icon name="description" size="3rem" color="grey-8" class="q-mb-md" />
-              <div class="text-h6 text-grey-7">No reports uploaded</div>
-              <div class="text-caption text-grey-6">Upload your medical reports to keep them organized</div>
-            </div>
-
-            <div v-else class="q-gutter-md">
-              <div v-for="r in reports" :key="r.reportId" class="report-item-modern">
-                <div class="row items-center q-gutter-md">
-                  <div class="col-auto">
-                    <div class="report-icon-box">
-                      <q-icon :name="r.fileType === 'pdf' ? 'picture_as_pdf' : 'image'" :color="r.fileType === 'pdf' ? 'red-4' : 'blue-4'" size="2rem" />
-                    </div>
-                  </div>
-                  <div class="col">
-                    <div class="text-weight-bold text-white">{{ r.title }}</div>
-                    <div class="text-caption text-grey-6">{{ r.description || 'No description' }}</div>
-                    <div class="q-mt-xs row items-center q-gutter-xs">
-                      <q-chip dense dark :color="r.fileType === 'pdf' ? 'red-10' : 'blue-10'" class="text-caption text-weight-bold">
-                        {{ r.fileType?.toUpperCase() || 'FILE' }}
-                      </q-chip>
-                      <span class="text-caption text-grey-7">{{ formatDate(r.uploadedAt) }}</span>
-                    </div>
-                  </div>
-                  <div class="col-auto row q-gutter-xs">
-                    <q-btn flat round dense icon="visibility" color="blue-5" size="sm" @click="window.open(r.fileUrl, '_blank')">
-                      <q-tooltip class="text-caption">View</q-tooltip>
-                    </q-btn>
-                    <q-btn flat round dense icon="delete_outline" color="red-5" size="sm" @click="doDeleteReport(r.reportId)">
-                      <q-tooltip class="text-caption">Delete</q-tooltip>
-                    </q-btn>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </q-tab-panel>
-
-        <!-- PRESCRIPTIONS TAB ══════════════════════════════════════════ -->
-        <q-tab-panel name="prescriptions" class="q-pa-none">
-          <div class="glass-card q-pa-xl shadow-glow">
-            <div class="text-h6 text-weight-bold text-white q-mb-lg">Prescriptions</div>
-
-            <div v-if="prescriptions.length === 0" class="text-center q-py-xl">
-              <q-icon name="medication" size="3rem" color="grey-8" class="q-mb-md" />
-              <div class="text-h6 text-grey-7">No prescriptions yet</div>
-              <div class="text-caption text-grey-6">Prescriptions issued by your doctors will appear here</div>
-            </div>
-
-            <div v-else class="q-gutter-md">
-              <q-expansion-item
-                v-for="rx in prescriptions" :key="rx.prescriptionId"
-                :label="rx.diagnosis || 'Prescription'"
-                class="prescription-expansion"
-                expand-icon-class="text-blue-4"
-                dark
-                header-class="prescription-header-modern"
-              >
-                <template #header>
-                  <q-item-section avatar>
-                    <div class="header-icon-box">
-                      <q-icon name="medical_services" color="blue-4" />
-                    </div>
-                  </q-item-section>
-                  <q-item-section>
-                    <q-item-label class="text-weight-bold text-white">{{ rx.diagnosis || 'Prescription' }}</q-item-label>
-                    <q-item-label caption class="text-grey-6">Dr. {{ rx.doctorName }} • {{ formatDate(rx.issuedAt) }}</q-item-label>
-                  </q-item-section>
-                  <q-item-section side>
-                    <q-chip dense dark color="blue-10" class="text-weight-bold text-caption">
-                      {{ rx.medications?.length || 0 }} MEDS
-                    </q-chip>
-                  </q-item-section>
-                </template>
-
-                <div class="q-pa-lg">
-                  <div class="q-mb-lg">
-                    <div class="text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-md">Medications</div>
-                    <div class="q-gutter-md">
-                      <div v-for="(med, i) in rx.medications" :key="i" class="medication-item-modern">
-                        <div class="row items-start q-gutter-md">
-                          <div class="col-auto">
-                            <q-icon name="medication" color="blue-5" size="1.5rem" />
-                          </div>
-                          <div class="col">
-                            <div class="text-weight-bold text-white q-mb-xs">{{ med.name }}</div>
-                            <div class="row items-center q-gutter-xs q-mb-xs">
-                              <q-chip dense dark color="grey-9" class="text-caption">{{ med.dosage }}</q-chip>
-                              <q-chip dense dark color="grey-9" class="text-caption">{{ med.frequency }}</q-chip>
-                              <q-chip dense dark color="grey-9" class="text-caption">{{ med.duration }}</q-chip>
-                            </div>
-                            <div v-if="med.notes" class="text-caption text-grey-6">{{ med.notes }}</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <q-separator dark style="opacity: 0.3;" class="q-my-md" v-if="rx.notes" />
-
-                  <div v-if="rx.notes">
-                    <div class="text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-md">Doctor's Notes</div>
-                    <div class="system-bubble">
-                      <div class="text-body2 text-white">{{ rx.notes }}</div>
-                    </div>
-                  </div>
-                </div>
-              </q-expansion-item>
-            </div>
-          </div>
-        </q-tab-panel>
-        </q-tab-panels>
       </div>
+
+      <!-- ═══════════════════════════════════════
+           STAT CARDS ROW
+      ═══════════════════════════════════════ -->
+      <div class="stats-grid">
+        <div class="stat-card" v-for="s in statCards" :key="s.label" :class="s.accentClass" @click="s.onClick && s.onClick()">
+          <div class="stat-icon-box">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" v-html="s.icon"></svg>
+          </div>
+          <div class="stat-content">
+            <div class="stat-num">{{ s.value }}</div>
+            <div class="stat-label">{{ s.label }}</div>
+          </div>
+          <div class="stat-arrow" v-if="s.onClick">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════
+           QUICK ACTION BUTTONS
+      ═══════════════════════════════════════ -->
+      <div class="quick-actions-row">
+        <div
+          class="quick-action-btn"
+          v-for="qa in quickActions"
+          :key="qa.label"
+          :class="qa.colorClass"
+          @click="qa.action"
+        >
+          <div class="qa-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" v-html="qa.icon"></svg>
+          </div>
+          <div class="qa-text">
+            <span class="qa-label">{{ qa.label }}</span>
+            <span class="qa-sub">{{ qa.sub }}</span>
+          </div>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" class="qa-chevron"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════
+           MAIN TABS
+      ═══════════════════════════════════════ -->
+      <div class="tabs-wrapper">
+        <div class="custom-tabs">
+          <button
+            v-for="t in mainTabs"
+            :key="t.value"
+            class="custom-tab"
+            :class="{ active: activeTab === t.value }"
+            @click="activeTab = t.value"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" v-html="t.icon"></svg>
+            {{ t.label }}
+            <span v-if="t.badge" class="tab-badge">{{ t.badge }}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ─────────────────────────────────────
+           TAB: OVERVIEW
+      ───────────────────────────────────── -->
+      <div v-show="activeTab === 'overview'" class="tab-content">
+        <div class="overview-grid">
+
+          <!-- Health Summary -->
+          <div class="ov-card ov-summary">
+            <div class="card-header">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+              Health Summary
+            </div>
+            <div class="summary-rows">
+              <div class="summary-row"><span>Full Name</span><span>{{ profileData.name || '—' }}</span></div>
+              <div class="summary-row"><span>Patient ID</span><span>{{ profileData.patientId || '—' }}</span></div>
+              <div class="summary-row"><span>Age</span><span>{{ calcAge(profileData.dateOfBirth) ? calcAge(profileData.dateOfBirth) + ' yrs' : '—' }}</span></div>
+              <div class="summary-row"><span>Gender</span><span class="capitalize">{{ profileData.gender || '—' }}</span></div>
+              <div class="summary-row"><span>Blood Group</span><span>{{ profileData.bloodGroup || '—' }}</span></div>
+              <div class="summary-row"><span>Phone</span><span>{{ profileData.phone || '—' }}</span></div>
+              <div class="summary-row" v-if="profileData.address?.city"><span>City</span><span>{{ profileData.address.city }}</span></div>
+              <div class="summary-row last" v-if="profileData.emergencyContact?.name">
+                <span>Emergency</span>
+                <span>{{ profileData.emergencyContact.name }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Conditions Card -->
+          <div class="ov-card ov-conditions">
+            <div class="card-header">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
+              Medical Conditions
+            </div>
+
+            <div class="conditions-section">
+              <div class="cond-label">Allergies</div>
+              <div class="chip-group" v-if="profileData.allergies?.length">
+                <span class="chip chip-red" v-for="a in profileData.allergies" :key="a">{{ a }}</span>
+              </div>
+              <p class="cond-empty" v-else>None recorded</p>
+            </div>
+
+            <div class="conditions-section">
+              <div class="cond-label">Chronic Conditions</div>
+              <div class="chip-group" v-if="profileData.chronicConditions?.length">
+                <span class="chip chip-amber" v-for="c in profileData.chronicConditions" :key="c">{{ c }}</span>
+              </div>
+              <p class="cond-empty" v-else>None recorded</p>
+            </div>
+          </div>
+
+          <!-- Recent Prescriptions Preview -->
+          <div class="ov-card ov-rx">
+            <div class="card-header-flex">
+              <div class="card-header">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 3H4v10c0 2.21 1.79 4 4 4h6c2.21 0 4-1.79 4-4v-3h2c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 5h-2V5h2v3zM4 19h16v2H4z"/></svg>
+                Latest Prescriptions
+              </div>
+              <button class="view-all-btn" @click="activeTab = 'prescriptions'">View all →</button>
+            </div>
+            <div v-if="!prescriptions.length" class="mini-empty">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.25"><path d="M20 3H4v10c0 2.21 1.79 4 4 4h6c2.21 0 4-1.79 4-4v-3h2c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 5h-2V5h2v3zM4 19h16v2H4z"/></svg>
+              <span>No prescriptions yet</span>
+            </div>
+            <div v-else class="rx-list">
+              <div v-for="rx in prescriptions.slice(0, 3)" :key="rx.prescriptionId || rx._id" class="rx-mini-item">
+                <div class="rx-dot"></div>
+                <div class="rx-info">
+                  <span class="rx-title">{{ rx.diagnosis || 'Prescription' }}</span>
+                  <span class="rx-sub">Dr. {{ rx.doctorName || '—' }} · {{ fmtDate(rx.issuedAt) }}</span>
+                </div>
+                <span class="rx-count">{{ rx.medications?.length || 0 }} meds</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Reports Preview -->
+          <div class="ov-card ov-reports-preview">
+            <div class="card-header-flex">
+              <div class="card-header">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                Recent Reports
+              </div>
+              <button class="view-all-btn" @click="activeTab = 'reports'">View all →</button>
+            </div>
+            <div v-if="!reports.length" class="mini-empty">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.25"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+              <span>No reports uploaded</span>
+            </div>
+            <div v-else class="report-mini-grid">
+              <div
+                v-for="r in reports.slice(0, 4)"
+                :key="r.reportId"
+                class="report-mini-card"
+                @click="openFile(r.fileUrl)"
+              >
+                <div class="report-mini-icon" :class="r.fileType === 'pdf' ? 'icon-red' : 'icon-blue'">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path v-if="r.fileType === 'pdf'" d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z"/>
+                    <path v-else d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                  </svg>
+                </div>
+                <span class="report-mini-name">{{ r.title }}</span>
+                <span class="report-mini-date">{{ fmtDate(r.uploadedAt) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Upcoming Appointments -->
+          <div class="ov-card ov-upcoming">
+            <div class="card-header-flex">
+              <div class="card-header">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
+                Upcoming Appointments
+              </div>
+              <button class="view-all-btn" @click="activeTab = 'appointments'">View all →</button>
+            </div>
+            <div v-if="!upcomingAppointments.length" class="mini-empty">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.25"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
+              <span>No upcoming appointments</span>
+            </div>
+            <div v-else class="upcoming-list">
+              <div v-for="ap in upcomingAppointments.slice(0, 3)" :key="ap._id" class="upcoming-item">
+                <div class="upcoming-date-box">
+                  <span class="up-day">{{ fmtDay(ap.date) }}</span>
+                  <span class="up-month">{{ fmtMonth(ap.date) }}</span>
+                </div>
+                <div class="upcoming-detail">
+                  <span class="up-title">{{ ap.patientName || profileData.name }}</span>
+                  <span class="up-sub">{{ ap.time }} · {{ ap.appointmentType }} · Queue #{{ ap.queueNumber || '—' }}</span>
+                </div>
+                <span class="status-pill" :class="statusClass(ap.status)">{{ ap.status }}</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ─────────────────────────────────────
+           TAB: PROFILE
+      ───────────────────────────────────── -->
+      <div v-show="activeTab === 'profile'" class="tab-content">
+        <div class="form-card">
+
+          <!-- Avatar Section -->
+          <div class="profile-avatar-center">
+            <div class="large-avatar-wrap" @click="$refs.avatarInputRef.click()">
+              <q-avatar size="100px" class="large-avatar">
+                <img v-if="profileData.profileImage?.url && !avatarErr" :src="profileData.profileImage.url" @error="avatarErr = true" />
+                <div v-else class="avatar-fallback large-fallback">
+                  <span>{{ getInitials(profileData.name) }}</span>
+                </div>
+              </q-avatar>
+              <div class="large-avatar-edit">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 15.5a3.5 3.5 0 0 1 0-7 3.5 3.5 0 0 1 0 7zm7.5-11H17l-1.5-2h-7L7 4.5H4.5C3.1 4.5 2 5.6 2 7v13c0 1.4 1.1 2.5 2.5 2.5h15c1.4 0 2.5-1.1 2.5-2.5V7c0-1.4-1.1-2.5-2.5-2.5z"/></svg>
+                Change Photo
+              </div>
+            </div>
+            <div class="profile-name-big">{{ profileData.name }}</div>
+            <div class="profile-id-sub">{{ profileData.email }} · {{ profileData.patientId }}</div>
+          </div>
+
+          <div class="section-divider"></div>
+
+          <!-- Personal Info Form -->
+          <div class="form-section-title">Personal Information</div>
+          <div class="form-grid">
+            <div class="form-field">
+              <label>Full Name</label>
+              <q-input v-model="editForm.name" dark outlined dense color="cyan-5" class="neon-input" />
+            </div>
+            <div class="form-field">
+              <label>Phone Number</label>
+              <q-input v-model="editForm.phone" dark outlined dense color="cyan-5" class="neon-input" />
+            </div>
+            <div class="form-field">
+              <label>Date of Birth</label>
+              <q-input v-model="editForm.dateOfBirth" type="date" dark outlined dense color="cyan-5" class="neon-input" />
+            </div>
+            <div class="form-field">
+              <label>Gender</label>
+              <q-select v-model="editForm.gender" :options="['male','female','other']" dark outlined dense color="cyan-5" class="neon-input" />
+            </div>
+            <div class="form-field">
+              <label>Blood Group</label>
+              <q-select v-model="editForm.bloodGroup" :options="bloodGroups" dark outlined dense color="cyan-5" class="neon-input" />
+            </div>
+            <div class="form-field">
+              <label>City</label>
+              <q-input v-model="editForm.address.city" dark outlined dense color="cyan-5" class="neon-input" />
+            </div>
+            <div class="form-field">
+              <label>District</label>
+              <q-input v-model="editForm.address.district" dark outlined dense color="cyan-5" class="neon-input" />
+            </div>
+            <div class="form-field">
+              <label>Postal Code</label>
+              <q-input v-model="editForm.address.postalCode" dark outlined dense color="cyan-5" class="neon-input" />
+            </div>
+          </div>
+
+          <div class="form-section-title" style="margin-top: 28px;">Emergency Contact</div>
+          <div class="form-grid">
+            <div class="form-field">
+              <label>Name</label>
+              <q-input v-model="editForm.emergencyContact.name" dark outlined dense color="cyan-5" class="neon-input" />
+            </div>
+            <div class="form-field">
+              <label>Phone</label>
+              <q-input v-model="editForm.emergencyContact.phone" dark outlined dense color="cyan-5" class="neon-input" />
+            </div>
+            <div class="form-field">
+              <label>Relationship</label>
+              <q-input v-model="editForm.emergencyContact.relationship" dark outlined dense color="cyan-5" class="neon-input" />
+            </div>
+          </div>
+
+          <div class="form-section-title" style="margin-top: 28px;">Medical History</div>
+          <div class="form-grid form-grid-full">
+            <div class="form-field">
+              <label>Known Allergies</label>
+              <q-select v-model="editForm.allergies" multiple use-chips use-input new-value-mode="add-unique" placeholder="Type and press Enter..." dark outlined dense color="cyan-5" class="neon-input" />
+            </div>
+            <div class="form-field">
+              <label>Chronic Conditions</label>
+              <q-select v-model="editForm.chronicConditions" multiple use-chips use-input new-value-mode="add-unique" placeholder="Type and press Enter..." dark outlined dense color="cyan-5" class="neon-input" />
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button class="btn-save" @click="saveProfile" :disabled="savingProfile">
+              <span v-if="savingProfile">Saving...</span>
+              <span v-else>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="margin-right:6px;vertical-align:-2px"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+                Save Changes
+              </span>
+            </button>
+          </div>
+
+          <div class="section-divider"></div>
+
+          <!-- Change Password -->
+          <div class="form-section-title">Change Password</div>
+          <div class="form-grid">
+            <div class="form-field">
+              <label>Current Password</label>
+              <q-input v-model="pwForm.current" type="password" dark outlined dense color="cyan-5" class="neon-input" />
+            </div>
+            <div class="form-field">
+              <label>New Password</label>
+              <q-input v-model="pwForm.newPw" type="password" dark outlined dense color="cyan-5" class="neon-input" />
+            </div>
+            <div class="form-field">
+              <label>Confirm New Password</label>
+              <q-input v-model="pwForm.confirm" type="password" dark outlined dense color="cyan-5" class="neon-input" />
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="btn-secondary" @click="changePassword" :disabled="changingPw">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="margin-right:6px;vertical-align:-2px"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+              {{ changingPw ? 'Updating...' : 'Update Password' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─────────────────────────────────────
+           TAB: REPORTS
+      ───────────────────────────────────── -->
+      <div v-show="activeTab === 'reports'" class="tab-content">
+        <div class="content-card">
+          <div class="content-card-header">
+            <div>
+              <div class="content-card-title">Medical Reports</div>
+              <div class="content-card-sub">{{ reports.length }} document{{ reports.length !== 1 ? 's' : '' }}</div>
+            </div>
+            <button class="btn-action" @click="uploadDialog = true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
+              Upload Report
+            </button>
+          </div>
+
+          <div v-if="!reports.length" class="empty-state">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+            <div class="empty-title">No medical reports</div>
+            <div class="empty-sub">Upload your lab results, scans, and medical documents</div>
+          </div>
+
+          <div v-else class="reports-list">
+            <div v-for="r in reports" :key="r.reportId" class="report-item">
+              <div class="report-icon-big" :class="r.fileType === 'pdf' ? 'icon-bg-red' : 'icon-bg-blue'">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                  <path v-if="r.fileType==='pdf'" d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z"/>
+                  <path v-else d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                </svg>
+              </div>
+              <div class="report-info">
+                <div class="report-title">{{ r.title }}</div>
+                <div class="report-desc">{{ r.description || 'No description' }}</div>
+                <div class="report-meta">
+                  <span class="type-badge" :class="r.fileType === 'pdf' ? 'badge-red' : 'badge-blue'">{{ (r.fileType || 'file').toUpperCase() }}</span>
+                  <span class="report-date">{{ fmtDate(r.uploadedAt) }}</span>
+                </div>
+              </div>
+              <div class="report-actions">
+                <button class="icon-btn-view" @click="openFile(r.fileUrl)">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+                </button>
+                <button class="icon-btn-del" @click="deleteReport(r.reportId)">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─────────────────────────────────────
+           TAB: PRESCRIPTIONS
+      ───────────────────────────────────── -->
+      <div v-show="activeTab === 'prescriptions'" class="tab-content">
+        <div class="content-card">
+          <div class="content-card-header">
+            <div>
+              <div class="content-card-title">Prescriptions</div>
+              <div class="content-card-sub">{{ prescriptions.length }} prescription{{ prescriptions.length !== 1 ? 's' : '' }}</div>
+            </div>
+          </div>
+
+          <div v-if="!prescriptions.length" class="empty-state">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M20 3H4v10c0 2.21 1.79 4 4 4h6c2.21 0 4-1.79 4-4v-3h2c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 5h-2V5h2v3zM4 19h16v2H4z"/></svg>
+            <div class="empty-title">No prescriptions yet</div>
+            <div class="empty-sub">Prescriptions issued by your doctors will appear here</div>
+          </div>
+
+          <div v-else class="prescriptions-list">
+            <div v-for="rx in prescriptions" :key="rx.prescriptionId || rx._id" class="rx-accordion" :class="{ expanded: expandedRx === (rx.prescriptionId || rx._id) }">
+              <div class="rx-accordion-header" @click="toggleRx(rx.prescriptionId || rx._id)">
+                <div class="rx-header-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-2.18c.07-.44.18-.88.18-1.35C18 2.53 15.48 0 12.35 0c-1.7 0-3.23.72-4.35 1.85C6.98.72 5.45 0 3.75 0 .62 0-1.9 2.53-1.9 4.65c0 .47.11.91.18 1.35H-2v2h2v10h16V8h2V6zm-7.65-4c1.03 0 1.65.62 1.65 1.65S13.38 5.3 12.35 5.3c-1.03 0-1.65-.62-1.65-1.65S11.32 2 12.35 2zM6 16H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V6h2v2zm8 8h-6v-2h6v2zm0-4h-6v-2h6v2zm0-4h-6V6h6v2z"/></svg>
+                </div>
+                <div class="rx-header-info">
+                  <span class="rx-h-title">{{ rx.diagnosis || 'Prescription' }}</span>
+                  <span class="rx-h-sub">Dr. {{ rx.doctorName || '—' }} · {{ fmtDate(rx.issuedAt) }}</span>
+                </div>
+                <span class="rx-count-badge">{{ rx.medications?.length || 0 }} meds</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" class="rx-chevron"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
+              </div>
+
+              <div class="rx-accordion-body" v-if="expandedRx === (rx.prescriptionId || rx._id)">
+                <div class="meds-label">Medications</div>
+                <div class="meds-grid">
+                  <div v-for="(med, i) in rx.medications" :key="i" class="med-card">
+                    <div class="med-name">{{ med.name }}</div>
+                    <div class="med-chips">
+                      <span v-if="med.dosage" class="med-chip">{{ med.dosage }}</span>
+                      <span v-if="med.frequency" class="med-chip">{{ med.frequency }}</span>
+                      <span v-if="med.duration" class="med-chip">{{ med.duration }}</span>
+                    </div>
+                    <div v-if="med.notes" class="med-notes">{{ med.notes }}</div>
+                  </div>
+                </div>
+                <div v-if="rx.notes" class="rx-notes-box">
+                  <div class="notes-label">Doctor's Notes</div>
+                  <div class="notes-text">{{ rx.notes }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─────────────────────────────────────
+           TAB: APPOINTMENTS
+      ───────────────────────────────────── -->
+      <div v-show="activeTab === 'appointments'" class="tab-content">
+        <div class="content-card">
+          <div class="content-card-header">
+            <div>
+              <div class="content-card-title">My Appointments</div>
+              <div class="content-card-sub">{{ appointments.length }} total</div>
+            </div>
+            <button class="btn-action" @click="$router.push('/appointment')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/></svg>
+              Book New
+            </button>
+          </div>
+
+          <!-- Status Filter -->
+          <div class="filter-row">
+            <button
+              v-for="f in apptFilters"
+              :key="f.value"
+              class="filter-btn"
+              :class="{ active: apptFilter === f.value }"
+              @click="apptFilter = f.value"
+            >{{ f.label }}</button>
+          </div>
+
+          <div v-if="!filteredAppts.length" class="empty-state">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
+            <div class="empty-title">No appointments found</div>
+          </div>
+
+          <div v-else class="appointments-list">
+            <div v-for="ap in filteredAppts" :key="ap._id || ap.appointmentId" class="appt-item">
+              <div class="appt-date-block">
+                <span class="appt-day">{{ fmtDay(ap.date) }}</span>
+                <span class="appt-month">{{ fmtMonth(ap.date) }}</span>
+              </div>
+              <div class="appt-info">
+                <div class="appt-title">{{ ap.patientName || profileData.name }}</div>
+                <div class="appt-sub">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
+                  {{ ap.time }} &nbsp;·&nbsp; {{ ap.appointmentType }} &nbsp;·&nbsp; Queue #{{ ap.queueNumber || '—' }}
+                </div>
+                <div class="appt-payment" v-if="ap.charges?.total">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
+                  LKR {{ ap.charges.total.toLocaleString() }}
+                  <span class="pay-badge" :class="ap.paymentStatus === 'PAID' ? 'pay-paid' : 'pay-pending'">{{ ap.paymentStatus }}</span>
+                </div>
+              </div>
+              <div class="appt-right">
+                <span class="status-pill" :class="statusClass(ap.status)">{{ ap.status }}</span>
+                <div class="appt-btns" v-if="['PENDING','CONFIRMED'].includes(ap.status)">
+                  <button class="appt-edit-btn" @click="openEditAppt(ap)">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                  </button>
+                  <button class="appt-cancel-btn" @click="cancelAppt(ap._id || ap.appointmentId)">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
 
-    <!-- Upload Dialog -->
+    <!-- ═══════════════════════════════════════
+         UPLOAD REPORT DIALOG
+    ═══════════════════════════════════════ -->
     <q-dialog v-model="uploadDialog" persistent>
-      <q-card class="glass-card">
-        <q-card-section class="row items-center q-pb-none">
-          <div class="text-h6 text-weight-bold text-white">Upload Medical Report</div>
-          <q-space />
-          <q-btn icon="close" flat round dense v-close-popup />
-        </q-card-section>
-
-        <q-form @submit="doUploadReport" class="q-pa-lg">
-          <div class="q-mb-md">
-            <div class="text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-sm">Report Title *</div>
-            <q-input v-model="rForm.title" placeholder="e.g., Blood Test Results" dark outlined color="blue-4" class="modern-input" />
+      <div class="dialog-box">
+        <div class="dialog-header">
+          <span>Upload Medical Report</span>
+          <button class="dialog-close" @click="uploadDialog = false; resetRForm()">✕</button>
+        </div>
+        <div class="dialog-body">
+          <div class="form-field">
+            <label>Report Title *</label>
+            <q-input v-model="rForm.title" placeholder="e.g. Blood Test Results" dark outlined dense color="cyan-5" class="neon-input" />
           </div>
-
-          <div class="q-mb-md">
-            <div class="text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-sm">Description</div>
-            <q-input v-model="rForm.description" type="textarea" rows="3" placeholder="Optional details..." dark outlined color="blue-4" class="modern-input" />
+          <div class="form-field" style="margin-top:14px">
+            <label>Description (optional)</label>
+            <q-input v-model="rForm.description" type="textarea" rows="2" dark outlined dense color="cyan-5" class="neon-input" />
           </div>
-
-          <div class="q-mb-lg">
-            <div class="text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1 q-mb-sm">File (PDF or Image) *</div>
-            <q-file v-model="rForm.file" dark outlined color="blue-4" class="modern-input" accept=".pdf,.jpg,.jpeg,.png" max-file-size="10485760">
-              <template #prepend>
-                <q-icon name="attach_file" color="blue-5" />
-              </template>
+          <div class="form-field" style="margin-top:14px">
+            <label>File (PDF or Image, max 10MB) *</label>
+            <q-file v-model="rForm.file" dark outlined dense color="cyan-5" class="neon-input" accept=".pdf,.jpg,.jpeg,.png" :max-file-size="10485760">
+              <template #prepend><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color:#22d3ee"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg></template>
             </q-file>
           </div>
-
-          <div class="row q-gutter-md justify-end">
-            <q-btn flat label="Cancel" color="grey-5" v-close-popup @click="resetRForm" />
-            <q-btn type="submit" unelevated label="Upload" color="blue-6" class="btn-primary-glow" :loading="uploadingReport" />
-          </div>
-        </q-form>
-      </q-card>
+        </div>
+        <div class="dialog-footer">
+          <button class="btn-ghost" @click="uploadDialog = false; resetRForm()">Cancel</button>
+          <button class="btn-save" @click="uploadReport" :disabled="uploadingReport">
+            {{ uploadingReport ? 'Uploading...' : 'Upload Report' }}
+          </button>
+        </div>
+      </div>
     </q-dialog>
+
+    <!-- ═══════════════════════════════════════
+         EDIT APPOINTMENT DIALOG
+    ═══════════════════════════════════════ -->
+    <q-dialog v-model="editApptDialog" persistent>
+      <div class="dialog-box">
+        <div class="dialog-header">
+          <span>Edit Appointment</span>
+          <button class="dialog-close" @click="editApptDialog = false">✕</button>
+        </div>
+        <div class="dialog-body">
+          <div class="form-field">
+            <label>New Date</label>
+            <q-input v-model="editApptForm.date" type="date" dark outlined dense color="cyan-5" class="neon-input" />
+          </div>
+          <div class="form-field" style="margin-top:14px">
+            <label>New Time</label>
+            <q-input v-model="editApptForm.time" type="time" dark outlined dense color="cyan-5" class="neon-input" />
+          </div>
+        </div>
+        <div class="dialog-footer">
+          <button class="btn-ghost" @click="editApptDialog = false">Cancel</button>
+          <button class="btn-save" @click="updateAppt" :disabled="updatingAppt">
+            {{ updatingAppt ? 'Updating...' : 'Update Appointment' }}
+          </button>
+        </div>
+      </div>
+    </q-dialog>
+
   </q-page>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import axios from 'axios'
@@ -364,77 +649,160 @@ const router = useRouter()
 const $q = useQuasar()
 
 const token = localStorage.getItem('nexus_token')
-const storedUser = JSON.parse(localStorage.getItem('nexus_user') || '{}')
+const storedUser = (() => { try { return JSON.parse(localStorage.getItem('nexus_user') || '{}') } catch { return {} } })()
 
-const tab = ref('profile')
+/* ── State ── */
+const activeTab = ref('overview')
 const profileData = ref({})
 const reports = ref([])
 const prescriptions = ref([])
+const appointments = ref([])
+const avatarErr = ref(false)
 const savingProfile = ref(false)
+const changingPw = ref(false)
 const uploadDialog = ref(false)
 const uploadingReport = ref(false)
+const editApptDialog = ref(false)
+const updatingAppt = ref(false)
+const apptFilter = ref('ALL')
+const expandedRx = ref(null)
+const unreadCount = ref(2)
+const avatarInputRef = ref(null)
 
 const bloodGroups = ['A+','A-','B+','B-','AB+','AB-','O+','O-','Unknown']
+const apptFilters = [
+  { label: 'All', value: 'ALL' },
+  { label: 'Pending', value: 'PENDING' },
+  { label: 'Confirmed', value: 'CONFIRMED' },
+  { label: 'Completed', value: 'COMPLETED' },
+  { label: 'Cancelled', value: 'CANCELLED' }
+]
 
 const editForm = reactive({
   name: '', phone: '', dateOfBirth: '', gender: '', bloodGroup: '',
   allergies: [], chronicConditions: [],
-  address: { city: '', district: '', postalCode: '', street: '' },
+  address: { street: '', city: '', district: '', postalCode: '' },
   emergencyContact: { name: '', phone: '', relationship: '' }
 })
-
+const pwForm = reactive({ current: '', newPw: '', confirm: '' })
 const rForm = reactive({ title: '', description: '', file: null })
-const resetRForm = () => { rForm.title = ''; rForm.description = ''; rForm.file = null }
+const editApptForm = reactive({ date: '', time: '', apptId: '' })
 
-// Navigation functions
-const goToSymptoms = () => {
-  window.location.href = 'http://localhost:9000/symptoms'
-}
+/* ── Computed ── */
+const upcomingAppointments = computed(() =>
+  appointments.value.filter(a => ['PENDING','CONFIRMED'].includes(a.status))
+)
+const filteredAppts = computed(() =>
+  apptFilter.value === 'ALL'
+    ? appointments.value
+    : appointments.value.filter(a => a.status === apptFilter.value)
+)
 
-const goToVideoConsultation = () => {
-  const pId = profileData.value.patientId || profileData.value.id
-  const pName = profileData.value.name
-  window.location.href = `http://localhost:9000/patientVideo?patientId=${pId}&patientName=${pName}`
-}
-
-// API client
-const api = axios.create({
-  baseURL: 'http://localhost:5001',
-  headers: { Authorization: `Bearer ${token}` }
-})
-
-// Helper functions
-const calculateAge = (dob) => {
-  if (!dob) return null
-  const birthDate = new Date(dob)
-  const today = new Date()
-  let age = today.getFullYear() - birthDate.getFullYear()
-  const monthDiff = today.getMonth() - birthDate.getMonth()
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-    age--
+/* ── Stat Cards ── */
+const statCards = computed(() => [
+  {
+    label: 'Medical Reports',
+    value: reports.value.length,
+    accentClass: 'stat-blue',
+    icon: '<path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>',
+    onClick: () => activeTab.value = 'reports'
+  },
+  {
+    label: 'Prescriptions',
+    value: prescriptions.value.length,
+    accentClass: 'stat-green',
+    icon: '<path d="M20 3H4v10c0 2.21 1.79 4 4 4h6c2.21 0 4-1.79 4-4v-3h2c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 5h-2V5h2v3zM4 19h16v2H4z"/>',
+    onClick: () => activeTab.value = 'prescriptions'
+  },
+  {
+    label: 'Upcoming Appts',
+    value: upcomingAppointments.value.length,
+    accentClass: 'stat-purple',
+    icon: '<path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/>',
+    onClick: () => activeTab.value = 'appointments'
+  },
+  {
+    label: 'Total Appointments',
+    value: appointments.value.length,
+    accentClass: 'stat-amber',
+    icon: '<path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/>',
+    onClick: () => activeTab.value = 'appointments'
   }
+])
+
+/* ── Quick Actions ── */
+const quickActions = computed(() => [
+  {
+    label: 'AI Symptom Check',
+    sub: 'Get instant AI analysis',
+    colorClass: 'qa-blue',
+    icon: '<path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/>',
+    action: () => router.push('/symptoms')
+  },
+  {
+    label: 'Video Consultation',
+    sub: 'Connect with a doctor',
+    colorClass: 'qa-teal',
+    icon: '<path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>',
+    action: () => {
+      const pId = profileData.value.patientId || storedUser.roleId || ''
+      router.push(`/patientVideo?patientId=${pId}&patientName=${encodeURIComponent(profileData.value.name || '')}`)
+    }
+  },
+  {
+    label: 'Book Appointment',
+    sub: 'Find & book a doctor',
+    colorClass: 'qa-purple',
+    icon: '<path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/>',
+    action: () => router.push('/appointment')
+  }
+])
+
+/* ── Tab Defs ── */
+const mainTabs = computed(() => [
+  { value: 'overview',       label: 'Overview',       icon: '<path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>' },
+  { value: 'profile',        label: 'Profile',         icon: '<path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>' },
+  { value: 'reports',        label: 'Reports',         icon: '<path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>',
+    badge: reports.value.length || null },
+  { value: 'prescriptions',  label: 'Prescriptions',   icon: '<path d="M20 3H4v10c0 2.21 1.79 4 4 4h6c2.21 0 4-1.79 4-4v-3h2c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 5h-2V5h2v3zM4 19h16v2H4z"/>',
+    badge: prescriptions.value.length || null },
+  { value: 'appointments',   label: 'Appointments',    icon: '<path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/>',
+    badge: upcomingAppointments.value.length || null }
+])
+
+/* ── Helpers ── */
+const getInitials = (name) => {
+  if (!name) return '?'
+  return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
+}
+const calcAge = (dob) => {
+  if (!dob) return null
+  const b = new Date(dob), t = new Date()
+  let age = t.getFullYear() - b.getFullYear()
+  if (t.getMonth() < b.getMonth() || (t.getMonth() === b.getMonth() && t.getDate() < b.getDate())) age--
   return age
 }
+const fmtDate  = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+const fmtDay   = (d) => d ? new Date(d).getDate() : '—'
+const fmtMonth = (d) => d ? new Date(d).toLocaleDateString('en-GB', { month: 'short' }).toUpperCase() : '—'
+const openFile = (url) => { if (url) window.open(url, '_blank') }
+const resetRForm = () => { rForm.title = ''; rForm.description = ''; rForm.file = null }
+const toggleRx = (id) => { expandedRx.value = expandedRx.value === id ? null : id }
+const statusClass = (s) => ({
+  PENDING: 'status-pending', VERIFIED: 'status-verified',
+  CONFIRMED: 'status-confirmed', COMPLETED: 'status-completed', CANCELLED: 'status-cancelled'
+}[s] || 'status-pending')
 
-const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric'
-  })
-}
+const notify = (msg, type = 'positive') => $q.notify({ message: msg, color: type === 'positive' ? 'teal-7' : 'red-7', position: 'top-right', timeout: 2500, icon: type === 'positive' ? 'check_circle' : 'error' })
 
-// Load all data
-const loadAll = async () => {
-  await Promise.all([loadProfile(), loadReports(), loadPrescriptions()])
-}
+/* ── API ── */
+const api     = axios.create({ baseURL: 'http://localhost:5001', headers: { Authorization: `Bearer ${token}` } })
+const apptApi = axios.create({ baseURL: 'http://localhost:5003', headers: { Authorization: `Bearer ${token}` } })
 
 const loadProfile = async () => {
   try {
     const { data } = await api.get('/api/patient/profile')
     profileData.value = data.data
-
-    // Fill edit form
     const d = data.data
     editForm.name = d.name || ''
     editForm.phone = d.phone || ''
@@ -443,95 +811,125 @@ const loadProfile = async () => {
     editForm.bloodGroup = d.bloodGroup || ''
     editForm.allergies = d.allergies || []
     editForm.chronicConditions = d.chronicConditions || []
+    editForm.address = { street: d.address?.street || '', city: d.address?.city || '', district: d.address?.district || '', postalCode: d.address?.postalCode || '' }
+    editForm.emergencyContact = { name: d.emergencyContact?.name || '', phone: d.emergencyContact?.phone || '', relationship: d.emergencyContact?.relationship || '' }
   } catch (e) {
     if (e.response?.status === 401) router.push('/login')
   }
 }
 
 const loadReports = async () => {
-  try {
-    const { data } = await api.get('/api/patient/reports')
-    reports.value = data.data
-  } catch (err) {
-    console.error('Reports load error:', err)
+  try { const { data } = await api.get('/api/patient/reports'); reports.value = data.data } catch (e) {
+    console.error(e)
+    notify('Failed to load reports', 'negative')
   }
 }
-
 const loadPrescriptions = async () => {
+  try { const { data } = await api.get('/api/patient/prescriptions'); prescriptions.value = data.data } catch (e) {
+    console.error(e)
+    notify('Failed to load prescriptions', 'negative')
+  }
+}
+const loadAppointments = async () => {
   try {
-    const { data } = await api.get('/api/patient/prescriptions')
-    prescriptions.value = data.data
-  } catch (err) {
-    console.error('Prescriptions load error:', err)
+    const patId = profileData.value.patientId || storedUser.roleId || ''
+    if (!patId) return
+    const { data } = await apptApi.get(`/api/appointments/patient/${patId}`)
+    appointments.value = (Array.isArray(data) ? data : data.data || []).sort((a, b) => new Date(b.date) - new Date(a.date))
+  } catch (e) {
+    console.error(e)
+    notify('Failed to load appointments', 'negative')
   }
 }
 
-const doSaveProfile = async () => {
+/* ── Actions ── */
+const saveProfile = async () => {
   savingProfile.value = true
   try {
     await api.put('/api/patient/profile', editForm)
     await loadProfile()
-    $q.notify({ icon: 'check_circle', color: 'blue-6', message: 'Profile updated successfully', position: 'top-right', timeout: 2000 })
+    notify('Profile updated successfully')
   } catch (e) {
-    $q.notify({ type: 'negative', message: e.response?.data?.message || 'Update failed', position: 'top-right' })
-  } finally {
-    savingProfile.value = false
-  }
+    notify(e.response?.data?.message || 'Update failed', 'negative')
+  } finally { savingProfile.value = false }
 }
 
-const doUploadImage = async (e) => {
-  const file = e.target.files[0]
+const changePassword = async () => {
+  if (pwForm.newPw !== pwForm.confirm) { notify('Passwords do not match', 'negative'); return }
+  changingPw.value = true
+  try {
+    await api.patch('/api/auth/change-password', { currentPassword: pwForm.current, newPassword: pwForm.newPw })
+    pwForm.current = ''; pwForm.newPw = ''; pwForm.confirm = ''
+    notify('Password updated')
+  } catch (e) {
+    notify(e.response?.data?.message || 'Failed', 'negative')
+  } finally { changingPw.value = false }
+}
+
+const triggerAvatarUpload = () => { avatarInputRef.value?.click() }
+
+const handleAvatarUpload = async (e) => {
+  const file = e.target.files?.[0]
   if (!file) return
-  const fd = new FormData()
-  fd.append('image', file)
+  const fd = new FormData(); fd.append('image', file)
   try {
     await api.post('/api/patient/profile/image', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+    avatarErr.value = false
     await loadProfile()
-    $q.notify({ icon: 'check_circle', color: 'blue-6', message: 'Photo updated', position: 'top-right' })
+    notify('Profile photo updated')
   } catch {
-    $q.notify({ type: 'negative', message: 'Image upload failed', position: 'top-right' })
+    notify('Image upload failed', 'negative')
   }
 }
 
-const doUploadReport = async () => {
-  if (!rForm.title || !rForm.file) {
-    $q.notify({ type: 'warning', message: 'Title and file are required', position: 'top-right' })
-    return
-  }
+const uploadReport = async () => {
+  if (!rForm.title || !rForm.file) { notify('Title and file required', 'negative'); return }
   uploadingReport.value = true
   const fd = new FormData()
-  fd.append('report', rForm.file)
-  fd.append('title', rForm.title)
-  fd.append('description', rForm.description)
+  fd.append('report', rForm.file); fd.append('title', rForm.title); fd.append('description', rForm.description)
   try {
     await api.post('/api/patient/reports', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
-    uploadDialog.value = false
-    resetRForm()
+    uploadDialog.value = false; resetRForm()
     await loadReports()
-    $q.notify({ icon: 'check_circle', color: 'blue-6', message: 'Report uploaded', position: 'top-right' })
+    notify('Report uploaded')
   } catch {
-    $q.notify({ type: 'negative', message: 'Upload failed', position: 'top-right' })
-  } finally {
-    uploadingReport.value = false
-  }
+    notify('Upload failed', 'negative')
+  } finally { uploadingReport.value = false }
 }
 
-const doDeleteReport = (reportId) => {
-  $q.dialog({
-    title: 'Delete Report',
-    message: 'This action cannot be undone. Continue?',
-    ok: { label: 'DELETE', color: 'red', flat: true },
-    cancel: { label: 'CANCEL', flat: true },
-    dark: true
-  }).onOk(async () => {
-    try {
-      await api.delete(`/api/patient/reports/${reportId}`)
-      await loadReports()
-      $q.notify({ icon: 'delete', color: 'grey-7', message: 'Report deleted', position: 'top-right' })
-    } catch {
-      $q.notify({ type: 'negative', message: 'Delete failed', position: 'top-right' })
-    }
-  })
+const deleteReport = (reportId) => {
+  $q.dialog({ title: 'Delete Report', message: 'This cannot be undone. Continue?', ok: { label: 'Delete', color: 'red', flat: true }, cancel: { label: 'Cancel', flat: true }, dark: true })
+    .onOk(async () => {
+      try { await api.delete(`/api/patient/reports/${reportId}`); await loadReports(); notify('Report deleted') }
+      catch { notify('Delete failed', 'negative') }
+    })
+}
+
+const openEditAppt = (ap) => {
+  editApptForm.apptId = ap._id || ap.appointmentId
+  editApptForm.date = ap.date?.split('T')[0] || ''
+  editApptForm.time = ap.time || ''
+  editApptDialog.value = true
+}
+
+const updateAppt = async () => {
+  updatingAppt.value = true
+  try {
+    await apptApi.put(`/api/appointments/${editApptForm.apptId}`, { date: editApptForm.date, time: editApptForm.time })
+    editApptDialog.value = false
+    await loadAppointments()
+    notify('Appointment updated')
+  } catch (e) {
+    notify(e.response?.data?.error || 'Update failed', 'negative')
+  } finally { updatingAppt.value = false }
+}
+
+const cancelAppt = (id) => {
+  $q.dialog({ title: 'Cancel Appointment', message: 'Cancel this appointment?', ok: { label: 'Yes, Cancel', color: 'red', flat: true }, cancel: { label: 'Keep It', flat: true }, dark: true })
+    .onOk(async () => {
+      try { await apptApi.delete(`/api/appointments/${id}`); await loadAppointments(); notify('Appointment cancelled') }
+      catch (e) { notify(e.response?.data?.error || 'Cancel failed', 'negative') }
+    })
 }
 
 const logout = () => {
@@ -540,1257 +938,989 @@ const logout = () => {
   router.push('/login')
 }
 
-onMounted(() => {
+onMounted(async () => {
   if (!token) { router.push('/login'); return }
   if (storedUser.role !== 'patient') { router.push('/'); return }
-  loadAll()
+  await loadProfile()
+  await Promise.all([loadReports(), loadPrescriptions(), loadAppointments()])
 })
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-
-/* GLOBAL */
-.font-jakarta { font-family: 'Plus Jakarta Sans', sans-serif; }
-.max-width-1200 { max-width: 1200px; }
-.page-shell { padding-top: 80px; padding-bottom: 80px; }
-.mt-120 { margin-top: 30px; }
-.mx-auto { margin-left: auto; margin-right: auto; }
-.z-top { position: relative; z-index: 1; }
-.hidden { display: none; }
-.capitalize { text-transform: capitalize; }
-.letter-spacing-1 { letter-spacing: 1px; }
-.tracking-wider { letter-spacing: 1.5px; }
-.hover-glow { transition: all 0.3s ease; }
-.hover-glow:hover {
-  text-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
-  transform: scale(1.1);
+/* ════════════════════════════════════════════════════
+   GLOBAL
+════════════════════════════════════════════════════ */
+.patient-dashboard-page {
+  background: #060a14;
+  min-height: 100vh;
+  color: #e2e8f0;
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  position: relative;
+  overflow-x: hidden;
 }
+.d-none { display: none !important; }
+.capitalize { text-transform: capitalize; }
 
-/* ATMOSPHERIC GRADIENTS */
-.page-bg-gradient {
-  position: absolute;
-  top: 0; left: 0; width: 100%; height: 100%;
+/* Orbs */
+.bg-orb {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(80px);
   pointer-events: none;
-  background:
-    radial-gradient(circle at 50% 30%, rgba(37, 99, 235, 0.08), transparent 60%),
-    radial-gradient(circle at 10% 80%, rgba(56, 189, 248, 0.04), transparent 50%),
-    radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.05), transparent 50%);
   z-index: 0;
 }
+.orb-1 { width: 500px; height: 500px; background: rgba(6, 182, 212, 0.06); top: -100px; left: -100px; }
+.orb-2 { width: 400px; height: 400px; background: rgba(139, 92, 246, 0.05); top: 300px; right: -80px; }
+.orb-3 { width: 350px; height: 350px; background: rgba(16, 185, 129, 0.04); bottom: 100px; left: 30%; }
 
-/* TYPOGRAPHY */
-.page-title {
-  font-size: clamp(2rem, 4vw, 3.5rem);
-  letter-spacing: -1px;
-  line-height: 1.1;
-  text-shadow: 0 10px 30px rgba(0,0,0,0.5);
+.dashboard-container {
+  position: relative;
+  z-index: 1;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 24px 20px 80px;
 }
-.text-gradient-primary {
-  background: linear-gradient(to right, #38bdf8, #818cf8, #e879f9);
+
+/* ════════════════════════════════════════════════════
+   HEADER
+════════════════════════════════════════════════════ */
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28px 0 32px;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+/* Avatar */
+.avatar-section {
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.avatar-outer-ring {
+  padding: 3px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #06b6d4, #8b5cf6);
+}
+.patient-avatar {
+  border: 3px solid #060a14;
+  border-radius: 50%;
+}
+.avatar-fallback {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #0e7490, #6d28d9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  border-radius: 50%;
+}
+.avatar-cam {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 22px;
+  height: 22px;
+  background: #06b6d4;
+  border-radius: 50%;
+  border: 2px solid #060a14;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+/* Header Info */
+.greeting-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(6, 182, 212, 0.1);
+  border: 1px solid rgba(6, 182, 212, 0.25);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #22d3ee;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 8px;
+}
+.badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22d3ee;
+  animation: pulse-dot 2s infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.welcome-title {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 800;
+  margin: 0 0 8px;
+  color: #f1f5f9;
+  letter-spacing: -0.5px;
+}
+.name-highlight {
+  background: linear-gradient(90deg, #22d3ee, #a78bfa);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
-
-/* BADGES & ICONS */
-.trusted-badge {
-  border: 1px solid rgba(125, 211, 252, 0.3);
-  background: rgba(14, 165, 233, 0.1);
-  backdrop-filter: blur(12px);
-  border-radius: 50px;
-  box-shadow: 0 0 20px rgba(14, 165, 233, 0.15);
-}
-
-.header-icon-box {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.15), rgba(56, 189, 248, 0.1));
+.header-meta {
   display: flex;
   align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.meta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+.meta-chip svg { color: #64748b; }
+
+/* Header Actions */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   flex-shrink: 0;
 }
-
-.action-icon-box {
-  width: 50px;
-  height: 50px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.05);
+.header-icon-btn {
+  color: #64748b !important;
+  transition: color 0.2s, background 0.2s;
+}
+.header-icon-btn:hover { color: #22d3ee !important; background: rgba(6, 182, 212, 0.1) !important; }
+.logout-btn {
   display: flex;
   align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  gap: 6px;
+  background: rgba(239, 68, 68, 0.1) !important;
+  border: 1px solid rgba(239, 68, 68, 0.2) !important;
+  color: #f87171 !important;
+  border-radius: 10px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  padding: 8px 14px !important;
+  transition: all 0.2s !important;
 }
+.logout-btn:hover { background: rgba(239, 68, 68, 0.2) !important; }
 
-/* CARDS & CONTAINERS */
-.glass-card {
-  background: rgba(10, 15, 30, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(20px);
-  border-radius: 24px;
-  position: relative;
-}
-
-.system-bubble {
-  background: rgba(37, 99, 235, 0.08);
-  border: 1px solid rgba(37, 99, 235, 0.15);
-  padding: 16px;
-  border-radius: 16px;
-}
-
-.shadow-glow {
-  box-shadow: 0 20px 60px rgba(59, 130, 246, 0.15);
-}
-
-/* QUICK ACTIONS */
-.quick-action-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(59, 130, 246, 0.15);
-  border-radius: 16px;
-  padding: 24px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-align: center;
-}
-.quick-action-card:hover {
-  background: rgba(59, 130, 246, 0.08);
-  border-color: rgba(59, 130, 246, 0.3);
-  transform: translateY(-4px);
-  box-shadow: 0 10px 30px rgba(59, 130, 246, 0.2);
-}
-.action-title {
-  font-size: 0.95rem;
-  margin-top: 12px;
-}
-.action-subtitle {
-  font-size: 0.8rem;
-  margin-top: 4px;
-}
-
-/* TABS */
-.modernized-tabs {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  padding: 0 20px;
-  background: transparent;
-}
-.modernized-tabs :deep(.q-tabs__content) {
-  color: rgba(255, 255, 255, 0.6);
-}
-.modernized-tabs :deep(.q-tab__label) {
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-}
-
-/* TAB PANELS */
-:deep(.q-tab-panels) {
-  background: transparent !important;
-}
-:deep(.q-tab-panel),
-.patient-panel {
-  background: transparent !important;
-  padding: 0 !important;
-}
-
-/* PROFILE MAIN CARD */
-.profile-main-card {
-  background: linear-gradient(145deg, rgba(7, 16, 38, 0.88), rgba(8, 22, 52, 0.78)) !important;
-  border: 1px solid rgba(83, 156, 255, 0.22) !important;
-  box-shadow: 0 24px 70px rgba(0, 18, 51, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
-  backdrop-filter: blur(22px) saturate(130%);
-}
-
-/* INPUTS */
-.modern-input :deep(.q-field__control) {
-  background: rgba(0, 0, 0, 0.2) !important;
-  border-radius: 12px;
-  padding: 12px 16px !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  transition: all 0.3s ease;
-}
-.modern-input :deep(.q-field__control:hover) {
-  border-color: rgba(59, 130, 246, 0.3) !important;
-}
-.modern-input :deep(.q-field__control:focus-within) {
-  border-color: rgba(59, 130, 246, 0.6) !important;
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.1) !important;
-}
-
-/* BUTTONS */
-.btn-primary-glow {
-  border-radius: 12px;
-  text-transform: none;
-  background: linear-gradient(135deg, #1d4ed8, #2563eb) !important;
-  box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.5);
-  transition: all 0.3s ease;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-}
-.btn-primary-glow:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 15px 35px -5px rgba(37, 99, 235, 0.6);
-}
-
-/* PROFILE SECTION */
-.profile-avatar-modern {
-  border: 3px solid rgba(59, 130, 246, 0.3);
-  box-shadow: 0 0 30px rgba(59, 130, 246, 0.2);
-}
-.avatar-cam-btn-pro {
-  position: absolute !important;
-  bottom: -8px !important;
-  right: -8px !important;
-  background: rgba(10, 15, 30, 0.8) !important;
-  border: 2px solid rgba(59, 130, 246, 0.3) !important;
-  backdrop-filter: blur(10px) !important;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3) !important;
-}
-.avatar-cam-btn-pro:hover {
-  background: rgba(59, 130, 246, 0.2) !important;
-  border-color: rgba(59, 130, 246, 0.6) !important;
-}
-
-.info-block {
-  background: rgba(255, 255, 255, 0.02);
-  padding: 16px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.tag-section {
-  background: rgba(255, 255, 255, 0.02);
-  padding: 16px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-/* REPORT ITEMS */
-.report-item-modern {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
-  padding: 20px;
-  transition: all 0.3s ease;
-}
-.report-item-modern:hover {
-  background: rgba(59, 130, 246, 0.08);
-  border-color: rgba(59, 130, 246, 0.2);
-  transform: translateX(4px);
-}
-
-.report-icon-box {
-  width: 50px;
-  height: 50px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.05);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* PRESCRIPTION EXPANSION */
-.prescription-expansion :deep(.q-expansion-item__content) {
-  background: rgba(255, 255, 255, 0.02);
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-}
-.prescription-header-modern {
-  background: rgba(255, 255, 255, 0.03) !important;
-  border-radius: 16px !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  transition: all 0.3s ease !important;
-}
-.prescription-header-modern:hover {
-  background: rgba(59, 130, 246, 0.08) !important;
-  border-color: rgba(59, 130, 246, 0.2) !important;
-}
-
-/* MEDICATION ITEMS */
-.medication-item-modern {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  padding: 16px;
-  transition: all 0.3s ease;
-}
-.medication-item-modern:hover {
-  background: rgba(59, 130, 246, 0.08);
-  border-color: rgba(59, 130, 246, 0.2);
-}
-
-/* RESPONSIVE */
-@media (max-width: 768px) {
-  .page-shell { padding-top: 60px; padding-bottom: 60px; }
-  .page-title { font-size: 2rem; }
-  .glass-card { padding: 20px !important; }
-  .header-actions {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  .header-buttons {
-    width: 100%;
-    justify-content: flex-end;
-    margin-top: 12px;
-  }
-}
-
-.quick-actions-bar {
-  padding: 20px 40px;
-  background: rgba(6,14,16,0.6);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(0,229,255,0.05);
-}
-
-.quick-actions-inner {
-  display: flex;
-  gap: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.action-card {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 20px 25px;
-  background: linear-gradient(135deg, rgba(0,229,255,0.05), rgba(0,188,212,0.02));
-  border: 1px solid rgba(0,229,255,0.15);
-  border-radius: 16px;
-  cursor: pointer;
-  transition: all 0.3s;
-  position: relative;
-  overflow: hidden;
-}
-
-.action-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: -100%;
-  width: 100%; height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(0,229,255,0.1), transparent);
-  transition: left 0.6s;
-}
-
-.action-card:hover::before {
-  left: 100%;
-}
-
-.action-card:hover {
-  transform: translateY(-3px);
-  border-color: rgba(0,229,255,0.3);
-  box-shadow: 0 10px 30px rgba(0,229,255,0.15);
-}
-
-.action-icon-wrapper {
-  position: relative;
-  width: 60px; height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0,0,0,0.3);
-  border-radius: 12px;
-  border: 1px solid rgba(0,229,255,0.2);
-}
-
-.action-icon-glow {
-  position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  width: 40px; height: 40px;
-  background: radial-gradient(circle, rgba(0,229,255,0.3), transparent);
-  filter: blur(10px);
-  animation: pulse 2s infinite;
-}
-
-.green-glow { background: radial-gradient(circle, rgba(76,175,80,0.3), transparent); }
-.purple-glow { background: radial-gradient(circle, rgba(156,39,176,0.3), transparent); }
-
-@keyframes pulse {
-  0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
-  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
-}
-
-.action-content {
-  flex: 1;
-}
-
-.action-title {
-  font-size: 0.9rem;
-  font-weight: 700;
-  letter-spacing: 2px;
-  margin-bottom: 4px;
-}
-
-.action-subtitle {
-  font-size: 0.7rem;
-  letter-spacing: 1px;
-}
-
-.action-arrow {
-  opacity: 0.6;
-  transition: all 0.3s;
-}
-
-.action-card:hover .action-arrow {
-  opacity: 1;
-  transform: translateX(3px);
-}
-
-/* Metrics Section */
-.metrics-section {
-  padding: 30px 40px;
-}
-
-.metrics-grid {
+/* ════════════════════════════════════════════════════
+   STAT CARDS
+════════════════════════════════════════════════════ */
+.stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.metric-card-pro {
-  padding: 25px;
-  background: linear-gradient(135deg, rgba(0,229,255,0.03), rgba(0,188,212,0.01));
-  border: 1px solid rgba(0,229,255,0.1);
-  border-radius: 16px;
-  position: relative;
-  overflow: hidden;
-  transition: all 0.3s;
-}
-
-.metric-card-pro::after {
-  content: '';
-  position: absolute;
-  top: -50%; right: -50%;
-  width: 200%; height: 200%;
-  background: radial-gradient(circle, rgba(0,229,255,0.05), transparent);
-  animation: rotate 20s linear infinite;
-}
-
-@keyframes rotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.metric-card-pro:hover {
-  border-color: rgba(0,229,255,0.2);
-  transform: translateY(-2px);
-}
-
-.metric-header {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  margin-bottom: 15px;
-}
-
-.metric-icon-wrapper {
-  position: relative;
-  width: 45px; height: 45px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0,0,0,0.3);
-  border-radius: 10px;
-  border: 1px solid rgba(0,229,255,0.2);
-}
-
-.metric-icon-pulse {
-  position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  width: 30px; height: 30px;
-  background: radial-gradient(circle, rgba(0,229,255,0.2), transparent);
-  filter: blur(8px);
-  animation: pulse 2s infinite;
-}
-
-.metric-label {
-  font-size: 0.65rem;
-  letter-spacing: 2px;
-}
-
-.metric-value {
-  font-size: 2rem;
-  font-weight: 700;
-  margin-bottom: 15px;
-  position: relative;
-  z-index: 1;
-}
-
-.metric-progress {
-  position: relative;
-  height: 4px;
-  background: rgba(255,255,255,0.05);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.metric-track {
-  position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(255,255,255,0.05);
-}
-
-.metric-fill-pro {
-  height: 100%;
-  border-radius: 2px;
-  transition: width 1.5s ease;
-  position: relative;
-}
-
-.metric-fill-pro::after {
-  content: '';
-  position: absolute;
-  top: 0; right: 0;
-  width: 20px; height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3));
-  animation: shimmer 2s infinite;
-}
-
-@keyframes shimmer {
-  from { transform: translateX(-20px); }
-  to { transform: translateX(20px); }
-}
-
-/* Tabs */
-.tabs-wrapper {
-  padding: 0 40px;
-  background: rgba(6,14,16,0.8);
-  backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(0,229,255,0.05);
-}
-
-.nexus-tabs-pro {
-  background: transparent;
-}
-
-.nexus-tabs-pro :deep(.q-tab) {
-  padding: 12px 24px;
-  font-size: 0.7rem;
-  letter-spacing: 2px;
-  font-weight: 600;
-  min-height: 60px;
-}
-
-.nexus-tabs-pro :deep(.q-tab__content) {
-  min-width: auto;
-}
-
-.nexus-tabs-pro :deep(.q-tab__indicator) {
-  height: 3px;
-  border-radius: 3px 3px 0 0;
-}
-
-/* Tab Panels */
-.tab-panels-pro {
-  background: transparent;
-  padding: 40px;
-}
-
-/* Profile Container */
-.profile-container {
-  display: grid;
-  grid-template-columns: 380px 1fr;
-  gap: 30px;
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-.profile-left {
-  height: fit-content;
-}
-
-.profile-card-pro {
-  background: linear-gradient(135deg, rgba(6,14,16,0.9), rgba(10,20,22,0.9));
-  border: 1px solid rgba(0,229,255,0.15);
-  border-radius: 20px;
-  padding: 30px;
-  backdrop-filter: blur(20px);
-  position: relative;
-  overflow: hidden;
-}
-
-.profile-card-pro::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background:
-    radial-gradient(circle at 30% 30%, rgba(0,229,255,0.05), transparent 40%),
-    radial-gradient(circle at 70% 70%, rgba(0,188,212,0.03), transparent 40%);
-  pointer-events: none;
-}
-
-.profile-header {
-  text-align: center;
-  margin-bottom: 30px;
-}
-
-.avatar-wrapper-pro {
-  position: relative;
-  display: inline-block;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
   margin-bottom: 20px;
 }
+@media (max-width: 900px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 500px) { .stats-grid { grid-template-columns: 1fr 1fr; } }
 
-.patient-avatar-pro {
-  background: rgba(0,229,255,0.08);
-  border: 3px solid rgba(0,229,255,0.3);
-  box-shadow: 0 0 30px rgba(0,229,255,0.2);
-}
-
-.avatar-ring {
-  position: absolute;
-  top: -5px; left: -5px;
-  right: -5px; bottom: -5px;
-  border: 2px solid transparent;
-  border-radius: 50%;
-  background: linear-gradient(45deg, #00e5ff, #00bcd4, #00e5ff);
-  background-clip: padding-box;
-  animation: rotate 3s linear infinite;
-  z-index: -1;
-}
-
-.avatar-cam-btn-pro {
-  position: absolute !important;
-  bottom: 5px; right: 5px;
-  background: rgba(6,14,16,0.95) !important;
-  border: 1px solid rgba(0,229,255,0.4);
-  width: 36px; height: 36px;
-}
-
-.profile-name {
-  font-size: 1.3rem;
-  font-weight: 700;
-  letter-spacing: 2px;
-  margin-bottom: 5px;
-}
-
-.profile-email {
-  font-size: 0.85rem;
-  letter-spacing: 1px;
-  margin-bottom: 3px;
-}
-
-.profile-phone {
-  font-size: 0.8rem;
-}
-
-.profile-divider {
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(0,229,255,0.2), transparent);
-  margin: 25px 0;
-}
-
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-  margin-bottom: 25px;
-}
-
-.info-item {
-  text-align: center;
-  padding: 15px;
-  background: rgba(0,229,255,0.02);
-  border: 1px solid rgba(0,229,255,0.08);
-  border-radius: 12px;
-  transition: all 0.3s;
-}
-
-.info-item:hover {
-  border-color: rgba(0,229,255,0.15);
-  background: rgba(0,229,255,0.04);
-}
-
-.info-label {
-  font-size: 0.55rem;
-  letter-spacing: 1.5px;
-  margin-bottom: 8px;
-}
-
-.info-value {
-  font-size: 1.1rem;
-  font-weight: 600;
-}
-
-.medical-tags {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.tags-section {
-  padding: 15px;
-  background: rgba(0,0,0,0.2);
-  border-radius: 12px;
-}
-
-.tags-title {
-  font-size: 0.6rem;
-  letter-spacing: 2px;
-  margin-bottom: 10px;
-}
-
-.tags-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.tag-chip {
-  font-size: 0.55rem;
-  height: 24px;
-}
-
-.no-tags {
-  font-size: 0.75rem;
-  font-style: italic;
-}
-
-/* Profile Right - Form */
-.profile-right {
-  height: fit-content;
-}
-
-.form-card-pro {
-  background: linear-gradient(135deg, rgba(6,14,16,0.9), rgba(10,20,22,0.9));
-  border: 1px solid rgba(0,229,255,0.15);
-  border-radius: 20px;
-  padding: 35px;
-  backdrop-filter: blur(20px);
-}
-
-.form-header-pro {
+.stat-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+  padding: 18px 16px;
   display: flex;
   align-items: center;
-  gap: 15px;
-  margin-bottom: 30px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid rgba(0,229,255,0.1);
+  gap: 14px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  border-radius: 16px 16px 0 0;
+}
+.stat-card:hover { transform: translateY(-3px); background: rgba(255,255,255,0.06); }
+.stat-blue::before { background: linear-gradient(90deg, #06b6d4, #0284c7); }
+.stat-blue .stat-icon-box { background: rgba(6,182,212,0.12); color: #22d3ee; }
+.stat-green::before { background: linear-gradient(90deg, #10b981, #059669); }
+.stat-green .stat-icon-box { background: rgba(16,185,129,0.12); color: #34d399; }
+.stat-purple::before { background: linear-gradient(90deg, #8b5cf6, #6d28d9); }
+.stat-purple .stat-icon-box { background: rgba(139,92,246,0.12); color: #a78bfa; }
+.stat-amber::before { background: linear-gradient(90deg, #f59e0b, #d97706); }
+.stat-amber .stat-icon-box { background: rgba(245,158,11,0.12); color: #fbbf24; }
+
+.stat-icon-box {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.stat-content { flex: 1; min-width: 0; }
+.stat-num {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #f1f5f9;
+  line-height: 1.1;
+}
+.stat-label {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+}
+.stat-arrow { color: #334155; transition: color 0.2s; }
+.stat-card:hover .stat-arrow { color: #94a3b8; }
+
+/* ════════════════════════════════════════════════════
+   QUICK ACTIONS
+════════════════════════════════════════════════════ */
+.quick-actions-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 28px;
+}
+@media (max-width: 700px) { .quick-actions-row { grid-template-columns: 1fr; } }
+
+.quick-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.02);
+  cursor: pointer;
+  transition: all 0.25s;
+  text-align: left;
+}
+.quick-action-btn:hover { transform: translateY(-2px); }
+.qa-blue { border-color: rgba(6,182,212,0.15); }
+.qa-blue:hover { background: rgba(6,182,212,0.08); border-color: rgba(6,182,212,0.3); }
+.qa-blue .qa-icon { background: rgba(6,182,212,0.12); color: #22d3ee; }
+.qa-teal { border-color: rgba(16,185,129,0.15); }
+.qa-teal:hover { background: rgba(16,185,129,0.08); border-color: rgba(16,185,129,0.3); }
+.qa-teal .qa-icon { background: rgba(16,185,129,0.12); color: #34d399; }
+.qa-purple { border-color: rgba(139,92,246,0.15); }
+.qa-purple:hover { background: rgba(139,92,246,0.08); border-color: rgba(139,92,246,0.3); }
+.qa-purple .qa-icon { background: rgba(139,92,246,0.12); color: #a78bfa; }
+
+.qa-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.qa-text { flex: 1; min-width: 0; }
+.qa-label { display: block; font-size: 14px; font-weight: 700; color: #e2e8f0; }
+.qa-sub { display: block; font-size: 12px; color: #64748b; margin-top: 2px; }
+.qa-chevron { color: #475569; flex-shrink: 0; }
+
+/* ════════════════════════════════════════════════════
+   TABS
+════════════════════════════════════════════════════ */
+.tabs-wrapper { margin-bottom: 20px; }
+.custom-tabs {
+  display: flex;
+  gap: 4px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px;
+  padding: 5px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.custom-tabs::-webkit-scrollbar { display: none; }
+
+.custom-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  position: relative;
+}
+.custom-tab:hover { color: #94a3b8; background: rgba(255,255,255,0.05); }
+.custom-tab.active {
+  background: rgba(6,182,212,0.12);
+  color: #22d3ee;
+  border: 1px solid rgba(6,182,212,0.2);
+}
+.tab-badge {
+  background: #06b6d4;
+  color: #030712;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
 }
 
-.form-header-pro span {
-  font-size: 1.1rem;
+/* ════════════════════════════════════════════════════
+   OVERVIEW GRID
+════════════════════════════════════════════════════ */
+.overview-grid {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  grid-template-rows: auto auto auto;
+  gap: 16px;
+}
+@media (max-width: 900px) { .overview-grid { grid-template-columns: 1fr; } }
+
+.ov-card {
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 18px;
+  padding: 22px;
+}
+.ov-summary { grid-row: 1 / 3; }
+.ov-rx      { grid-column: 2; }
+.ov-conditions { grid-column: 2; }
+.ov-reports-preview { grid-column: 1 / 3; }
+.ov-upcoming { grid-column: 1 / 3; }
+
+@media (max-width: 900px) {
+  .ov-summary, .ov-rx, .ov-conditions, .ov-reports-preview, .ov-upcoming {
+    grid-column: 1; grid-row: auto;
+  }
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
   font-weight: 700;
-  letter-spacing: 2px;
+  color: #cbd5e1;
+  margin-bottom: 16px;
 }
+.card-header svg { color: #06b6d4; }
+.card-header-flex {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.view-all-btn {
+  background: none;
+  border: none;
+  color: #22d3ee;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  transition: opacity 0.2s;
+}
+.view-all-btn:hover { opacity: 0.7; }
 
-.profile-form {
+/* Summary Rows */
+.summary-rows { display: flex; flex-direction: column; gap: 0; }
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 13px;
+}
+.summary-row.last { border-bottom: none; }
+.summary-row span:first-child { color: #64748b; }
+.summary-row span:last-child { color: #e2e8f0; font-weight: 600; text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Conditions */
+.conditions-section { margin-bottom: 16px; }
+.conditions-section:last-child { margin-bottom: 0; }
+.cond-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 8px;
+}
+.chip-group { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.chip-red { background: rgba(239,68,68,0.12); color: #fca5a5; border: 1px solid rgba(239,68,68,0.2); }
+.chip-amber { background: rgba(245,158,11,0.12); color: #fcd34d; border: 1px solid rgba(245,158,11,0.2); }
+.cond-empty { font-size: 12px; color: #475569; font-style: italic; margin: 0; }
+
+/* Mini Lists */
+.mini-empty {
   display: flex;
   flex-direction: column;
-  gap: 25px;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 20px;
+  gap: 8px;
+  color: #334155;
+  font-size: 13px;
 }
+.rx-list { display: flex; flex-direction: column; gap: 10px; }
+.rx-mini-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.04);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.rx-dot { width: 8px; height: 8px; border-radius: 50%; background: #06b6d4; flex-shrink: 0; }
+.rx-info { flex: 1; min-width: 0; }
+.rx-title { display: block; font-size: 13px; font-weight: 600; color: #e2e8f0; }
+.rx-sub { display: block; font-size: 11px; color: #64748b; }
+.rx-count { font-size: 11px; font-weight: 700; color: #22d3ee; background: rgba(6,182,212,0.1); padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
 
-.form-section {
+/* Report Mini Grid */
+.report-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+.report-mini-card {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  align-items: center;
+  gap: 6px;
+  padding: 16px 12px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.25s;
+  text-align: center;
 }
+.report-mini-card:hover { background: rgba(6,182,212,0.08); border-color: rgba(6,182,212,0.2); transform: translateY(-2px); }
+.report-mini-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.icon-red { background: rgba(239,68,68,0.12); color: #f87171; }
+.icon-blue { background: rgba(6,182,212,0.12); color: #22d3ee; }
+.report-mini-name { font-size: 12px; font-weight: 600; color: #e2e8f0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; }
+.report-mini-date { font-size: 11px; color: #64748b; }
 
-.section-title-pro {
-  font-size: 0.65rem;
-  letter-spacing: 2.5px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid rgba(0,229,255,0.08);
+/* Upcoming */
+.upcoming-list { display: flex; flex-direction: column; gap: 10px; }
+.upcoming-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.04);
+  border-radius: 12px;
+  padding: 12px 14px;
+  transition: all 0.2s;
 }
+.upcoming-item:hover { background: rgba(255,255,255,0.04); }
+.upcoming-date-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6,182,212,0.1);
+  border: 1px solid rgba(6,182,212,0.15);
+  border-radius: 10px;
+  padding: 8px 14px;
+  min-width: 52px;
+}
+.up-day { font-size: 1.3rem; font-weight: 800; color: #f1f5f9; line-height: 1; }
+.up-month { font-size: 10px; font-weight: 700; color: #22d3ee; text-transform: uppercase; }
+.upcoming-detail { flex: 1; min-width: 0; }
+.up-title { display: block; font-size: 14px; font-weight: 600; color: #e2e8f0; }
+.up-sub { display: block; font-size: 12px; color: #64748b; margin-top: 3px; }
+
+/* Status Pills */
+.status-pill {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+.status-pending  { background: rgba(245,158,11,0.12); color: #fbbf24; border: 1px solid rgba(245,158,11,0.2); }
+.status-verified { background: rgba(6,182,212,0.12);  color: #22d3ee; border: 1px solid rgba(6,182,212,0.2); }
+.status-confirmed{ background: rgba(16,185,129,0.12); color: #34d399; border: 1px solid rgba(16,185,129,0.2); }
+.status-completed{ background: rgba(148,163,184,0.1); color: #94a3b8; border: 1px solid rgba(148,163,184,0.15); }
+.status-cancelled{ background: rgba(239,68,68,0.1);   color: #f87171; border: 1px solid rgba(239,68,68,0.15); }
+
+/* ════════════════════════════════════════════════════
+   PROFILE FORM
+════════════════════════════════════════════════════ */
+.form-card {
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 20px;
+  padding: 32px;
+}
+.profile-avatar-center { text-align: center; margin-bottom: 28px; }
+.large-avatar-wrap {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+  margin-bottom: 14px;
+}
+.large-avatar { border: 3px solid rgba(6,182,212,0.3) !important; }
+.large-fallback { font-size: 2rem; font-weight: 800; }
+.large-avatar-edit {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(6,182,212,0.9);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  border: 2px solid #060a14;
+}
+.profile-name-big { font-size: 1.3rem; font-weight: 800; color: #f1f5f9; }
+.profile-id-sub { font-size: 13px; color: #64748b; margin-top: 4px; }
+
+.section-divider { height: 1px; background: rgba(255,255,255,0.06); margin: 28px 0; }
+.form-section-title { font-size: 15px; font-weight: 700; color: #cbd5e1; margin-bottom: 16px; }
 
 .form-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
 }
+.form-grid-full .form-field { grid-column: 1 / -1; }
 
-.form-field-pro {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.form-field-pro.full-width {
-  grid-column: 1 / -1;
-}
-
-.field-label-pro {
-  font-size: 0.6rem;
-  letter-spacing: 2px;
-  color: rgba(0,229,255,0.5);
-}
-
-.nexus-field-pro :deep(.q-field__control) {
-  border-radius: 12px;
-  background: rgba(0,229,255,0.02);
-  border: 1px solid rgba(0,229,255,0.1);
-  transition: all 0.3s;
-}
-
-.nexus-field-pro :deep(.q-field__control:hover) {
-  border-color: rgba(0,229,255,0.2);
-  background: rgba(0,229,255,0.04);
-}
-
-.form-actions {
-  margin-top: 20px;
-  display: flex;
-  justify-content: center;
-}
-
-.save-btn-pro {
-  background: linear-gradient(135deg, #00494f, #006064, #007c80);
-  color: #fff !important;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  letter-spacing: 2px;
-  padding: 12px 40px;
-  box-shadow: 0 6px 25px rgba(0,188,212,0.2);
-  transition: all 0.3s;
-}
-
-.save-btn-pro:hover {
-  box-shadow: 0 8px 35px rgba(0,188,212,0.3);
-  transform: translateY(-2px);
-}
-
-/* Reports Container */
-.reports-container {
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.reports-header-pro {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 30px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid rgba(0,229,255,0.1);
-}
-
-.reports-title-section {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.reports-title {
-  font-size: 1.3rem;
+.form-field label {
+  display: block;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 2px;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 6px;
 }
 
-.reports-subtitle {
-  font-size: 0.8rem;
-  letter-spacing: 1px;
-  margin-top: 3px;
+.neon-input :deep(.q-field__control) {
+  background: rgba(0,0,0,0.3) !important;
+  border-radius: 10px !important;
+}
+.neon-input :deep(.q-field__control:before) {
+  border-color: rgba(255,255,255,0.1) !important;
+}
+.neon-input :deep(.q-field__control:hover:before) {
+  border-color: rgba(6,182,212,0.3) !important;
 }
 
-.upload-btn-pro {
-  background: linear-gradient(135deg, #00494f, #006064, #007c80);
-  color: #fff !important;
-  border-radius: 12px;
-  font-size: 0.7rem;
-  letter-spacing: 2px;
-  padding: 10px 25px;
-  box-shadow: 0 4px 20px rgba(0,188,212,0.15);
-  transition: all 0.3s;
-}
+.form-actions { margin-top: 22px; display: flex; justify-content: flex-end; }
 
-.upload-btn-pro:hover {
-  box-shadow: 0 6px 30px rgba(0,188,212,0.25);
-  transform: translateY(-2px);
-}
-
-.empty-state-pro {
-  display: flex;
-  flex-direction: column;
+.btn-save {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  padding: 80px 20px;
-  background: rgba(0,229,255,0.01);
-  border: 1px solid rgba(0,229,255,0.05);
+  background: linear-gradient(135deg, #0891b2, #06b6d4);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 11px 24px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-save:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(6,182,212,0.35); }
+.btn-save:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(139,92,246,0.12);
+  color: #a78bfa;
+  border: 1px solid rgba(139,92,246,0.25);
+  border-radius: 10px;
+  padding: 11px 24px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-secondary:hover { background: rgba(139,92,246,0.2); }
+.btn-secondary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ════════════════════════════════════════════════════
+   REPORTS
+════════════════════════════════════════════════════ */
+.content-card {
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.07);
   border-radius: 20px;
+  padding: 28px;
 }
-
-.empty-icon-wrapper {
-  margin-bottom: 20px;
-  opacity: 0.5;
-}
-
-.empty-title {
-  font-size: 1.1rem;
-  letter-spacing: 2px;
-  margin-bottom: 10px;
-}
-
-.empty-subtitle {
-  font-size: 0.85rem;
-  opacity: 0.7;
-}
-
-.reports-grid-pro {
-  display: grid;
-  gap: 15px;
-}
-
-.report-card-pro {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 25px;
-  background: linear-gradient(135deg, rgba(0,229,255,0.03), rgba(0,188,212,0.01));
-  border: 1px solid rgba(0,229,255,0.1);
-  border-radius: 16px;
-  transition: all 0.3s;
-  position: relative;
-  overflow: hidden;
-}
-
-.report-card-pro::before {
-  content: '';
-  position: absolute;
-  top: 0; left: -100%;
-  width: 100%; height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(0,229,255,0.05), transparent);
-  transition: left 0.6s;
-}
-
-.report-card-pro:hover::before {
-  left: 100%;
-}
-
-.report-card-pro:hover {
-  border-color: rgba(0,229,255,0.2);
-  transform: translateX(5px);
-  box-shadow: 0 5px 25px rgba(0,229,255,0.1);
-}
-
-.report-icon-section {
-  flex-shrink: 0;
-}
-
-.report-icon-wrapper {
-  width: 60px; height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0,0,0,0.3);
-  border-radius: 12px;
-  border: 1px solid rgba(0,229,255,0.15);
-}
-
-.report-content {
-  flex: 1;
-}
-
-.report-title {
-  font-size: 1rem;
-  font-weight: 600;
-  letter-spacing: 1px;
-  margin-bottom: 5px;
-}
-
-.report-description {
-  font-size: 0.85rem;
-  margin-bottom: 10px;
-  line-height: 1.4;
-}
-
-.report-meta {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.meta-chip {
-  font-size: 0.55rem;
-  height: 22px;
-}
-
-.report-date {
-  font-size: 0.7rem;
-  letter-spacing: 1px;
-}
-
-.report-actions {
-  display: flex;
-  gap: 8px;
-}
-
-/* Prescriptions Container */
-.prescriptions-container {
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.prescriptions-header-pro {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 30px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid rgba(0,229,255,0.1);
-}
-
-.prescriptions-title-section {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.prescriptions-title {
-  font-size: 1.3rem;
-  font-weight: 700;
-  letter-spacing: 2px;
-}
-
-.prescriptions-subtitle {
-  font-size: 0.8rem;
-  letter-spacing: 1px;
-  margin-top: 3px;
-}
-
-.prescriptions-list-pro {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.prescription-item-pro {
-  background: linear-gradient(135deg, rgba(0,229,255,0.03), rgba(0,188,212,0.01));
-  border: 1px solid rgba(0,229,255,0.1);
-  border-radius: 16px;
-  overflow: hidden;
-  transition: all 0.3s;
-}
-
-.prescription-item-pro:hover {
-  border-color: rgba(0,229,255,0.2);
-  box-shadow: 0 5px 25px rgba(0,229,255,0.1);
-}
-
-.prescription-header-pro {
-  background: rgba(0,0,0,0.2);
-  padding: 20px 25px;
-}
-
-.prescription-avatar-pro {
-  width: 50px; height: 50px;
-  background: rgba(0,229,255,0.08);
-  border: 2px solid rgba(0,229,255,0.2);
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.prescription-diagnosis {
-  font-size: 1rem;
-  font-weight: 600;
-  letter-spacing: 1px;
-}
-
-.prescription-doctor {
-  font-size: 0.8rem;
-  letter-spacing: 0.5px;
-  margin-top: 3px;
-}
-
-.med-count-chip {
-  font-size: 0.55rem;
-  height: 24px;
-}
-
-.prescription-body-pro {
-  padding: 25px;
-  background: rgba(0,0,0,0.1);
-}
-
-.medications-section {
-  margin-bottom: 25px;
-}
-
-.medications-title {
-  font-size: 0.65rem;
-  letter-spacing: 2px;
-  margin-bottom: 15px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid rgba(0,229,255,0.08);
-}
-
-.medication-item-pro {
+.content-card-header {
   display: flex;
   align-items: flex-start;
-  gap: 15px;
-  padding: 15px;
-  background: rgba(0,229,255,0.02);
-  border: 1px solid rgba(0,229,255,0.08);
-  border-radius: 12px;
-  margin-bottom: 12px;
-  transition: all 0.3s;
+  justify-content: space-between;
+  margin-bottom: 22px;
+  gap: 16px;
+  flex-wrap: wrap;
 }
+.content-card-title { font-size: 18px; font-weight: 800; color: #f1f5f9; }
+.content-card-sub { font-size: 13px; color: #64748b; margin-top: 3px; }
 
-.medication-item-pro:hover {
-  border-color: rgba(0,229,255,0.15);
-  background: rgba(0,229,255,0.04);
-}
-
-.medication-icon {
-  width: 40px; height: 40px;
-  background: rgba(0,0,0,0.3);
+.btn-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(6,182,212,0.1);
+  color: #22d3ee;
+  border: 1px solid rgba(6,182,212,0.25);
   border-radius: 10px;
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.btn-action:hover { background: rgba(6,182,212,0.2); transform: translateY(-1px); }
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 10px;
+  text-align: center;
+}
+.empty-state svg { color: #1e293b; }
+.empty-title { font-size: 16px; font-weight: 700; color: #334155; }
+.empty-sub { font-size: 13px; color: #1e293b; max-width: 300px; }
+
+.reports-list { display: flex; flex-direction: column; gap: 12px; }
+.report-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 14px;
+  padding: 16px 18px;
+  transition: all 0.25s;
+}
+.report-item:hover { background: rgba(255,255,255,0.04); transform: translateX(4px); }
+.report-icon-big {
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
-
-.medication-info {
-  flex: 1;
-}
-
-.medication-name {
-  font-size: 0.95rem;
-  font-weight: 600;
-  letter-spacing: 1px;
-  margin-bottom: 8px;
-}
-
-.medication-details {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 8px;
-}
-
-.med-detail-chip {
-  font-size: 0.55rem;
-  height: 22px;
-}
-
-.medication-notes {
-  font-size: 0.75rem;
-  font-style: italic;
-  line-height: 1.4;
-}
-
-.doctor-notes-section {
-  padding-top: 20px;
-  border-top: 1px solid rgba(0,229,255,0.08);
-}
-
-.notes-title {
-  font-size: 0.65rem;
-  letter-spacing: 2px;
-  margin-bottom: 12px;
-}
-
-.notes-content-pro {
-  padding: 15px;
-  background: rgba(0,0,0,0.2);
-  border-left: 3px solid rgba(0,229,255,0.3);
-  border-radius: 0 12px 12px 0;
-}
-
-.notes-text {
-  font-size: 0.85rem;
-  line-height: 1.5;
-  font-style: italic;
-}
-
-/* Upload Dialog */
-.upload-dialog-pro {
-  background: linear-gradient(135deg, #060e10, #0a1416);
-  border: 1px solid rgba(0,229,255,0.2);
-  border-radius: 20px;
-  min-width: 450px;
-  padding: 0;
-  overflow: hidden;
-}
-
-.dialog-header-pro {
+.icon-bg-red { background: rgba(239,68,68,0.12); color: #f87171; }
+.icon-bg-blue { background: rgba(6,182,212,0.12); color: #22d3ee; }
+.report-info { flex: 1; min-width: 0; }
+.report-title { font-size: 14px; font-weight: 700; color: #e2e8f0; margin-bottom: 3px; }
+.report-desc { font-size: 12px; color: #64748b; margin-bottom: 6px; }
+.report-meta { display: flex; align-items: center; gap: 8px; }
+.type-badge { font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 6px; }
+.badge-red { background: rgba(239,68,68,0.12); color: #f87171; }
+.badge-blue { background: rgba(6,182,212,0.12); color: #22d3ee; }
+.report-date { font-size: 12px; color: #475569; }
+.report-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.icon-btn-view, .icon-btn-del {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: none;
   display: flex;
   align-items: center;
-  gap: 15px;
-  padding: 25px 30px;
-  background: rgba(0,229,255,0.05);
-  border-bottom: 1px solid rgba(0,229,255,0.1);
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
 }
+.icon-btn-view { background: rgba(6,182,212,0.1); color: #22d3ee; }
+.icon-btn-view:hover { background: rgba(6,182,212,0.2); }
+.icon-btn-del { background: rgba(239,68,68,0.1); color: #f87171; }
+.icon-btn-del:hover { background: rgba(239,68,68,0.2); }
 
-.dialog-header-pro span {
-  font-size: 1rem;
+/* ════════════════════════════════════════════════════
+   PRESCRIPTIONS
+════════════════════════════════════════════════════ */
+.prescriptions-list { display: flex; flex-direction: column; gap: 10px; }
+.rx-accordion {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 14px;
+  overflow: hidden;
+  transition: border-color 0.25s;
+}
+.rx-accordion.expanded { border-color: rgba(6,182,212,0.25); }
+.rx-accordion-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.rx-accordion-header:hover { background: rgba(255,255,255,0.03); }
+.rx-header-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: rgba(6,182,212,0.1);
+  color: #22d3ee;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.rx-header-info { flex: 1; min-width: 0; }
+.rx-h-title { display: block; font-size: 14px; font-weight: 700; color: #e2e8f0; }
+.rx-h-sub { display: block; font-size: 12px; color: #64748b; }
+.rx-count-badge {
+  background: rgba(6,182,212,0.1);
+  color: #22d3ee;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 2px;
+  padding: 3px 10px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+.rx-chevron { color: #475569; transition: transform 0.25s; flex-shrink: 0; }
+.rx-accordion.expanded .rx-chevron { transform: rotate(180deg); }
+
+.rx-accordion-body {
+  padding: 16px 16px 20px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+.meds-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 12px;
+}
+.meds-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+.med-card {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 10px;
+  padding: 12px;
+}
+.med-name { font-size: 13px; font-weight: 700; color: #e2e8f0; margin-bottom: 6px; }
+.med-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
+.med-chip {
+  background: rgba(255,255,255,0.05);
+  color: #94a3b8;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+.med-notes { font-size: 11px; color: #64748b; font-style: italic; }
+.rx-notes-box {
+  margin-top: 16px;
+  background: rgba(6,182,212,0.06);
+  border: 1px solid rgba(6,182,212,0.12);
+  border-radius: 10px;
+  padding: 14px;
+}
+.notes-label { font-size: 11px; font-weight: 700; color: #22d3ee; text-transform: uppercase; margin-bottom: 6px; }
+.notes-text { font-size: 13px; color: #cbd5e1; }
+
+/* ════════════════════════════════════════════════════
+   APPOINTMENTS
+════════════════════════════════════════════════════ */
+.filter-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.filter-btn {
+  padding: 7px 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: transparent;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.filter-btn:hover { color: #94a3b8; border-color: rgba(255,255,255,0.15); }
+.filter-btn.active {
+  background: rgba(6,182,212,0.12);
+  color: #22d3ee;
+  border-color: rgba(6,182,212,0.25);
 }
 
-.upload-form-pro {
-  padding: 30px;
+.appointments-list { display: flex; flex-direction: column; gap: 12px; }
+.appt-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 14px;
+  padding: 16px 18px;
+  transition: all 0.25s;
+  flex-wrap: wrap;
+}
+.appt-item:hover { background: rgba(255,255,255,0.04); }
+.appt-date-block {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  align-items: center;
+  background: rgba(139,92,246,0.1);
+  border: 1px solid rgba(139,92,246,0.15);
+  border-radius: 10px;
+  padding: 8px 14px;
+  min-width: 54px;
+  flex-shrink: 0;
 }
+.appt-day { font-size: 1.4rem; font-weight: 800; color: #f1f5f9; line-height: 1; }
+.appt-month { font-size: 10px; font-weight: 700; color: #a78bfa; text-transform: uppercase; }
+.appt-info { flex: 1; min-width: 180px; }
+.appt-title { font-size: 14px; font-weight: 700; color: #e2e8f0; margin-bottom: 4px; }
+.appt-sub { font-size: 12px; color: #64748b; display: flex; align-items: center; gap: 4px; margin-bottom: 4px; }
+.appt-sub svg { flex-shrink: 0; }
+.appt-payment { font-size: 12px; color: #34d399; display: flex; align-items: center; gap: 6px; }
+.pay-badge { font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 6px; }
+.pay-paid { background: rgba(16,185,129,0.12); color: #34d399; }
+.pay-pending { background: rgba(245,158,11,0.12); color: #fbbf24; }
+.appt-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
+.appt-btns { display: flex; gap: 6px; }
+.appt-edit-btn, .appt-cancel-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.appt-edit-btn { background: rgba(6,182,212,0.1); color: #22d3ee; }
+.appt-edit-btn:hover { background: rgba(6,182,212,0.2); }
+.appt-cancel-btn { background: rgba(239,68,68,0.1); color: #f87171; }
+.appt-cancel-btn:hover { background: rgba(239,68,68,0.2); }
 
-.dialog-actions-pro {
+/* ════════════════════════════════════════════════════
+   DIALOGS
+════════════════════════════════════════════════════ */
+.dialog-box {
+  background: #0d1526;
+  border: 1px solid rgba(6,182,212,0.2);
+  border-radius: 18px;
+  min-width: min(480px, 95vw);
+  overflow: hidden;
+}
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  font-size: 16px;
+  font-weight: 800;
+  color: #f1f5f9;
+}
+.dialog-close {
+  background: rgba(255,255,255,0.05);
+  border: none;
+  color: #94a3b8;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+.dialog-close:hover { background: rgba(239,68,68,0.15); color: #f87171; }
+.dialog-body { padding: 22px 24px; }
+.dialog-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
-  margin-top: 10px;
-  padding-top: 20px;
-  border-top: 1px solid rgba(0,229,255,0.1);
+  gap: 10px;
+  padding: 16px 24px 20px;
+  border-top: 1px solid rgba(255,255,255,0.06);
 }
-
-.upload-submit-btn-pro {
-  background: linear-gradient(135deg, #00494f, #006064, #007c80);
-  color: #fff !important;
+.btn-ghost {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #94a3b8;
   border-radius: 10px;
-  font-size: 0.7rem;
-  letter-spacing: 2px;
-  padding: 10px 25px;
-  box-shadow: 0 4px 20px rgba(0,188,212,0.15);
-  transition: all 0.3s;
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
 }
+.btn-ghost:hover { border-color: rgba(255,255,255,0.2); color: #e2e8f0; }
 
-.upload-submit-btn-pro:hover {
-  box-shadow: 0 6px 30px rgba(0,188,212,0.25);
-  transform: translateY(-1px);
-}
-
-/* Responsive */
-@media (max-width: 1024px) {
-  .profile-container {
-    grid-template-columns: 1fr;
-  }
-
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
+/* ════════════════════════════════════════════════════
+   RESPONSIVE
+════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
-  .top-bar {
-    padding: 15px 20px;
-  }
-
-  .quick-actions-inner {
-    flex-direction: column;
-  }
-
-  .metrics-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .info-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .tab-panels-pro {
-    padding: 20px;
-  }
+  .dashboard-container { padding: 16px 14px 60px; }
+  .dashboard-header { padding: 20px 0 24px; }
+  .welcome-title { font-size: 1.4rem; }
+  .form-card { padding: 20px; }
+  .content-card { padding: 18px; }
+  .header-actions .logout-btn span { display: none; }
+  .appt-item { gap: 10px; }
+}
+@media (max-width: 500px) {
+  .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .quick-actions-row { grid-template-columns: 1fr; }
+  .header-left { flex-direction: column; align-items: flex-start; gap: 12px; }
 }
 </style>
