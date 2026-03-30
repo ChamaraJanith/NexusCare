@@ -11,38 +11,34 @@ const USER_SERVICE_URL = process.env.USER_SERVICE_URL || "http://localhost:5001"
  */
 export const getUserByToken = async (bearerToken) => {
   try {
-    // Extract raw token from "Bearer xxxxx"
-    const rawToken = bearerToken?.startsWith("Bearer ")
-      ? bearerToken.split(" ")[1]
-      : bearerToken;
+    // 1. Extract token correctly
+    const token = bearerToken?.split(" ")[1];
 
-    if (!rawToken) {
+    if (!token) {
       console.error("[userServiceClient] No token provided");
       return null;
     }
 
-    console.log("[userServiceClient] Calling POST /api/auth/verify-token");
+    // 5. Add logging to debug token
+    console.log("[userServiceClient] Sending token to user-service:", token);
 
+    // 2. & 3. Send request with correct header to verify-token
     const response = await axios.post(
       `${USER_SERVICE_URL}/api/auth/verify-token`,
-      { token: rawToken }
+      { token },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
     );
 
+    // 5. Logging response
     console.log("[userServiceClient] verify-token response:", response.data);
 
-    // verify-token returns: { success, userId, roleId, role, name, email, isVerified }
-    if (response.data?.success) {
-      return {
-        name: response.data.name,
-        email: response.data.email,
-        userId: response.data.userId,
-        roleId: response.data.roleId,
-        role: response.data.role,
-        profileImage: response.data.profileImage || null,
-      };
-    }
-
-    return null;
+    // 4. Return
+    // (We natively map res.data.user if it exists, otherwise we safely default to the flat res.data structure MS1 provides)
+    return response.data?.user || response.data;
   } catch (err) {
     console.error(
       "[userServiceClient] verify-token failed:",

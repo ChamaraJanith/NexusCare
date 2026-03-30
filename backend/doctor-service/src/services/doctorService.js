@@ -2,153 +2,168 @@ import Doctor from "../models/Doctor.js";
 import AvailabilitySlot from "../models/AvailabilitySlot.js";
 import { getUserByToken } from "./userServiceClient.js";
 import cloudinary from "../config/cloudinary.js";
-// Force restart: 1
 
-// GET by doctorId (business ID)
+// ─── READ ────────────────────────────────────────────────────────────────────
+
+/** Get MS2 professional record by doctorId (returns null if not yet created). */
 export const getDoctorByDoctorId = async (doctorId) => {
   return await Doctor.findOne({ doctorId, isDeleted: false });
 };
 
-/**
- * GET full doctor profile by merging:
- * - Doctor record from local DB (specialization, experience, hospital, bio)
- * - User identity from user-patient-service (name, email, profileImage)
- */
 export const getDoctorFullProfile = async (doctorId, bearerToken) => {
-  // Fetch both in parallel
-  const [doctorRecord, userIdentity] = await Promise.all([
-    getDoctorByDoctorId(doctorId),
-    getUserByToken(bearerToken),
-  ]);
+  const doctorRecord = await Doctor.findOne({ doctorId });
 
-  console.log("[doctorService] doctorRecord:", doctorRecord);
-  console.log("[doctorService] userIdentity:", userIdentity);
+  // Safely wrap MS1 call
+  const userIdentity = await getUserByToken(bearerToken).catch(err => {
+    console.warn("[getDoctorFullProfile] getUserByToken failed:", err.message);
+    return null;
+  });
 
-  // Build merged profile
+  console.log("DB specialization:", doctorRecord?.specialization);
+  console.log("MS1 specialty:", userIdentity?.specialty);
+  console.log("MS1 hospital:", userIdentity?.hospital);
+  console.log("MS1 userIdentity:", userIdentity);
+
   return {
     doctorId,
-
-    // Identity fields
-    name: userIdentity?.name || null,
-    email: userIdentity?.email || null,
-    profileImage: doctorRecord?.profileImage?.url
-      ? doctorRecord.profileImage
-      : (userIdentity?.profileImage || null),
-    phone: userIdentity?.phone || null,
-
-    // 🔥 FIXED PROFESSIONAL FIELDS
-    specialization:
-      doctorRecord?.specialization ||
-      doctorRecord?.specialty ||
-      null,
-
-    qualifications: doctorRecord?.qualifications || null,
-    experience: doctorRecord?.experience || null,
-    hospital: doctorRecord?.hospital || null,
-    location: doctorRecord?.location || null,
-    bio: doctorRecord?.bio || null,
-    isActive: doctorRecord?.isActive ?? true,
+    name: userIdentity?.name || `Doctor ${doctorId}`,
+    email: userIdentity?.email || "",
+    phone: userIdentity?.phone || "",
+    specialization: doctorRecord?.specialty || userIdentity?.specialty || "",
+    experience: doctorRecord?.experience || 0,
+    hospital: doctorRecord?.hospital || userIdentity?.hospital || "",
+    location: doctorRecord?.location || "",
+    bio: doctorRecord?.bio || "",
+    profileImage: doctorRecord?.profileImage?.url ? doctorRecord.profileImage : (userIdentity?.profileImage || null),
+    isActive: doctorRecord?.isActive !== undefined ? doctorRecord.isActive : true,
   };
 };
 
+// ─── WRITE ───────────────────────────────────────────────────────────────────
 
-// UPDATE by doctorId
+export const updateDoctorProfile = async (doctorId, updateData) => {
+
+  console.log("RAW UPDATE DATA:", updateData);
+
+  const cleanData = {};
+
+  Object.keys(updateData).forEach((key) => {
+    let value = updateData[key];
+
+    // 🔥 FIX 1: handle null/undefined
+    if (value === undefined || value === null) return;
+
+    // 🔥 FIX 2: ensure number type
+    if (key === "experience") {
+      value = Number(value);
+      if (isNaN(value)) return;
+    }
+
+    cleanData[key] = value;
+  });
+
+  if (cleanData.specialization !== undefined) {
+    cleanData.specialty = cleanData.specialization;
+  }
+
+  console.log("CLEAN DATA:", cleanData);
+
+  return await Doctor.findOneAndUpdate(
+    { doctorId },
+    { $set: cleanData },
+    {
+      returnDocument: "after",
+      runValidators: true,
+      upsert: true,
+    }
+  );
+};
+
+/** Generic update by doctorId (admin use). */
 export const updateDoctorByDoctorId = async (doctorId, data) => {
   return await Doctor.findOneAndUpdate(
     { doctorId, isDeleted: false },
-    data,
+    { $set: data },
     { new: true, runValidators: true }
   );
 };
 
-// UPDATE Doctor Profile details
-export const updateDoctorProfile = async (doctorId, updateData) => {
-  return await Doctor.findOneAndUpdate(
-    { doctorId, isDeleted: false },
-    updateData,
-    { new: true, runValidators: true }
-  );
-};
-
-// UPDATE Profile Image
+/**
+ * Upsert profile image.
+ * Works even when the MS2 doctor record doesn't exist yet (new doctor).
+ * Cleans up old Cloudinary image if one is being replaced.
+ */
 export const updateProfileImage = async (doctorId, fileUrl, publicId) => {
-  const doctor = await getDoctorByDoctorId(doctorId);
-  if (!doctor) throw new Error("Doctor not found");
+  const existing = await getDoctorByDoctorId(doctorId);
 
-  // If there's an existing image, delete it from Cloudinary
-  if (doctor.profileImage && doctor.profileImage.publicId) {
+  if (existing?.profileImage?.publicId) {
     try {
-      await cloudinary.uploader.destroy(doctor.profileImage.publicId);
+      await cloudinary.uploader.destroy(existing.profileImage.publicId);
     } catch (err) {
-      console.error("[Cloudinary] Failed to delete old image:", err);
+      console.error("[Cloudinary] Failed to delete old image:", err.message);
     }
   }
 
-  // Save new image details
-  doctor.profileImage = { url: fileUrl, publicId };
-  return await doctor.save();
+  return await Doctor.findOneAndUpdate(
+    { doctorId, isDeleted: false },
+    {
+      $set: { profileImage: { url: fileUrl, publicId } },
+      $setOnInsert: { doctorId },
+    },
+    {
+      new: true,
+      upsert: true,
+    }
+  );
 };
 
-// GET ALL
+// ─── LIST / SEARCH ───────────────────────────────────────────────────────────
+
 export const getAllDoctors = async (filter = {}) => {
   return await Doctor.find({ isDeleted: false, ...filter });
 };
 
-//search doctors with filters
+/**
+ * Search doctors with filters (specialization, hospital, location, date).
+ */
 export const searchDoctors = async (queryParams) => {
   try {
     const params = queryParams.query ? queryParams.query : queryParams;
 
-    console.log("🔥 PARAMS:", params);
+    const query = { isDeleted: false };
 
-    const query = {};
-
-    // 🔥 SIMPLE & SAFE FILTER
-    if (params.specialty) {
-      query.specialty = {
-        $regex: params.specialty.trim(),
-        $options: "i"
-      };
+    if (params.specialization) {
+      query.specialization = { $regex: params.specialization.trim(), $options: "i" };
     }
 
     if (params.hospital) {
-      query.hospital = {
-        $regex: params.hospital.trim(),
-        $options: "i"
-      };
+      query.hospital = { $regex: params.hospital.trim(), $options: "i" };
     }
 
-    // NAME FILTER (optional)
-if (params.name) {
-  query.$text = { $search: params.name };
-}
+    if (params.location) {
+      query.location = { $regex: params.location.trim(), $options: "i" };
+    }
 
-// DATE FILTER (important)
-if (params.date) {
-  const slots = await AvailabilitySlot.find({
-    date: params.date,
-    isBooked: false
-  }).select("doctorId");
+    if (params.date) {
+      const slots = await AvailabilitySlot.find({
+        date: params.date,
+        isBooked: false,
+      }).select("doctorId");
 
-  const doctorIds = [...new Set(slots.map(s => s.doctorId))];
+      const doctorIds = [...new Set(slots.map((s) => s.doctorId))];
 
-  if (doctorIds.length > 0) {
-    query.doctorId = { $in: doctorIds };
-  } else {
-    return { data: [] };
-  }
-}
+      if (doctorIds.length > 0) {
+        query.doctorId = { $in: doctorIds };
+      } else {
+        return { data: [] };
+      }
+    }
 
     const doctors = await Doctor.find(query);
 
-    console.log("✅ FOUND:", doctors.length);
-
-    return {
-      data: doctors
-    };
-
+    return { data: doctors };
   } catch (error) {
-    console.error("❌ ERROR:", error);
+    console.error("[searchDoctors] error:", error);
     throw error;
   }
 };

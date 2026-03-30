@@ -1,6 +1,7 @@
 import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import cors from "cors";
 import appointmentRoutes from "./routes/appointmentRoutes.js";
 import http from "http";
 import { Server } from "socket.io";
@@ -8,6 +9,13 @@ import { Server } from "socket.io";
 dotenv.config();
 
 const app = express();
+
+// CORS for HTTP requests from frontend
+app.use(cors({
+  origin: "http://localhost:9000",
+  credentials: true,
+}));
+
 app.use(express.json());
 
 // 🔥 create HTTP server

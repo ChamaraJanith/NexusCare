@@ -1,6 +1,6 @@
 <template>
   <q-page class="q-pa-md q-pa-lg-xl bg-grey-1" style="min-height: 100vh;">
-    
+
     <div class="row items-center q-mb-xl">
       <q-btn flat round dense icon="arrow_back" color="grey-8" class="q-mr-md" @click="$router.push('/doctor')" />
       <div>
@@ -9,24 +9,21 @@
       </div>
     </div>
 
-    <!-- MAIN CONTENT -->
+    <!-- Loading -->
     <div v-if="pageLoading" class="row justify-center items-center" style="min-height: 50vh;">
       <q-spinner-gears size="60px" color="primary" />
     </div>
 
     <div v-else class="row q-col-gutter-xl justify-center">
-      
-      <!-- LEFT COLUMN -->
+
+      <!-- LEFT COLUMN — Avatar & summary card -->
       <div class="col-12 col-md-4">
         <q-card flat bordered class="profile-card q-pa-xl text-center shadow-subtle border-radius-16">
-          
+
           <div class="relative-position inline-block q-mx-auto avatar-container cursor-pointer" @click="triggerFileUpload">
             <q-avatar size="160px" class="shadow-10 bg-grey-2">
-              
               <img v-if="previewImage" :src="previewImage" style="object-fit: cover;" />
-              
-              <img v-else-if="getAvatarUrl" :src="getAvatarUrl" style="object-fit: cover;" />
-              
+              <img v-else-if="avatarUrl" :src="avatarUrl" style="object-fit: cover;" />
               <div v-else class="text-h2 text-grey-5">
                 {{ doctor.name ? doctor.name.charAt(0).toUpperCase() : 'DR' }}
               </div>
@@ -37,18 +34,18 @@
               <div class="text-caption text-weight-bold q-mt-xs">CHANGE</div>
             </div>
 
-            <input 
-              type="file" 
-              ref="fileInputRef" 
-              accept="image/png, image/jpeg, image/webp" 
-              style="display: none;" 
-              @change="handleFileSelect" 
+            <input
+              type="file"
+              ref="fileInputRef"
+              accept="image/png, image/jpeg, image/webp"
+              style="display: none;"
+              @change="handleFileSelect"
             />
           </div>
 
           <div class="q-mt-lg">
             <h2 class="text-h5 text-weight-bold text-dark q-mb-xs">
-              Dr. {{ doctor.name }}
+              Dr. {{ doctor.name || '—' }}
             </h2>
 
             <q-badge color="blue-1" text-color="blue-8" class="q-px-sm q-py-xs text-weight-bold">
@@ -59,21 +56,19 @@
           <div class="q-mt-xl text-left q-gutter-y-sm">
             <div class="row items-center text-grey-7">
               <q-icon name="email" size="20px" class="q-mr-md text-blue-grey-4" />
-              <div class="text-weight-medium text-body2">
-                {{ doctor.email || 'N/A' }}
-              </div>
+              <div class="text-weight-medium text-body2">{{ doctor.email || 'N/A' }}</div>
             </div>
           </div>
         </q-card>
       </div>
 
-      <!-- RIGHT COLUMN -->
+      <!-- RIGHT COLUMN — Editable form -->
       <div class="col-12 col-md-8">
         <q-card flat bordered class="q-pa-xl shadow-subtle border-radius-16 bg-white">
 
           <div class="text-h6 text-weight-bold q-mb-lg flex items-center">
             <q-icon name="manage_accounts" color="primary" size="24px" class="q-mr-sm" />
-            Professional Identity
+            Professional Details
           </div>
 
           <q-form @submit.prevent="saveProfile" class="q-gutter-y-lg">
@@ -85,7 +80,13 @@
               </div>
 
               <div class="col-12 col-sm-6">
-                <q-input v-model.number="form.experience" type="number" label="Years of Experience" outlined />
+                <q-input
+                  v-model.number="form.experience"
+                  type="number"
+                  label="Years of Experience"
+                  outlined
+                  min="0"
+                />
               </div>
 
               <div class="col-12">
@@ -105,7 +106,7 @@
             <q-separator class="q-my-lg" />
 
             <div class="row justify-end q-gutter-md">
-              <q-btn flat label="Discard Changes" color="grey-6" @click="resetForm" />
+              <q-btn flat label="Discard Changes" color="grey-6" @click="resetForm" :disable="saving" />
               <q-btn color="primary" label="Save Profile" type="submit" :loading="saving" />
             </div>
 
@@ -126,49 +127,46 @@ const $q = useQuasar();
 
 const layoutDoctor = inject('doctor', ref({}));
 const doctor = ref({});
-
-const getAvatarUrl = computed(() => {
-  const d = doctor.value || layoutDoctor.value;
-  return d?.profileImage?.url || null;
-});
+const pageLoading = ref(true);
+const saving = ref(false);
 
 const fileInputRef = ref(null);
 const previewImage = ref(null);
 
 const form = reactive({
   specialization: '',
-  experience: 0,
+  experience: null,
   hospital: '',
   location: '',
-  bio: ''
+  bio: '',
 });
 
-const saving = ref(false);
-const pageLoading = ref(true);
+// ── Avatar URL ───────────────────────────────────────────────────────────────
+const avatarUrl = computed(() => {
+  const d = doctor.value;
+  return d?.profileImage?.url || d?.profileImage || null;
+});
 
-// 🔥 AUTO FILL
+// ── Load / re-load full profile from server ──────────────────────────────────
 const loadProfile = async () => {
   try {
-    const d = await fetchDoctorProfile();
-
-    // 🔥 handle both response formats
-    const profile = d.data || d;
+    const res = await fetchDoctorProfile();
+    const profile = res?.data || res || {};
 
     doctor.value = profile;
 
-    // 🔥 FIX: specialty → specialization
-    form.specialization = profile.specialization || profile.specialty || '';
-    form.experience = profile.experience || 0;
-    form.hospital = profile.hospital || '';
-    form.location = profile.location || '';
-    form.bio = profile.bio || '';
+    // Populate editable form fields
+    form.specialization = profile.specialization || '';
+    form.experience     = profile.experience ?? 0;
+    form.hospital       = profile.hospital   || '';
+    form.location       = profile.location   || '';
+    form.bio            = profile.bio        || '';
 
+    // Keep layout-level doctor in sync
     Object.assign(layoutDoctor.value, profile);
-
-    console.log("PROFILE FIXED:", profile); // debug
-    console.log("PROFILE FULL:", d);
   } catch (err) {
-    console.error(err);
+    console.error('[DoctorProfilePage] loadProfile error:', err);
+    $q.notify({ type: 'negative', message: 'Failed to load profile' });
   }
 };
 
@@ -177,19 +175,20 @@ onMounted(async () => {
   pageLoading.value = false;
 });
 
-// RESET
+// ── Discard changes ──────────────────────────────────────────────────────────
 const resetForm = () => {
-  form.specialization = doctor.value.specialization || '';
-  form.experience = doctor.value.experience || 0;
-  form.hospital = doctor.value.hospital || '';
-  form.location = doctor.value.location || '';
-  form.bio = doctor.value.bio || '';
+  const d = doctor.value;
+  form.specialization = d.specialization || '';
+  form.experience     = d.experience ?? 0;
+  form.hospital       = d.hospital   || '';
+  form.location       = d.location   || '';
+  form.bio            = d.bio        || '';
   previewImage.value = null;
 };
 
-// IMAGE
+// ── Image upload ─────────────────────────────────────────────────────────────
 const triggerFileUpload = () => {
-  fileInputRef.value.click();
+  fileInputRef.value?.click();
 };
 
 const handleFileSelect = async (event) => {
@@ -201,26 +200,35 @@ const handleFileSelect = async (event) => {
   try {
     await uploadDoctorImage(file);
     await loadProfile();
-
-    $q.notify({ type: 'positive', message: 'Image updated' });
-
-  } catch {
-    $q.notify({ type: 'negative', message: 'Upload failed' });
+    $q.notify({ type: 'positive', message: 'Profile image updated' });
+  } catch (err) {
+    console.error('[DoctorProfilePage] image upload error:', err);
+    $q.notify({ type: 'negative', message: 'Image upload failed' });
+  } finally {
+    previewImage.value = null;
+    event.target.value = '';
   }
 };
 
-// SAVE
+// ── Save professional profile ────────────────────────────────────────────────
 const saveProfile = async () => {
   saving.value = true;
   try {
-    const updated = await updateDoctorProfileData({ ...form });
+    await updateDoctorProfileData({
+      specialization: form.specialization,
+      experience: Number(form.experience) || 0,
+      hospital:       form.hospital,
+      location:       form.location,
+      bio:            form.bio,
+    });
 
-    Object.assign(doctor.value, updated);
+    // Re-fetch full authoritative profile from server
+    await loadProfile();
 
-    $q.notify({ type: 'positive', message: 'Profile updated' });
-
-  } catch {
-    $q.notify({ type: 'negative', message: 'Update failed' });
+    $q.notify({ type: 'positive', message: 'Profile saved successfully' });
+  } catch (err) {
+    console.error('[DoctorProfilePage] save error:', err);
+    $q.notify({ type: 'negative', message: 'Failed to save profile' });
   } finally {
     saving.value = false;
   }
@@ -247,6 +255,7 @@ const saveProfile = async () => {
   background: rgba(0,0,0,0.5);
   opacity: 0;
   transition: 0.3s;
+  border-radius: 50%;
 }
 .avatar-container:hover .avatar-overlay {
   opacity: 1;

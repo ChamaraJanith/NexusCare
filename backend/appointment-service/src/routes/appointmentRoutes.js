@@ -2,6 +2,7 @@ import express from "express";
 import {
   bookAppointment,
   getAppointments,
+  getDoctorAppointments,
   updateAppointment,
   cancelAppointment
 } from "../controllers/appointmentController.js";
@@ -72,6 +73,9 @@ router.post("/", validateAppointment, bookAppointment);
 
 // 📄 GET PATIENT APPOINTMENTS
 router.get("/patient/:patientId", getAppointments);
+
+// 👨‍⚕️ GET DOCTOR APPOINTMENTS
+router.get("/doctor/:doctorId", getDoctorAppointments);
 
 
 // ✏️ UPDATE APPOINTMENT

@@ -1,55 +1,49 @@
 import mongoose from "mongoose";
 
+/**
+ * Doctor professional profile (MS2 — doctor-service)
+ *
+ * Stores doctor-editable professional details.
+ * All fields except doctorId are OPTIONAL to allow upsert on first save.
+ */
 const doctorSchema = new mongoose.Schema(
   {
+    // Business ID from JWT (e.g. DOC-0001) — the only required field.
     doctorId: {
-      type: String, // from auth service JWT roleId (e.g., DOC-0001)
+      type: String,
       required: true,
       unique: true,
-    },
-
-    profileImage: {
-      url: String,
-      publicId: String,
-    },
-    
-    specialty: {
-      type: String,
-    },
-
-    specialization: {
-      type: String,
-      required: true,
-      trim: true,
       index: true,
     },
 
-    qualifications: {
-      type: String,
-      required: true,
-      trim: true,
+    // Cloudinary profile image
+    profileImage: {
+      url: { type: String },
+      publicId: { type: String },
     },
 
+    // Years of clinical experience
     experience: {
       type: Number,
-      required: true,
       min: 0,
-      index: true,
+      default: null,
     },
 
+    // Primary hospital / clinic name
     hospital: {
       type: String,
-      required: true,
       trim: true,
+      default: null,
     },
 
+    // City / location shown to patients
     location: {
       type: String,
-      required: true,
       trim: true,
-      index: true,
+      default: null,
     },
 
+    // Short professional bio for patients
     bio: {
       type: String,
       default: "",
@@ -68,15 +62,11 @@ const doctorSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    collection: "doctorprofiles", // 🔥🔥🔥 CRITICAL FIX
+    collection: "doctorprofiles",
   }
 );
 
-// 🔍 Full-text search (only professional fields)
-doctorSchema.index({
-  specialization: "text",
-  hospital: "text",
-  location: "text",
-});
+// Text search on specialization, hospital & location
+doctorSchema.index({ specialization: "text", hospital: "text", location: "text" });
 
 export default mongoose.model("Doctor", doctorSchema, "doctorprofiles");

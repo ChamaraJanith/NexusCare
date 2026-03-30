@@ -10,7 +10,7 @@
       <div class="q-mb-lg">
         <div class="text-grey-7" style="font-size: 16px;">Welcome to,</div>
         <div class="text-weight-bolder" style="font-size: 28px; color: #1c2b36;">
-          Dr. {{ doctor.name || 'Doctor' }}
+          Dr. {{ doctor.name }}
         </div>
       </div>
 
@@ -85,13 +85,13 @@
         <div class="col-12 col-md-4">
           <q-card flat bordered style="border-radius: 12px;" class="q-pa-md">
             <div class="text-weight-bold text-dark q-mb-xs" style="font-size: 13px;">Specialization</div>
-            <div class="text-weight-bolder text-primary" style="font-size: 20px;">{{ doctor.specialization || 'N/A' }}</div>
+            <div class="text-weight-bolder text-primary" style="font-size: 20px;">{{ doctor.specialization }}</div>
           </q-card>
         </div>
         <div class="col-12 col-md-4">
           <q-card flat bordered style="border-radius: 12px;" class="q-pa-md">
             <div class="text-weight-bold text-dark q-mb-xs" style="font-size: 13px;">Experience</div>
-            <div class="text-weight-bolder" style="font-size: 36px; color: #1c2b36;">{{ doctor.experience || 0 }}<span style="font-size: 14px; color: #999;"> years</span></div>
+            <div class="text-weight-bolder" style="font-size: 36px; color: #1c2b36;">{{ doctor.experience }}<span style="font-size: 14px; color: #999;"> years</span></div>
           </q-card>
         </div>
       </div>
@@ -101,9 +101,10 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue';
-import { fetchAppointments } from 'src/services/doctorApi';
+import { fetchAppointments, fetchDoctorProfile } from 'src/services/doctorApi';
 
-defineProps({ doctor: Object, loading: Boolean });
+const doctor = ref({});
+const loading = ref(true);
 const appointments = ref([]);
 const dataLoading = ref(true);
 
@@ -131,11 +132,24 @@ const parseJwt = (token) => {
 };
 
 onMounted(async () => {
+  try {
+    const profileRes = await fetchDoctorProfile();
+    doctor.value = profileRes.data || profileRes || {};
+  } catch (err) {
+    console.error("Failed to fetch doctor profile", err);
+  } finally {
+    loading.value = false;
+  }
+
   const token = localStorage.getItem('token') || localStorage.getItem('nexus_token');
   const decoded = token ? parseJwt(token) : null;
-  const doctorId = decoded?.roleId;
+  const doctorId = decoded?.roleId || doctor.value?.doctorId;
   if (doctorId) {
-    appointments.value = await fetchAppointments(doctorId);
+    try {
+      appointments.value = await fetchAppointments(doctorId);
+    } catch (err) {
+      console.error("Failed to fetch appointments", err);
+    }
   }
   dataLoading.value = false;
 });
