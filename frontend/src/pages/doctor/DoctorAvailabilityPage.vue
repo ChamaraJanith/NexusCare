@@ -41,6 +41,14 @@
 
     <!-- Date Selector (Only in DATE mode) -->
     <div v-if="viewMode === 'DATE'" class="q-mb-lg bg-white q-pa-md shadow-1" style="border-radius: 12px; border: 1px solid #e0e0e0;">
+      <div class="row items-center justify-between q-mb-md">
+        <div class="text-weight-bold text-grey-8">Quick Select</div>
+        <div>
+          <q-btn unelevated size="sm" color="primary" class="text-capitalize q-mr-sm" label="Today" @click="setToday" />
+          <q-btn outline size="sm" color="primary" class="text-capitalize" label="Tomorrow" @click="setTomorrow" />
+        </div>
+      </div>
+      <q-separator class="q-mb-md" color="grey-2" />
       <div class="row items-center justify-between">
         <div class="row items-center">
           <q-icon name="event" size="24px" color="primary" class="q-mr-md" />
@@ -122,36 +130,103 @@
       </template>
 
       <!-- ALL MODE -->
+      <!-- ALL MODE -->
       <template v-else-if="viewMode === 'ALL'">
-        <div v-if="recurringSlots.length > 0" class="q-mb-xl">
-          <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-md row items-center">
-            <q-icon name="repeat" size="20px" class="q-mr-sm text-primary" /> Recurring Slots
-          </div>
-          <div class="row q-col-gutter-md">
-            <div v-for="slot in recurringSlots" :key="slot._id" class="col-12 col-sm-6 col-md-4">
-              <SlotCard :slotData="slot" @edit="openDialog(slot)" @delete="confirmDelete(slot)" />
+        <div class="availability-container">
+          
+          <!-- Next 7 Days Preview -->
+          <div class="q-mb-md">
+            <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-md row items-center">
+              <q-icon name="view_week" size="20px" class="q-mr-sm text-primary" /> Next 7 Days Preview
+            </div>
+            <div class="next-days">
+              <div 
+                v-for="date in next7Days" 
+                :key="date.toISOString()" 
+                @click="selectDate(date)" 
+                class="day-card"
+                :class="{ 'selected-day': isSelectedDate(date) }"
+              >
+                <div class="day-name">{{ formatShortDay(date) }}</div>
+                <div class="day-number">{{ formatDay(date) }}</div>
+                <div class="day-status">Available</div>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div v-if="oneTimeSlots.length > 0" class="q-mb-xl">
-          <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-md row items-center">
-            <q-icon name="event" size="20px" class="q-mr-sm text-teal" /> One-Time Slots
-          </div>
-          <div class="row q-col-gutter-md">
-            <div v-for="slot in oneTimeSlots" :key="slot._id" class="col-12 col-sm-6 col-md-4">
-              <SlotCard :slotData="slot" @edit="openDialog(slot)" @delete="confirmDelete(slot)" />
+          <!-- Calendar Grid -->
+          <div class="calendar-container q-mb-xl">
+            <div class="calendar-header q-mb-md">
+              <div class="month-nav" style="display: flex; align-items: center;">
+                <q-btn flat round dense icon="chevron_left" @click="prevMonth" />
+                <h3 class="text-h6 text-weight-bold q-ma-none q-px-sm" style="color: #1f2937;">{{ currentMonthName }}</h3>
+                <q-btn flat round dense icon="chevron_right" @click="nextMonth" />
+              </div>
+              <div class="quick-actions">
+                <button class="quick-btn primary" @click="setToday()">Today</button>
+                <button class="quick-btn outline" @click="setTomorrow()">Tomorrow</button>
+              </div>
+            </div>
+            
+            <div class="calendar-grid text-caption text-weight-bold text-grey-5 text-center font-weight-bold" style="border-bottom: 1px solid #f3f4f6; padding-bottom: 8px; margin-top: 0; gap: 10px;">
+              <div v-for="d in ['SUN','MON','TUE','WED','THU','FRI','SAT']" :key="d" style="align-self:end">{{ d }}</div>
+            </div>
+
+            <div class="calendar-grid">
+              <!-- empty cells for offset -->
+              <div v-for="n in calendarOffset" :key="'empty'+n"></div>
+              
+              <div
+                v-for="day in calendarDays" 
+                :key="day.toISOString()"
+                class="calendar-cell"
+                :class="{
+                  today: isToday(day),
+                  selected: isSelectedDate(day),
+                  past: isPast(day) && !isToday(day)
+                }"
+                @click="selectDate(day)"
+              >
+                <span class="text-weight-bold" style="font-size: 15px; color: #374151;">{{ day.getDate() }}</span>
+                <!-- availability indicator -->
+                <div class="dot available"></div>
+              </div>
             </div>
           </div>
-        </div>
-        
-        <div v-if="allSlots.length === 0" class="column items-center justify-center q-pa-xl bg-white shadow-1" style="min-height: 25vh; border-radius: 14px;">
-          <q-icon name="event_available" size="60px" color="grey-4" class="q-mb-md" />
-          <div class="text-h6 text-weight-bold text-grey-6 q-mb-sm">No availability slots yet</div>
-          <q-btn unelevated color="primary" icon="add" label="Add Your First Slot" class="text-capitalize" style="border-radius: 10px;" @click="openDialog()" />
-        </div>
-      </template>
 
+          <!-- Slots Section -->
+          <div class="slots-section">
+            <div v-if="recurringSlots.length > 0" class="section">
+              <div class="text-h6 text-weight-bold text-grey-8 q-mb-md row items-center">
+                <q-icon name="repeat" size="24px" class="q-mr-sm text-primary" /> Recurring Slots
+              </div>
+              <div class="row q-col-gutter-md">
+                <div v-for="slot in recurringSlots" :key="slot._id" class="col-12 col-sm-6 col-md-4">
+                  <SlotCard :slotData="slot" @edit="openDialog(slot)" @delete="confirmDelete(slot)" class="slot-card" />
+                </div>
+              </div>
+            </div>
+
+            <div v-if="oneTimeSlots.length > 0" class="section">
+              <div class="text-h6 text-weight-bold text-grey-8 q-mb-md row items-center">
+                <q-icon name="event" size="24px" class="q-mr-sm text-teal" /> One-Time Slots
+              </div>
+              <div class="row q-col-gutter-md">
+                <div v-for="slot in oneTimeSlots" :key="slot._id" class="col-12 col-sm-6 col-md-4">
+                  <SlotCard :slotData="slot" @edit="openDialog(slot)" @delete="confirmDelete(slot)" class="slot-card" />
+                </div>
+              </div>
+            </div>
+            
+            <div v-if="allSlots.length === 0" class="column items-center justify-center q-pa-xl bg-white shadow-1" style="min-height: 25vh; border-radius: 14px;">
+              <q-icon name="event_available" size="60px" color="grey-4" class="q-mb-md" />
+              <div class="text-h6 text-weight-bold text-grey-6 q-mb-sm">No availability slots yet</div>
+              <q-btn unelevated color="primary" icon="add" label="Add Your First Slot" class="text-capitalize" style="border-radius: 10px;" @click="openDialog()" />
+            </div>
+          </div>
+
+        </div>
+      </template>        
     </div>
 
     <!-- ────────────── ADD / EDIT DIALOG ────────────── -->
@@ -538,6 +613,90 @@ const isFormValid = computed(() => {
 const recurringSlots = computed(() => allSlots.value.filter(s => s.isRecurring));
 const oneTimeSlots   = computed(() => allSlots.value.filter(s => !s.isRecurring));
 
+// ─── Helpers: Advanced Navigation ─────────────────────────────────
+const getNext7Days = () => {
+  const days = [];
+  const today = new Date();
+  for (let i = 0; i < 7; i++) {
+    const d = new Date();
+    d.setDate(today.getDate() + i);
+    days.push(d);
+  }
+  return days;
+};
+const next7Days = ref(getNext7Days());
+
+const formatShortDay = (date) => date.toLocaleDateString('en-US', { weekday: 'short' });
+const formatDay = (date) => date.getDate();
+
+const currentMonth = ref(new Date());
+
+const getDaysInMonth = (date) => {
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const lastDay = new Date(year, month + 1, 0);
+  const days = [];
+  for (let i = 1; i <= lastDay.getDate(); i++) {
+    days.push(new Date(year, month, i));
+  }
+  return days;
+};
+const calendarDays = computed(() => getDaysInMonth(currentMonth.value));
+
+const calendarOffset = computed(() => {
+  const year = currentMonth.value.getFullYear();
+  const month = currentMonth.value.getMonth();
+  const firstDay = new Date(year, month, 1);
+  return firstDay.getDay(); 
+});
+
+const prevMonth = () => {
+  const d = new Date(currentMonth.value);
+  d.setMonth(d.getMonth() - 1);
+  currentMonth.value = d;
+};
+const nextMonth = () => {
+  const d = new Date(currentMonth.value);
+  d.setMonth(d.getMonth() + 1);
+  currentMonth.value = d;
+};
+const currentMonthName = computed(() => currentMonth.value.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }));
+
+const selectDate = (date) => {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  selectedDateStr.value = `${yyyy}-${mm}-${dd}`;
+  viewMode.value = "DATE";
+};
+
+const setToday = () => {
+  selectDate(new Date());
+};
+
+const setTomorrow = () => {
+  const t = new Date();
+  t.setDate(t.getDate() + 1);
+  selectDate(t);
+};
+
+const isToday = (date) => {
+  const today = new Date();
+  return date.getDate() === today.getDate() && date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
+};
+
+const isPast = (date) => {
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  return date < today;
+};
+
+const isSelectedDate = (date) => {
+  if (!selectedDateStr.value) return false;
+  const d = new Date(selectedDateStr.value);
+  return date.getDate() === d.getDate() && date.getMonth() === d.getMonth() && date.getFullYear() === d.getFullYear();
+};
+
 const futureDatesOnly = (date) => {
   const today = new Date().toISOString().slice(0, 10).replace(/-/g, '/');
   return date >= today;
@@ -763,5 +922,200 @@ onMounted(loadSlots);
   background-color: #e0f2fe !important; /* Light blue selected */
   color: #0369a1 !important; /* Darker blue active text */
   font-weight: 600;
+}
+
+/* ─── Modern Vertical Availability Styling ───────── */
+.availability-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.next-days {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.day-card {
+  flex: 1;
+  min-width: 90px;
+  background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+  border-radius: 12px;
+  padding: 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+}
+
+.day-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+
+.day-name {
+  font-size: 11px;
+  color: #6b7280;
+  text-transform: uppercase;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.day-number {
+  font-size: 16px;
+  font-weight: 900;
+  color: #1f2937;
+}
+
+.day-status {
+  font-size: 11px;
+  color: #10b981;
+  margin-top: 4px;
+  font-weight: bold;
+}
+
+.selected-day {
+  background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+  color: white !important;
+}
+.selected-day .day-name, .selected-day .day-number, .selected-day .day-status {
+  color: white !important;
+}
+
+.calendar-container {
+  background: #ffffff;
+  padding: 16px;
+  border-radius: 16px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.04);
+  border: 1px solid #f3f4f6;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.calendar-cell {
+  height: 55px;
+  border-radius: 10px;
+  font-size: 13px;
+  background: #f9fafb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid #f3f4f6;
+}
+
+.calendar-cell:hover {
+  background: #e0f2fe;
+  border-color: #bae6fd;
+}
+
+.calendar-cell.today {
+  border: 2px solid #3b82f6;
+  background: #eff6ff;
+}
+
+.calendar-cell.selected {
+  background: #3b82f6 !important;
+  color: white;
+  border-color: #3b82f6;
+}
+.calendar-cell.selected span {
+  color: white !important;
+}
+
+.calendar-cell.past {
+  opacity: 0.4;
+  cursor: default;
+  background: #f3f4f6;
+}
+.calendar-cell.past:hover {
+  background: #f3f4f6;
+  border-color: #f3f4f6;
+}
+
+.dot {
+  position: absolute;
+  bottom: 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.dot.available {
+  background: #10b981;
+}
+
+.dot.full {
+  background: #ef4444;
+}
+
+.slots-section {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.slot-card {
+  border-radius: 14px;
+  background: white;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  transition: all 0.2s ease;
+}
+
+.slot-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(0,0,0,0.08);
+}
+
+.quick-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.quick-btn {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.quick-btn.primary {
+  background: #3b82f6;
+  color: white;
+  border: none;
+}
+
+.quick-btn.primary:hover {
+  background: #2563eb;
+}
+
+.quick-btn.outline {
+  border: 1px solid #3b82f6;
+  color: #3b82f6;
+  background: transparent;
+}
+
+.quick-btn.outline:hover {
+  background: #eff6ff;
 }
 </style>
