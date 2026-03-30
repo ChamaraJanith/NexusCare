@@ -50,10 +50,55 @@ export const addSlot = async (body, doctorId) => {
   return await AvailabilitySlot.create(slotData);
 };
 
-// ─── GET SLOTS BY DOCTOR ─────────────────────────────────────────
+// ─── GET SLOTS BY DOCTOR (templates only — not instances) ────────
 export const getSlotsByDoctor = async (doctorId) => {
-  return await AvailabilitySlot.find({ doctorId, isDeleted: false })
-    .sort({ isRecurring: 1, dayOfWeek: 1, date: 1, startTime: 1 });
+  return await AvailabilitySlot.find({
+    doctorId,
+    isDeleted: false,
+    parentSlotId: null  // exclude auto-generated instances
+  }).sort({ isRecurring: 1, dayOfWeek: 1, date: 1, startTime: 1 });
+};
+
+// ─── LAZY INSTANCE GENERATOR ──────────────────────────────────────
+/**
+ * For a given recurring template + specific calendar date,
+ * find OR create an independent instance slot.
+ * Each instance has its own slotCount, bookedCount, and queue.
+ */
+export const getOrCreateSlotInstance = async (doctorId, date, parentSlot) => {
+  // Normalize to start-of-day for consistent matching
+  const instanceDate = new Date(date);
+  instanceDate.setHours(0, 0, 0, 0);
+
+  // 1. Check if an instance already exists for this parent + date
+  const existing = await AvailabilitySlot.findOne({
+    parentSlotId: parentSlot._id,
+    date: instanceDate,
+    isDeleted: false
+  });
+
+  if (existing) return existing;
+
+  // 2. Not found → create a fresh instance inheriting the template's config
+  const instance = await AvailabilitySlot.create({
+    doctorId,
+    date: instanceDate,
+    startTime:    parentSlot.startTime,
+    endTime:      parentSlot.endTime,
+    slotType:     parentSlot.slotType,
+    hospital:     parentSlot.hospital  || "",
+    location:     parentSlot.location  || "",
+    platform:     parentSlot.platform  || "",
+    slotCount:    parentSlot.slotCount,
+    bookedCount:  0,
+    isBooked:     false,
+    isRecurring:  false,       // instances are date-based, not recurring
+    dayOfWeek:    null,
+    parentSlotId: parentSlot._id,
+    isDeleted:    false
+  });
+
+  return instance;
 };
 
 // ─── UPDATE SLOT BY _id ──────────────────────────────────────────
