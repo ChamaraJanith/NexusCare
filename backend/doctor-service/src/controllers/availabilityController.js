@@ -57,54 +57,93 @@ export const deleteSlot = async (req, res) => {
   }
 };
 
-// 🔥 NEW: get slots by doctor + date + split types
+// 🔥 NEW: get slots by doctor + date + split types (expired slots excluded)
 export const getSlotsByDoctorAndDate = async (req, res) => {
   try {
     const { doctorId } = req.params;
     const { date } = req.query;
 
+    // Timezone-safe date range
+    const selectedDate = new Date(date);
+    selectedDate.setHours(0, 0, 0, 0);
+    const nextDate = new Date(selectedDate);
+    nextDate.setDate(nextDate.getDate() + 1);
+
     const slots = await AvailabilitySlot.find({
       doctorId,
-      date: new Date(date),
+      date: { $gte: selectedDate, $lt: nextDate },
       isDeleted: false,
-      isBooked: false
+      // Filter only slots that still have capacity (bookedCount < slotCount)
+      $expr: { $lt: ["$bookedCount", "$slotCount"] }
+    });
+
+    // Filter out expired slots (past date+time)
+    const now = new Date();
+    const validSlots = slots.filter(slot => {
+      const slotDateTime = new Date(slot.date);
+      const [h, m] = slot.startTime.split(":");
+      slotDateTime.setHours(parseInt(h), parseInt(m), 0, 0);
+      return slotDateTime >= now;
     });
 
     // 🔥 SPLIT TYPES
-    const physical = slots.filter(s => s.slotType === "PHYSICAL");
-    const online = slots.filter(s => s.slotType === "ONLINE");
+    const physical = validSlots.filter(s => s.slotType === "PHYSICAL");
+    const online   = validSlots.filter(s => s.slotType === "ONLINE");
 
-    res.json({
-      physical,
-      online
-    });
+    res.json({ physical, online });
 
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-//🔥 NEW: lock slot when appointment created
+//🔥 UPDATED: capacity-based queue booking
 export const bookSlot = async (req, res) => {
   try {
     const { doctorId, date, time } = req.body;
 
-    const slot = await AvailabilitySlot.findOneAndUpdate(
-      {
-        doctorId,
-        date: new Date(date),
-        startTime: time,
-        isBooked: false
-      },
-      { isBooked: true },
-      { new: true }
-    );
+    // 1. Find the target slot
+    const slot = await AvailabilitySlot.findOne({
+      doctorId,
+      date: new Date(date),
+      startTime: time,
+      isDeleted: false
+    });
 
     if (!slot) {
-      return res.status(400).json({ message: "Slot already booked" });
+      return res.status(404).json({ message: "Slot not found" });
     }
 
-    res.json({ message: "Slot booked" });
+    // 2. Block booking if slot has already expired
+    const now = new Date();
+    const slotDateTime = new Date(slot.date);
+    const [hours, minutes] = slot.startTime.split(":");
+    slotDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+    if (slotDateTime < now) {
+      return res.status(400).json({ message: "This slot has already expired" });
+    }
+
+    // 3. Check capacity
+    if (slot.bookedCount >= slot.slotCount) {
+      return res.status(400).json({ message: "Slot full" });
+    }
+
+    // 3. Increment bookedCount and assign queue number
+    slot.bookedCount += 1;
+    const queueNumber = slot.bookedCount;
+
+    // 4. For ONLINE slots: mark isBooked for backward compatibility
+    if (slot.slotType === "ONLINE") {
+      slot.isBooked = true;
+    }
+
+    await slot.save();
+
+    res.json({
+      message: "Booked successfully",
+      queueNumber
+    });
 
   } catch (err) {
     res.status(500).json({ message: err.message });

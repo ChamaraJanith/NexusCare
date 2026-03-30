@@ -217,6 +217,25 @@
             />
           </div>
 
+          <!-- Slot Count (PHYSICAL only) -->
+          <div v-if="form.slotType === 'PHYSICAL'">
+            <div class="text-weight-bold text-dark q-mb-sm" style="font-size: 13px;">SLOT CAPACITY</div>
+            <q-input
+              v-model.number="form.slotCount"
+              outlined
+              type="number"
+              :min="1"
+              :max="100"
+              label="Number of patients per slot"
+              color="primary"
+              bg-color="grey-1"
+              style="border-radius: 10px;"
+            >
+              <template v-slot:prepend><q-icon name="people" color="primary" /></template>
+              <template v-slot:hint>Number of patients that can be booked in this time slot</template>
+            </q-input>
+          </div>
+
           <!-- Platform (ONLINE) -->
           <div v-if="form.slotType === 'ONLINE'">
             <div class="text-weight-bold text-dark q-mb-sm" style="font-size: 13px;">PLATFORM</div>
@@ -381,14 +400,19 @@ const defaultForm = () => ({
   location: '',
   platform: '',
   slotType: '',
+  slotCount: 1,
 });
 const form = ref(defaultForm());
 
 const onSlotTypeChange = (val) => {
   if (val === 'ONLINE') {
     form.value.location = '';
+    form.value.slotCount = 1; // ONLINE always single-booking
   } else if (val === 'PHYSICAL') {
     form.value.platform = '';
+    if (!form.value.slotCount || form.value.slotCount < 1) {
+      form.value.slotCount = 1;
+    }
   }
 };
 
@@ -403,8 +427,9 @@ const timeError = computed(() => {
 const isFormValid = computed(() => {
   if (!form.value.startTime || !form.value.endTime || timeError.value) return false;
   if (!form.value.slotType) return false;
-  
+
   if (form.value.slotType === 'PHYSICAL' && !form.value.location) return false;
+  if (form.value.slotType === 'PHYSICAL' && (!form.value.slotCount || form.value.slotCount < 1)) return false;
   if (form.value.slotType === 'ONLINE' && !form.value.platform) return false;
 
   if (form.value.type === 'single' && !form.value.date) return false;
@@ -461,6 +486,7 @@ const openDialog = (slot = null) => {
       location: slot.location || slot.hospital || '',
       platform: slot.platform || '',
       slotType: slot.slotType || '',
+      slotCount: slot.slotCount || 1,
     };
   } else {
     editMode.value = false;
@@ -487,6 +513,10 @@ const submitSlot = async () => {
     dialogError.value = 'Location required';
     return;
   }
+  if (form.value.slotType === 'PHYSICAL' && (!form.value.slotCount || form.value.slotCount < 1)) {
+    dialogError.value = 'Slot count must be at least 1';
+    return;
+  }
   if (form.value.slotType === 'ONLINE' && !form.value.platform) {
     dialogError.value = 'Platform required';
     return;
@@ -511,6 +541,7 @@ const submitSlot = async () => {
       startTime: form.value.startTime,
       endTime: form.value.endTime,
       slotType: form.value.slotType,
+      slotCount: form.value.slotType === 'ONLINE' ? 1 : Number(form.value.slotCount),
       location: form.value.slotType === 'PHYSICAL' ? form.value.location : null,
       platform: form.value.slotType === 'ONLINE' ? form.value.platform : null,
       ...(form.value.type === 'single'

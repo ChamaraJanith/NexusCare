@@ -2,7 +2,7 @@ import AvailabilitySlot from "../models/AvailabilitySlot.js";
 
 // ─── CREATE SLOT ────────────────────────────────────────────────
 export const addSlot = async (body, doctorId) => {
-  const { type, date, dayOfWeek, startTime, endTime, hospital, location, platform, slotType } = body;
+  const { type, date, dayOfWeek, startTime, endTime, hospital, location, platform, slotType, slotCount } = body;
 
   if (!startTime || !endTime) throw new Error("startTime and endTime are required");
   if (startTime >= endTime) throw new Error("startTime must be before endTime");
@@ -15,8 +15,16 @@ export const addSlot = async (body, doctorId) => {
     hospital: hospital || location || "", // preserve backwards compatibility if hospital is explicitly passed
     location: location || hospital || "",
     platform: platform || "",
-    slotType 
+    slotType,
+    bookedCount: 0
   };
+
+  // Enforce capacity rules per slot type
+  if (slotType === "ONLINE") {
+    slotData.slotCount = 1; // ONLINE always single-booking
+  } else if (slotType === "PHYSICAL") {
+    slotData.slotCount = slotCount ? Number(slotCount) : 1; // PHYSICAL can have custom queue size
+  }
 
   if (type === "recurring") {
     if (!dayOfWeek) throw new Error("dayOfWeek is required for recurring slots");
@@ -63,6 +71,16 @@ export const updateSlot = async (slotId, body, doctorId) => {
   if (location !== undefined) updates.location = location;
   if (platform !== undefined) updates.platform = platform;
   if (slotType !== undefined) updates.slotType = slotType;
+
+  // slotCount can only be updated on PHYSICAL slots
+  const effectiveSlotType = slotType || slot.slotType;
+  if (effectiveSlotType === "PHYSICAL" && body.slotCount !== undefined) {
+    const newSlotCount = Number(body.slotCount);
+    if (newSlotCount < slot.bookedCount) {
+      throw new Error("slotCount cannot be less than bookedCount");
+    }
+    updates.slotCount = newSlotCount;
+  }
 
   if (type === "recurring") {
     if (!dayOfWeek) throw new Error("dayOfWeek required for recurring slots");

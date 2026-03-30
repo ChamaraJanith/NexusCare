@@ -68,6 +68,18 @@ const slotSchema = new mongoose.Schema(
       default: false
     },
 
+    // Maximum patients allowed per slot (PHYSICAL = configurable, ONLINE = always 1)
+    slotCount: {
+      type: Number,
+      default: 1
+    },
+
+    // Tracks how many patients have booked this slot (enables queue numbering)
+    bookedCount: {
+      type: Number,
+      default: 0
+    },
+
     isDeleted: {
       type: Boolean,
       default: false,
