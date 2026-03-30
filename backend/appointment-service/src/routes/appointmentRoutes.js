@@ -23,12 +23,13 @@ const router = express.Router();
 // 🔍 SEARCH DOCTORS
 router.get("/search", async (req, res) => {
   try {
-    const { name, specialty, hospital, date } = req.query;
+    const { name, specialization, hospital, location, date } = req.query;
 
     const doctors = await doctorService.searchDoctors({
       name,
-      specialty,
+      specialization,
       hospital,
+      location,
       date
     });
 

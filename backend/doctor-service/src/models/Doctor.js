@@ -66,7 +66,7 @@ const doctorSchema = new mongoose.Schema(
   }
 );
 
-// Text search on specialization, hospital & location
-doctorSchema.index({ specialization: "text", hospital: "text", location: "text" });
+// Text search on specialty, hospital & location
+doctorSchema.index({ specialty: "text", hospital: "text", location: "text" });
 
 export default mongoose.model("Doctor", doctorSchema, "doctorprofiles");

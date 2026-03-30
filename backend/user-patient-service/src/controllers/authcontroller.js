@@ -302,10 +302,39 @@ const changePassword = async (req, res, next) => {
   }
 };
 
+// ─── SEARCH DOCTORS BY NAME (Used by MS2) ──────────────────────────────────
+// POST /api/auth/doctors/search
+// Body: { name: string }
+// Returns: Array of { doctorId, name, profileImage }
+const searchDoctorsByName = async (req, res, next) => {
+  try {
+    const { name } = req.body;
+
+    const query = { role: "doctor", isActive: true };
+    if (name) {
+      query.name = { $regex: name, $options: "i" };
+    }
+
+    const doctors = await User.find(query).select("roleId name profileImage");
+
+    res.status(200).json({
+      success: true,
+      data: doctors.map(d => ({
+        doctorId: d.roleId,
+        name: d.name,
+        profileImage: d.profileImage
+      }))
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   register,
   login,
   getMe,
   verifyToken,
   changePassword,
+  searchDoctorsByName,
 };

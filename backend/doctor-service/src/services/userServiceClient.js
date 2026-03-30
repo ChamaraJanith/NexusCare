@@ -47,3 +47,28 @@ export const getUserByToken = async (bearerToken) => {
     return null;
   }
 };
+
+/**
+ * Calls user-patient-service POST /api/auth/doctors/search
+ * to retrieve a batch list of doctor identities (and their doctorIds)
+ * matching the provided name.
+ */
+export const searchDoctorsByName = async (name) => {
+  try {
+    const response = await axios.post(
+      `${USER_SERVICE_URL}/api/auth/doctors/search`,
+      { name }
+    );
+
+    if (response.data?.success) {
+      return response.data.data; // Array of { doctorId, name, profileImage }
+    }
+    return [];
+  } catch (err) {
+    console.error(
+      "[userServiceClient] searchDoctorsByName failed:",
+      err.response?.data || err.message
+    );
+    return [];
+  }
+};
