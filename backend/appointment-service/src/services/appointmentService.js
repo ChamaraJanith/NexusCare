@@ -100,6 +100,11 @@ export const getAppointmentsByPatient = async (patientId) => {
   return await Appointment.find({ patientId });
 };
 
+// 👨‍⚕️ Get appointments for a doctor
+export const getAppointmentsByDoctor = async (doctorId) => {
+  return await Appointment.find({ doctorId });
+};
+
 
 // ✅ Update appointment (FINAL 🔥)
 export const updateAppointment = async (id, patientId, data) => {

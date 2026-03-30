@@ -13,22 +13,17 @@ const doctorApi = axios.create({
   baseURL: DOCTOR_SERVICE_URL,
 });
 
-// 🔥 REQUEST INTERCEPTOR WITH DEBUG
+// Attach JWT token from localStorage to every doctor-service request
 doctorApi.interceptors.request.use((config) => {
   const token =
     localStorage.getItem('token') ||
     localStorage.getItem('nexus_token');
 
-  console.log("🔐 TOKEN DEBUG:", token); // 👈 DEBUG
-
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   } else {
-    console.warn("⚠️ No token found in localStorage");
+    console.warn('[doctorApi] No auth token found in localStorage');
   }
-
-  console.log("📡 REQUEST:", config.method?.toUpperCase(), config.url);
-  console.log("📨 HEADERS:", config.headers); // 👈 DEBUG
 
   return config;
 });
@@ -57,43 +52,26 @@ appointmentApi.interceptors.request.use((config) => {
 // ───────────────────────────────────────────────
 
 export const fetchDoctorProfile = async () => {
-  console.log('[doctorApi] GET /api/doctors/me');
-
   const res = await doctorApi.get('/api/doctors/me');
-
-  console.log('[doctorApi] /me response:', res.data);
-
-  return res.data?.data || res.data || {};
+  return res.data?.data || res.data;
 };
 
+/**
+ * Update MS2-owned professional fields.
+ * Specialization is editable and stored in MS2.
+ */
 export const updateDoctorProfileData = async (payload) => {
-  const res = await doctorApi.put('/api/doctors/me', payload);
+  const { specialization, experience, hospital, location, bio } = payload;
+  const res = await doctorApi.put('/api/doctors/me', { specialization, experience, hospital, location, bio });
   return res.data?.data;
 };
 
-// 🔥 FIXED IMAGE UPLOAD (FORCE TOKEN)
 export const uploadDoctorImage = async (file) => {
   const formData = new FormData();
   formData.append('image', file);
 
-  const token =
-    localStorage.getItem('token') ||
-    localStorage.getItem('nexus_token');
-
-  console.log("🖼️ Uploading image...");
-  console.log("🔐 TOKEN USED:", token);
-
-  const res = await doctorApi.post(
-    '/api/doctors/me/image',
-    formData,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`, // 🔥 FORCE HEADER
-      },
-    }
-  );
-
-  console.log("✅ Upload response:", res.data);
+  // The interceptor already attaches the token; no need to force it manually
+  const res = await doctorApi.post('/api/doctors/me/image', formData);
 
   return res.data?.data;
 };

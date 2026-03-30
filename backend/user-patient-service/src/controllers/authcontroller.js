@@ -222,6 +222,16 @@ const verifyToken = async (req, res, next) => {
       });
     }
 
+    let specialty = null;
+    let hospital = null;
+    if (user.role === "doctor") {
+      const doctorProfile = await DoctorProfile.findOne({ doctorId: user.roleId });
+      if (doctorProfile) {
+        specialty = doctorProfile.specialty;
+        hospital = doctorProfile.hospital;
+      }
+    }
+
     // Return the user identity for the requesting microservice
     res.status(200).json({
       success: true,
@@ -231,6 +241,9 @@ const verifyToken = async (req, res, next) => {
       name: user.name,
       email: user.email,
       isVerified: user.isVerified,
+      profileImage: user.profileImage,
+      specialty: specialty,
+      hospital: hospital,
     });
   } catch (error) {
     if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {

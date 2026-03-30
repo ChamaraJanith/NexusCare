@@ -1,6 +1,7 @@
 import {
   createAppointment,
   getAppointmentsByPatient,
+  getAppointmentsByDoctor,
   updateAppointment as updateAppointmentService,
   cancelAppointment as cancelAppointmentService
 } from "../services/appointmentService.js";
@@ -90,6 +91,22 @@ export const getAppointments = async (req, res) => {
 
   } catch (error) {
     console.error("Error fetching appointments:", error.message);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+
+// 👨‍⚕️ Get Doctor Appointments
+export const getDoctorAppointments = async (req, res) => {
+  try {
+    const { doctorId } = req.params;
+
+    const appointments = await getAppointmentsByDoctor(doctorId);
+
+    res.status(200).json(appointments);
+
+  } catch (error) {
+    console.error("Error fetching doctor appointments:", error.message);
     res.status(500).json({ error: "Internal Server Error" });
   }
 };

@@ -2,7 +2,7 @@ import Doctor from "../models/Doctor.js";
 import cloudinary from "../config/cloudinary.js";
 import * as doctorService from "../services/doctorService.js";
 
-// GET /api/doctors/me
+// ─── GET /api/doctors/me ──────────────────────────────────────────────────────
 export const getDoctorMe = async (req, res) => {
   try {
     const doctorId = req.user.doctorId || req.user.roleId;
@@ -10,47 +10,31 @@ export const getDoctorMe = async (req, res) => {
     if (!doctorId) {
       return res.status(400).json({
         success: false,
-        message: "Could not determine doctor ID",
+        message: "Could not determine doctor ID from token",
       });
     }
 
     const bearerToken = req.headers.authorization;
+    const profile = await doctorService.getDoctorFullProfile(doctorId, bearerToken);
 
-    const profile = await doctorService.getDoctorFullProfile(
-      doctorId,
-      bearerToken
-    );
-
-    console.log("🔥 FINAL PROFILE FROM SERVICE:", profile);
-
-    // 🔥 FINAL NORMALIZATION (NO MORE NULL)
-    const fixedProfile = {
-      ...profile,
-
-      specialization:
-        profile.specialization ||
-        profile.specialty ||
-        "NOT_FOUND", // debug fallback
-    };
-
-    console.log("🔥 FINAL PROFILE SENT:", fixedProfile);
-
-    res.json({
+    return res.status(200).json({
       success: true,
-      data: fixedProfile,
+      data: profile,
     });
-
   } catch (err) {
-    console.error("GET /me ERROR:", err);
-    res.status(500).json({
+    console.error("[getDoctorMe] ERROR:", err.message);
+    return res.status(500).json({
       success: false,
       message: err.message,
     });
   }
 };
 
-
-// UPDATE PROFILE
+// ─── PUT /api/doctors/me ──────────────────────────────────────────────────────
+/**
+ * Upsert the editable professional fields for the authenticated doctor.
+ * Specialization is editable and stored in MS2.
+ */
 export const updateDoctorMe = async (req, res) => {
   try {
     const doctorId = req.user.doctorId || req.user.roleId;
@@ -58,45 +42,51 @@ export const updateDoctorMe = async (req, res) => {
     if (!doctorId) {
       return res.status(403).json({
         success: false,
-        message: "Forbidden",
+        message: "Forbidden: no doctorId in token",
       });
     }
 
     const { specialization, experience, hospital, location, bio } = req.body;
 
     const updateData = {};
+    if (specialization !== undefined) updateData.specialty = specialization;
+    if (experience !== undefined && experience !== null) {
+      const num = Number(experience);
 
-    if (specialization) updateData.specialization = specialization;
-    if (experience !== undefined) updateData.experience = experience;
-    if (hospital) updateData.hospital = hospital;
-    if (location) updateData.location = location;
-    if (bio) updateData.bio = bio;
+      if (!isNaN(num)) {
+        updateData.experience = num;
+      }
+    }
+    if (hospital !== undefined) updateData.hospital = hospital;
+    if (location !== undefined) updateData.location = location;
+    if (bio !== undefined) updateData.bio = bio;
 
-    const updated = await doctorService.updateDoctorProfile(
-      doctorId,
-      updateData
-    );
+    // Upsert — creates record if it doesn't exist yet
+    const updated = await doctorService.updateDoctorProfile(doctorId, updateData);
+    
+    console.log("UPDATE DATA:", updateData);
 
-    res.json({
+    return res.status(200).json({
       success: true,
       data: updated,
     });
-
   } catch (err) {
-    console.error("UPDATE ERROR:", err);
-    res.status(500).json({
+    console.error("[updateDoctorMe] ERROR:", err.message);
+    return res.status(500).json({
       success: false,
       message: err.message,
     });
   }
+  
 };
 
-
-// UPLOAD IMAGE
+// ─── POST /api/doctors/me/image ───────────────────────────────────────────────
+/**
+ * Upload / replace the doctor's profile image.
+ * Uses upsert so it works even if the doctor has no MS2 record yet.
+ */
 export const uploadProfileImage = async (req, res) => {
   try {
-    console.log("FILE DEBUG:", req.file);
-
     if (!req.file) {
       return res.status(400).json({
         success: false,
@@ -106,48 +96,33 @@ export const uploadProfileImage = async (req, res) => {
 
     const doctorId = req.user.doctorId || req.user.roleId;
 
-    const doctor = await Doctor.findOne({ doctorId });
-
-    if (!doctor) {
-      return res.status(404).json({
+    if (!doctorId) {
+      return res.status(403).json({
         success: false,
-        message: "Doctor not found",
+        message: "Forbidden: no doctorId in token",
       });
     }
 
     const imageUrl = req.file.path || req.file.url;
-    const publicId =
-      req.file.filename ||
-      req.file.public_id ||
-      req.file.asset_id;
+    const publicId = req.file.filename || req.file.public_id || req.file.asset_id;
 
-    if (doctor.profileImage?.publicId) {
-      await cloudinary.uploader.destroy(doctor.profileImage.publicId);
-    }
+    // Upsert profile image (handles old-image cleanup internally)
+    const updated = await doctorService.updateProfileImage(doctorId, imageUrl, publicId);
 
-    doctor.profileImage = {
-      url: imageUrl,
-      publicId,
-    };
-
-    await doctor.save({ validateBeforeSave: false });
-
-    res.json({
+    return res.status(200).json({
       success: true,
-      data: doctor.profileImage,
+      data: updated?.profileImage || { url: imageUrl, publicId },
     });
-
   } catch (err) {
-    console.error("UPLOAD ERROR:", err);
-    res.status(500).json({
+    console.error("[uploadProfileImage] ERROR:", err.message);
+    return res.status(500).json({
       success: false,
       message: err.message,
     });
   }
 };
 
-
-// GET doctor
+// ─── GET /api/doctors/:id ─────────────────────────────────────────────────────
 export const getDoctor = async (req, res) => {
   try {
     const doctor = await doctorService.getDoctorByDoctorId(req.params.id);
@@ -159,60 +134,50 @@ export const getDoctor = async (req, res) => {
       });
     }
 
-    res.json({
+    return res.status(200).json({
       success: true,
       data: doctor,
     });
-
   } catch (err) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: err.message,
     });
   }
 };
 
-
-// 🔍 SEARCH + FILTER
+// ─── GET /api/doctors/search ──────────────────────────────────────────────────
 export const searchDoctors = async (req, res) => {
   try {
     const result = await doctorService.searchDoctors(req.query);
-
-    // 🔥 RETURN ONLY ARRAY
-    res.json(result.data);
-
-  } catch (error) {
-    console.error("❌ ERROR:", error);
-
-    res.status(500).json({
-      error: error.message
+    return res.status(200).json(result.data);
+  } catch (err) {
+    console.error("[searchDoctors] ERROR:", err.message);
+    return res.status(500).json({
+      success: false,
+      message: err.message,
     });
   }
 };
 
-
-// UPDATE doctor
+// ─── PUT /api/doctors/:id (admin) ─────────────────────────────────────────────
 export const updateDoctor = async (req, res) => {
   try {
-    if (req.params.id !== req.user.doctorId) {
+    if (req.params.id !== (req.user.doctorId || req.user.roleId)) {
       return res.status(403).json({
         success: false,
         message: "Forbidden",
       });
     }
 
-    const updated = await doctorService.updateDoctorByDoctorId(
-      req.params.id,
-      req.body
-    );
+    const updated = await doctorService.updateDoctorByDoctorId(req.params.id, req.body);
 
-    res.json({
+    return res.status(200).json({
       success: true,
       data: updated,
     });
-
   } catch (err) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: err.message,
     });
