@@ -6,6 +6,8 @@ const PatientProfile = require("../models/PatientProfile");
 const DoctorProfile = require("../models/DoctorProfile");
 const cloudinary = require("../config/cloudinary");
 
+const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || "http://localhost:5006/api/notifications/register";
+
 // Helper: Generate JWT token from userId and role
 const generateToken = (userId, role, roleId) => {
   return jwt.sign(
@@ -13,6 +15,29 @@ const generateToken = (userId, role, roleId) => {
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
   );
+};
+
+// helper for cross-service registration notification
+const sendRegistrationNotification = async ({ email, name, role }) => {
+  if (!email || !name || !role) return;
+
+  try {
+    const resp = await fetch(NOTIFICATION_SERVICE_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, name, role }),
+    });
+
+    if (!resp.ok) {
+      const text = await resp.text();
+      console.warn(`Notification service non-2xx response: ${resp.status} ${text}`);
+      return;
+    }
+
+    console.log(`✅ Registration notification posted for ${email}`);
+  } catch (err) {
+    console.warn("⚠️ Failed to post registration notification", err.message || err);
+  }
 };
 
 // ─── REGISTER ───────────────────────────────────────────────────────────────
@@ -94,6 +119,9 @@ const register = async (req, res, next) => {
         consultationFee,
       });
     }
+
+    // Notify notification-service (non-blocking)
+    sendRegistrationNotification({ email: user.email, name: user.name, role: user.role });
 
     // Generate token
     const token = generateToken(user.userId, user.role, user.roleId);
