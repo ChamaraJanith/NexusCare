@@ -49,7 +49,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-const PORT = process.env.PORT || 5005;
+const PORT = process.env.PORT || 5009;
 app.listen(PORT, () => {
   console.log(`🚀 Payment Service running on port ${PORT}`);
 });
