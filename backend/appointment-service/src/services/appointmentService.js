@@ -2,24 +2,32 @@ import Appointment from "../models/Appointment.js";
 import axios from "axios"; // 🔥 IMPORTANT (missing in your code)
 import { io } from "../app.js";
 
+const FEE_SERVICE_URL = process.env.FEE_SERVICE_URL || "http://localhost:5007";
+const INTERNAL_SERVICE_KEY = process.env.INTERNAL_SERVICE_KEY;
+
+
 
 // 🔥 STEP 3 → ADD THIS AT TOP (charges function)
-const calculateCharges = (type) => {
-  const doctorFee = 2000;
-  const serviceFee = 500;
-
-  let hospitalFee = 0;
-
-  if (type === "PHYSICAL") {
-    hospitalFee = 1000;
+const fetchCharges = async (doctorId, hospitalId, appointmentType) => {
+  try {
+    const { data } = await axios.post(
+      `${FEE_SERVICE_URL}/api/service-fee/calculate`,
+      { doctorId, hospitalId, appointmentType },
+      {
+        headers: { "x-internal-service-key": INTERNAL_SERVICE_KEY },
+        timeout: 5000,
+      }
+    );
+    if (data.success) return data.data;
+    throw new Error("Fee service returned failure");
+  } catch (err) {
+    console.error("❌ MS6 unreachable, using fallback fees:", err.message);
+    // Fallback — booking never breaks even if MS6 is down
+    const serviceFee = 500;
+    const doctorFee = 2000;
+    const hospitalFee = appointmentType === "PHYSICAL" ? 1000 : 0;
+    return { doctorFee, hospitalFee, serviceFee, total: doctorFee + hospitalFee + serviceFee };
   }
-
-  return {
-    doctorFee,
-    hospitalFee,
-    serviceFee,
-    total: doctorFee + serviceFee + hospitalFee
-  };
 };
 
 
@@ -74,7 +82,7 @@ export const createAppointment = async (data) => {
   const queueNumber = count + 1;
 
   // 💰 CALCULATE CHARGES
-  const charges = calculateCharges(appointmentType);
+  const charges = await fetchCharges(doctorId, data.hospitalId || null, appointmentType);
 
   const appointmentId = await generateAppointmentId();
 
