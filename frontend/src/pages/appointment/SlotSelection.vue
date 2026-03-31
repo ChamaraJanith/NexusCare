@@ -70,7 +70,7 @@
               <tr>
                 <th class="text-grey-4 text-weight-bold">DATE</th>
                 <th class="text-grey-4 text-weight-bold">TIME</th>
-                <th class="text-grey-4 text-weight-bold">NEXT AVAILABLE NUMBER</th>
+                <th class="text-grey-4 text-weight-bold">HOSPITAL</th>
                 <th class="text-grey-4 text-weight-bold">ACTIVE APPOINTMENTS</th>
                 <th class="text-grey-4 text-weight-bold">ACTION</th>
                 <th class="text-grey-4 text-weight-bold">STATUS</th>
@@ -78,24 +78,24 @@
             </thead>
             <tbody>
               <tr v-for="slot in physicalSlots" :key="slot._id || slot.startTime">
-                <td class="text-white">{{ slot.date }}</td>
-                <td class="text-blue-4 text-weight-medium">{{ slot.startTime }}</td>
-                <td class="text-white text-center">{{ slot.bookedCount + 1 }}</td>
+                <td class="text-white">{{ formatDate(slot.date) }}</td>
+                <td class="text-blue-4 text-weight-medium">{{ slot.startTime }} - {{ slot.endTime }}</td>
+                <td class="text-white">{{ slot.hospital }}</td>
                 <td class="text-white text-center">{{ slot.bookedCount }}</td>
                 <td>
                   <q-btn 
                     unelevated 
                     rounded 
-                    :color="isFull(slot) ? 'grey-8' : 'primary'"
-                    :disable="isFull(slot)"
+                    :color="slot.isBooked ? 'grey-8' : 'primary'"
+                    :disable="slot.isBooked"
                     class="action-btn text-weight-bold q-px-md text-caption"
-                    :label="isFull(slot) ? 'Unavailable' : 'Book Now'"
+                    :label="slot.isBooked ? 'Unavailable' : 'Book Now'"
                     @click="handleSlotBooking(slot, 'Physical')"
                   />
                 </td>
                 <td>
-                  <q-chip dense :color="isFull(slot) ? 'red-9' : 'green-9'" text-color="white" class="status-chip border-none shadow-none text-weight-bold">
-                    {{ isFull(slot) ? 'CLOSED' : 'Available' }}
+                  <q-chip dense :color="slot.isBooked ? 'red-9' : 'green-9'" text-color="white" class="status-chip border-none shadow-none text-weight-bold">
+                    {{ slot.isBooked ? 'Unavailable' : 'Available' }}
                   </q-chip>
                 </td>
               </tr>
@@ -118,7 +118,7 @@
               <tr>
                 <th class="text-grey-4 text-weight-bold">DATE</th>
                 <th class="text-grey-4 text-weight-bold">TIME</th>
-                <th class="text-grey-4 text-weight-bold">NEXT AVAILABLE NUMBER</th>
+                <th class="text-grey-4 text-weight-bold">PLATFORM</th>
                 <th class="text-grey-4 text-weight-bold">ACTIVE APPOINTMENTS</th>
                 <th class="text-grey-4 text-weight-bold">ACTION</th>
                 <th class="text-grey-4 text-weight-bold">STATUS</th>
@@ -126,24 +126,24 @@
             </thead>
             <tbody>
               <tr v-for="slot in onlineSlots" :key="slot._id || slot.startTime">
-                <td class="text-white">{{ slot.date }}</td>
-                <td class="text-blue-4 text-weight-medium">{{ slot.startTime }}</td>
-                <td class="text-white text-center">{{ slot.bookedCount + 1 }}</td>
+                <td class="text-white">{{ formatDate(slot.date) }}</td>
+                <td class="text-blue-4 text-weight-medium">{{ slot.startTime }} - {{ slot.endTime }}</td>
+                <td class="text-white">{{ slot.platform || "Zoom" }}</td>
                 <td class="text-white text-center">{{ slot.bookedCount }}</td>
                 <td>
                   <q-btn 
                     unelevated 
                     rounded 
-                    :color="isFull(slot) ? 'grey-8' : 'primary'"
-                    :disable="isFull(slot)"
+                    :color="slot.isBooked ? 'grey-8' : 'primary'"
+                    :disable="slot.isBooked"
                     class="action-btn text-weight-bold q-px-md text-caption"
-                    :label="isFull(slot) ? 'Unavailable' : 'Book Now'"
+                    :label="slot.isBooked ? 'Unavailable' : 'Book Now'"
                     @click="handleSlotBooking(slot, 'Online')"
                   />
                 </td>
                 <td>
-                  <q-chip dense :color="isFull(slot) ? 'red-9' : 'green-9'" text-color="white" class="status-chip border-none shadow-none text-weight-bold">
-                    {{ isFull(slot) ? 'CLOSED' : 'Available' }}
+                  <q-chip dense :color="slot.isBooked ? 'red-9' : 'green-9'" text-color="white" class="status-chip border-none shadow-none text-weight-bold">
+                    {{ slot.isBooked ? 'Unavailable' : 'Available' }}
                   </q-chip>
                 </td>
               </tr>
@@ -179,16 +179,19 @@ onMounted(() => {
   fetchSlots();
 });
 
-const isFull = (slot) => {
-  return slot.bookedCount >= slot.slotCount;
-};
+function formatDate(date) {
+  return new Date(date).toLocaleDateString();
+}
 
 const fetchSlots = async () => {
   loadingSlots.value = true;
   store.selectedDate = selectedDateStr.value;
   store.selectedSlot = null; 
   try {
-    const data = await getDoctorSlots(store.selectedDoctor._id || store.selectedDoctor.id, selectedDateStr.value);
+    console.log("SELECTED DOCTOR:", store.selectedDoctor);
+    const doctorId = store.selectedDoctor.doctorId || store.selectedDoctor._id || store.selectedDoctor.id;
+    const data = await getDoctorSlots(doctorId, selectedDateStr.value);
+    console.log("SLOTS FRONT:", data);
     physicalSlots.value = data.physical || [];
     onlineSlots.value = data.online || [];
     await store.fetchQueueNumber();
