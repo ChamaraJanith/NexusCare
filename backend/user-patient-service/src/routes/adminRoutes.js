@@ -9,6 +9,7 @@ const {
   verifyDoctor,
   getStats,
   deleteUser,
+  getAllDoctorFees,
 } = require("../controllers/adminController");
 const { protect, restrictTo } = require("../middleware/auth");
 
@@ -28,5 +29,7 @@ router.delete("/users/:userId", deleteUser);                    // Delete user
 // Doctor verification
 router.get("/doctors/pending", getPendingDoctors);              // List unverified doctors
 router.patch("/doctors/:doctorId/verify", verifyDoctor);        // Approve or reject doctor
+
+router.get("/doctors/fees", getAllDoctorFees);
 
 module.exports = router;
