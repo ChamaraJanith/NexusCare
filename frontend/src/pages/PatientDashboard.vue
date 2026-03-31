@@ -440,10 +440,19 @@
               </div>
               <div class="report-actions">
                 <button class="icon-btn-view" @click="openFile(r.fileUrl)">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                  </svg>
+                </button>
+                <button class="icon-btn-download" @click="openFile(r.fileUrl, true, r.title)">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                  </svg>
                 </button>
                 <button class="icon-btn-del" @click="deleteReport(r.reportId)">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                  </svg>
                 </button>
               </div>
             </div>
@@ -636,6 +645,40 @@
       </div>
     </q-dialog>
 
+    <!-- DELETE CONFIRM DIALOG -->
+    <q-dialog v-model="deleteConfirmDialog" persistent>
+      <div class="dialog-box">
+        <div class="dialog-header">
+          <span>Delete Report</span>
+          <button class="dialog-close" @click="deleteConfirmDialog = false">✕</button>
+        </div>
+        <div class="dialog-body">
+          <p style="color:#94a3b8; font-size:14px; margin:0;">
+            This report will be permanently deleted. This action cannot be undone.
+          </p>
+        </div>
+        <div class="dialog-footer">
+          <button class="btn-ghost" @click="deleteConfirmDialog = false" :disabled="deletingReport">
+            Cancel
+          </button>
+          <button
+            class="btn-save"
+            style="background: linear-gradient(135deg, #dc2626, #ef4444); min-width: 130px;"
+            @click="confirmDelete"
+            :disabled="deletingReport"
+          >
+            <span v-if="deletingReport" style="display:flex;align-items:center;gap:8px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="animation:spin 1s linear infinite">
+                <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
+              </svg>
+              Deleting...
+            </span>
+            <span v-else>Delete Report</span>
+          </button>
+        </div>
+      </div>
+    </q-dialog>
+
   </q-page>
 </template>
 
@@ -785,7 +828,39 @@ const calcAge = (dob) => {
 const fmtDate  = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
 const fmtDay   = (d) => d ? new Date(d).getDate() : '—'
 const fmtMonth = (d) => d ? new Date(d).toLocaleDateString('en-GB', { month: 'short' }).toUpperCase() : '—'
-const openFile = (url) => { if (url) window.open(url, '_blank') }
+const openFile = (url, download = false, title = '') => {
+  if (!url) return
+
+  if (download) {
+    fetch(url)
+      .then(res => res.blob())
+      .then(blob => {
+        // 🔥 title eka use karanna filename widiyata
+        const isPdf = url.includes('/raw/upload/') || url.endsWith('.pdf')
+        const ext = isPdf ? '.pdf' : ('.' + url.split('.').pop().split('?')[0])
+        const fileName = title ? (title + ext) : (url.split('/').pop().split('?')[0])
+
+        const blobUrl = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = blobUrl
+        a.download = fileName
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        window.URL.revokeObjectURL(blobUrl)
+      })
+      .catch(() => {
+        window.open(url, '_blank', 'noopener,noreferrer')
+      })
+  } else {
+    if (url.includes('/raw/upload/')) {
+      const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=false`
+      window.open(viewerUrl, '_blank', 'noopener,noreferrer')
+    } else {
+      window.open(url, '_blank', 'noopener,noreferrer')
+    }
+  }
+}
 const resetRForm = () => { rForm.title = ''; rForm.description = ''; rForm.file = null }
 const toggleRx = (id) => { expandedRx.value = expandedRx.value === id ? null : id }
 const statusClass = (s) => ({
@@ -897,12 +972,29 @@ const uploadReport = async () => {
   } finally { uploadingReport.value = false }
 }
 
+const deleteConfirmDialog = ref(false)
+const reportToDelete = ref(null)
+const deletingReport = ref(false)
+
 const deleteReport = (reportId) => {
-  $q.dialog({ title: 'Delete Report', message: 'This cannot be undone. Continue?', ok: { label: 'Delete', color: 'red', flat: true }, cancel: { label: 'Cancel', flat: true }, dark: true })
-    .onOk(async () => {
-      try { await api.delete(`/api/patient/reports/${reportId}`); await loadReports(); notify('Report deleted') }
-      catch { notify('Delete failed', 'negative') }
-    })
+  reportToDelete.value = reportId
+  deleteConfirmDialog.value = true
+}
+
+const confirmDelete = async () => {
+  deletingReport.value = true
+  try {
+    await api.delete(`/api/patient/reports/${reportToDelete.value}`)
+    deleteConfirmDialog.value = false
+    await loadReports()
+    notify('Report deleted')
+  } catch (e) {
+    console.error(e)
+    notify('Delete failed', 'negative')
+  } finally {
+    deletingReport.value = false
+    reportToDelete.value = null
+  }
 }
 
 const openEditAppt = (ap) => {
@@ -1625,6 +1717,26 @@ onMounted(async () => {
   transition: all 0.2s;
   white-space: nowrap;
 }
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.icon-btn-download {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: rgba(16,185,129,0.1);
+  color: #34d399;
+}
+.icon-btn-download:hover { background: rgba(16,185,129,0.2); }
+
 .btn-action:hover { background: rgba(6,182,212,0.2); transform: translateY(-1px); }
 
 .empty-state {
@@ -1923,4 +2035,5 @@ onMounted(async () => {
   .quick-actions-row { grid-template-columns: 1fr; }
   .header-left { flex-direction: column; align-items: flex-start; gap: 12px; }
 }
+
 </style>

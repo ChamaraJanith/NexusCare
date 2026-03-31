@@ -8,29 +8,35 @@ const cloudinary = require("../config/cloudinary");
 const profileImageStorage = new CloudinaryStorage({
   cloudinary,
   params: {
-    folder: "nexuscare/profile-images", // Cloudinary folder
+    folder: "nexuscare/profile-images",
     allowed_formats: ["jpg", "jpeg", "png", "webp"],
-    transformation: [{ width: 500, height: 500, crop: "fill" }], // Resize to square
+    transformation: [{ width: 500, height: 500, crop: "fill" }],
   },
 });
 
 // Storage config for medical reports (PDFs and images)
 const medicalReportStorage = new CloudinaryStorage({
   cloudinary,
-  params: {
-    folder: "nexuscare/medical-reports",
-    allowed_formats: ["pdf", "jpg", "jpeg", "png"],
-    resource_type: "auto", // Auto-detect file type (image or raw for PDF)
+  params: async (req, file) => {
+    const isPdf = file.mimetype === "application/pdf";
+    return {
+      folder: "nexuscare/medical-reports",
+      resource_type: isPdf ? "raw" : "image",
+      allowed_formats: isPdf ? ["pdf"] : ["jpg", "jpeg", "png"],
+    };
   },
 });
 
 // Storage config for doctor verification documents
 const verificationDocStorage = new CloudinaryStorage({
   cloudinary,
-  params: {
-    folder: "nexuscare/verification-docs",
-    allowed_formats: ["pdf", "jpg", "jpeg", "png"],
-    resource_type: "auto",
+  params: async (req, file) => {
+    const isPdf = file.mimetype === "application/pdf";
+    return {
+      folder: "nexuscare/verification-docs",
+      resource_type: isPdf ? "raw" : "image",
+      allowed_formats: isPdf ? ["pdf"] : ["jpg", "jpeg", "png"],
+    };
   },
 });
 

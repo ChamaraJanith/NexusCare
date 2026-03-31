@@ -164,12 +164,17 @@ const uploadMedicalReport = async (req, res, next) => {
     if (req.file.mimetype === "application/pdf") fileType = "pdf";
     else if (req.file.mimetype.startsWith("image/")) fileType = "image";
 
+    let fileUrl = req.file.path;
+    if (req.file.mimetype === "application/pdf") {
+      fileUrl = fileUrl.replace("/image/upload/", "/raw/upload/");
+    }
+
     // Create report entry
     const reportEntry = {
       reportId: uuidv4(), // Unique ID for this report
       title,
       description,
-      fileUrl: req.file.path,
+      fileUrl,
       publicId: req.file.filename,
       fileType,
       uploadedAt: new Date(),
