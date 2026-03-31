@@ -108,6 +108,7 @@
           {{ paymentStats.byStatus?.pending?.count }}
         </q-badge>
       </q-tab>
+      <q-tab name="fees" label="FEE MANAGEMENT" icon="account_balance_wallet" />
     </q-tabs>
 
     <q-tab-panels v-model="tab" animated transition-prev="fade" transition-next="fade" class="bg-transparent">
@@ -421,6 +422,166 @@
         </div>
       </q-tab-panel>
 
+      <!-- ══ FEE MANAGEMENT ════════════════════════════════════════ -->
+<q-tab-panel name="fees" class="q-pa-none">
+  <div class="nexus-panel q-pa-xl">
+
+    <!-- Service Fee -->
+    <div class="panel-header q-mb-lg">
+      <q-icon name="settings" color="blue-4" class="q-mr-sm" />
+      <span class="font-sora text-white uppercase">Platform Service Fee</span>
+    </div>
+    <div class="row q-col-gutter-md q-mb-xl items-end">
+      <div class="col-12 col-sm-4">
+        <div class="field-label q-mb-xs">SERVICE FEE (LKR)</div>
+        <q-input v-model.number="serviceFeeAmount" type="number" min="0"
+          dark outlined color="blue-4" dense class="nexus-field-blue" />
+      </div>
+      <div class="col-12 col-sm-4">
+        <div class="field-label q-mb-xs">DESCRIPTION</div>
+        <q-input v-model="serviceFeeDesc" dark outlined color="blue-4" dense class="nexus-field-blue" />
+      </div>
+      <div class="col-auto">
+        <q-btn label="UPDATE" color="blue-8" class="font-sora"
+          :loading="updatingServiceFee" @click="doUpdateServiceFee" />
+      </div>
+    </div>
+
+    <q-separator dark class="q-mb-xl" />
+
+    <!-- Hospitals -->
+    <div class="panel-header q-mb-lg">
+      <q-icon name="local_hospital" color="cyan-4" class="q-mr-sm" />
+      <span class="font-sora text-white uppercase">Hospital Registry</span>
+      <q-space />
+      <q-btn flat icon="add" label="ADD HOSPITAL" color="cyan-4" class="font-sora text-caption"
+        @click="hospitalDlg.show = true; hospitalDlg.editing = false" />
+    </div>
+
+    <div v-if="loadingHospitals" class="q-gutter-y-sm">
+      <q-skeleton v-for="i in 3" :key="i" type="rect" dark height="60px" class="rounded-borders" />
+    </div>
+    <div v-else class="q-gutter-y-sm q-mb-xl">
+      <div v-for="h in hospitals" :key="h.hospitalId" class="user-row q-pa-md row items-center">
+        <div class="col-12 col-md-3">
+          <div class="text-white font-sora text-subtitle2">{{ h.name }}</div>
+          <div class="text-grey-6 text-caption">{{ h.location }}</div>
+        </div>
+        <div class="col-auto q-mr-lg">
+          <q-chip dense dark color="cyan-10" class="font-sora" style="font-size:0.55rem">{{ h.hospitalId }}</q-chip>
+        </div>
+        <div class="col-12 col-md-2">
+          <div class="text-green-4 font-sora text-subtitle2">LKR {{ (h.hospitalFee || 0).toLocaleString() }}</div>
+          <div class="text-grey-7 font-sora" style="font-size:0.6rem">hospital fee</div>
+        </div>
+        <div class="col-auto q-mx-md">
+          <q-badge :color="h.isActive ? 'green-9' : 'red-9'" class="font-sora" style="font-size:0.55rem">
+            {{ h.isActive ? '● ACTIVE' : '○ INACTIVE' }}
+          </q-badge>
+        </div>
+        <div class="col-auto row q-gutter-xs">
+          <q-btn flat round dense size="sm" icon="edit" color="blue-4" @click="openEditHospital(h)" />
+          <q-btn flat round dense size="sm" icon="delete_outline" color="red-5" @click="doDeleteHospital(h)" />
+        </div>
+      </div>
+      <div v-if="hospitals.length === 0" class="empty-state q-pa-xl">
+        <q-icon name="local_hospital" size="4rem" color="grey-9" />
+        <div class="font-sora text-grey-8 q-mt-md">NO HOSPITALS REGISTERED</div>
+      </div>
+    </div>
+
+    <q-separator dark class="q-mb-xl" />
+
+    <!-- Doctor Fees (from MS1) -->
+    <div class="panel-header q-mb-lg">
+      <q-icon name="medical_services" color="orange-4" class="q-mr-sm" />
+      <span class="font-sora text-white uppercase">Doctor Consultation Fees</span>
+      <q-chip dense dark color="grey-9" class="font-sora q-ml-md" style="font-size:0.5rem">
+        SOURCE: MS1 — DOCTOR PROFILES
+      </q-chip>
+    </div>
+
+    <div v-if="loadingDoctorFees" class="q-gutter-y-sm">
+      <q-skeleton v-for="i in 4" :key="i" type="rect" dark height="60px" class="rounded-borders" />
+    </div>
+    <div v-else class="q-gutter-y-sm">
+      <div v-for="doc in doctorFeeList" :key="doc.doctorId" class="user-row q-pa-md row items-center">
+        <div class="col-12 col-md-4">
+          <div class="text-white font-sora text-subtitle2">{{ doc.name }}</div>
+          <div class="text-grey-6 text-caption">{{ doc.email }}</div>
+        </div>
+        <div class="col-12 col-md-2">
+          <q-chip dense dark color="orange-10" class="font-sora" style="font-size:0.55rem">{{ doc.doctorId }}</q-chip>
+        </div>
+        <div class="col-12 col-md-2">
+          <div class="text-orange-4 font-sora text-subtitle2">LKR {{ (doc.consultationFee || 0).toLocaleString() }}</div>
+          <div class="text-grey-7 font-sora" style="font-size:0.6rem">consultation fee</div>
+        </div>
+        <div class="col text-grey-6 text-caption font-sora">{{ doc.specialty }}</div>
+        <div class="col-auto">
+          <q-btn flat round dense size="sm" icon="edit" color="blue-4" @click="openEditDoctorFee(doc)">
+            <q-tooltip class="font-sora bg-dark">Edit fee</q-tooltip>
+          </q-btn>
+        </div>
+      </div>
+      <div v-if="doctorFeeList.length === 0" class="empty-state q-pa-xl">
+        <q-icon name="medical_services" size="4rem" color="grey-9" />
+        <div class="font-sora text-grey-8 q-mt-md">NO DOCTORS FOUND</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hospital Dialog -->
+  <q-dialog v-model="hospitalDlg.show" persistent>
+    <q-card class="dialog-card q-pa-xl" style="min-width:420px">
+      <div class="card-accent-bar q-mb-lg"></div>
+      <div class="font-sora text-white uppercase q-mb-lg">
+        {{ hospitalDlg.editing ? 'Edit Hospital' : 'Register Hospital' }}
+      </div>
+      <div class="field-label q-mb-xs">HOSPITAL NAME *</div>
+      <q-input v-model="hospitalDlg.form.name" dark outlined color="blue-4" dense class="nexus-field q-mb-md" />
+      <div class="field-label q-mb-xs">LOCATION</div>
+      <q-input v-model="hospitalDlg.form.location" dark outlined color="blue-4" dense class="nexus-field q-mb-md" />
+      <div class="field-label q-mb-xs">CONTACT</div>
+      <q-input v-model="hospitalDlg.form.contactNumber" dark outlined color="blue-4" dense class="nexus-field q-mb-md" />
+      <div class="field-label q-mb-xs">EMAIL</div>
+      <q-input v-model="hospitalDlg.form.email" dark outlined color="blue-4" dense class="nexus-field q-mb-md" />
+      <div class="field-label q-mb-xs">HOSPITAL FEE (LKR) *</div>
+      <q-input v-model.number="hospitalDlg.form.hospitalFee" type="number" min="0"
+        dark outlined color="blue-4" dense class="nexus-field q-mb-md" />
+      <div v-if="hospitalDlg.editing" class="row items-center q-mb-lg">
+        <div class="field-label q-mr-md">ACTIVE</div>
+        <q-toggle v-model="hospitalDlg.form.isActive" color="green" />
+      </div>
+      <div class="row q-gutter-sm justify-end">
+        <q-btn flat label="CANCEL" color="grey-6" class="font-sora" v-close-popup />
+        <q-btn :label="hospitalDlg.editing ? 'UPDATE' : 'REGISTER'" color="blue-8" class="font-sora"
+          :loading="hospitalDlg.loading" @click="doSaveHospital" />
+      </div>
+    </q-card>
+  </q-dialog>
+
+  <!-- Edit Doctor Fee Dialog -->
+  <q-dialog v-model="editingDoctorFee.show" persistent>
+    <q-card class="dialog-card q-pa-xl" style="min-width:380px">
+      <div class="card-accent-bar q-mb-lg"></div>
+      <div class="font-sora text-white uppercase q-mb-xs">Edit Consultation Fee</div>
+      <div class="text-grey-6 text-caption q-mb-lg">
+        {{ editingDoctorFee.name }}
+        <span class="text-orange-4 q-ml-xs">{{ editingDoctorFee.doctorId }}</span>
+      </div>
+      <div class="field-label q-mb-xs">CONSULTATION FEE (LKR) *</div>
+      <q-input v-model.number="editingDoctorFee.fee" type="number" min="0"
+        dark outlined color="blue-4" class="nexus-field q-mb-lg" />
+      <div class="row q-gutter-sm justify-end">
+        <q-btn flat label="CANCEL" color="grey-6" class="font-sora" v-close-popup />
+        <q-btn label="SAVE" color="orange-8" class="font-sora"
+          :loading="editingDoctorFee.loading" @click="doSaveDoctorFee" />
+      </div>
+    </q-card>
+  </q-dialog>
+</q-tab-panel>
+
     </q-tab-panels>
   </q-page>
 </template>
@@ -460,6 +621,129 @@ const loadingPayments = ref(false)
 const paymentStatusFilter = ref('')
 const paymentPage = ref(1)
 const paymentTotalPages = ref(1)
+
+
+
+// Fee Management
+const feeApi = axios.create({
+  baseURL: 'http://localhost:5007',
+  headers: { Authorization: `Bearer ${token}` }
+})
+
+const serviceFeeAmount = ref(500)
+const serviceFeeDesc = ref('Platform service fee')
+const updatingServiceFee = ref(false)
+
+const hospitals = ref([])
+const loadingHospitals = ref(false)
+
+// Doctor fees — fetched from MS1 via admin endpoint
+const doctorFeeList = ref([])
+const loadingDoctorFees = ref(false)
+const editingDoctorFee = reactive({ show: false, doctorId: '', name: '', fee: 0, loading: false })
+
+const hospitalDlg = reactive({
+  show: false, editing: false, editId: null, loading: false,
+  form: { name: '', location: '', contactNumber: '', email: '', hospitalFee: 0, isActive: true }
+})
+
+const loadServiceFee = async () => {
+  try {
+    const { data } = await feeApi.get('/api/service-fee')
+    serviceFeeAmount.value = data.data?.amount || 500
+    serviceFeeDesc.value = data.data?.description || 'Platform service fee'
+  } catch (err) { console.error('loadServiceFee:', err) }
+}
+
+const loadHospitals = async () => {
+  loadingHospitals.value = true
+  try {
+    const { data } = await feeApi.get('/api/hospitals')
+    hospitals.value = data.data
+  } finally { loadingHospitals.value = false }
+}
+
+// Fetches all doctor fees from MS1 (single source of truth)
+const loadDoctorFees = async () => {
+  loadingDoctorFees.value = true
+  try {
+    const { data } = await api.get('/api/admin/doctors/fees')
+    doctorFeeList.value = data.data
+  } catch (err) { console.error('loadDoctorFees:', err) }
+  finally { loadingDoctorFees.value = false }
+}
+
+const doUpdateServiceFee = async () => {
+  updatingServiceFee.value = true
+  try {
+    await feeApi.put('/api/service-fee', { amount: serviceFeeAmount.value, description: serviceFeeDesc.value })
+    $q.notify({ type: 'positive', message: 'Service fee updated', position: 'top-right' })
+  } catch { $q.notify({ type: 'negative', message: 'Failed', position: 'top-right' }) }
+  finally { updatingServiceFee.value = false }
+}
+
+const openEditDoctorFee = (doc) => {
+  editingDoctorFee.doctorId = doc.doctorId
+  editingDoctorFee.name = doc.name
+  editingDoctorFee.fee = doc.consultationFee
+  editingDoctorFee.show = true
+}
+
+// Saves directly to MS1 DoctorProfile
+const doSaveDoctorFee = async () => {
+  editingDoctorFee.loading = true
+  try {
+    await api.patch(`/api/auth/doctors/${editingDoctorFee.doctorId}/fee`, {
+      consultationFee: editingDoctorFee.fee
+    })
+    $q.notify({ type: 'positive', message: 'Doctor fee updated', position: 'top-right' })
+    editingDoctorFee.show = false
+    await loadDoctorFees()
+  } catch (err) {
+    $q.notify({ type: 'negative', message: err.response?.data?.message || 'Failed', position: 'top-right' })
+  } finally { editingDoctorFee.loading = false }
+}
+
+const doSaveHospital = async () => {
+  hospitalDlg.loading = true
+  try {
+    if (hospitalDlg.editing) {
+      await feeApi.put(`/api/hospitals/${hospitalDlg.editId}`, hospitalDlg.form)
+      $q.notify({ type: 'positive', message: 'Hospital updated', position: 'top-right' })
+    } else {
+      await feeApi.post('/api/hospitals', hospitalDlg.form)
+      $q.notify({ type: 'positive', message: 'Hospital registered', position: 'top-right' })
+    }
+    hospitalDlg.show = false
+    hospitalDlg.editing = false
+    hospitalDlg.form = { name: '', location: '', contactNumber: '', email: '', hospitalFee: 0, isActive: true }
+    await loadHospitals()
+  } catch (err) {
+    $q.notify({ type: 'negative', message: err.response?.data?.message || 'Failed', position: 'top-right' })
+  } finally { hospitalDlg.loading = false }
+}
+
+const openEditHospital = (h) => {
+  hospitalDlg.editing = true
+  hospitalDlg.editId = h.hospitalId
+  hospitalDlg.form = { name: h.name, location: h.location, contactNumber: h.contactNumber, email: h.email, hospitalFee: h.hospitalFee, isActive: h.isActive }
+  hospitalDlg.show = true
+}
+
+const doDeleteHospital = (h) => {
+  $q.dialog({
+    title: 'Delete Hospital', dark: true,
+    message: `Remove ${h.name} from the registry?`,
+    ok: { label: 'DELETE', color: 'red', flat: true },
+    cancel: { label: 'CANCEL', flat: true }
+  }).onOk(async () => {
+    try {
+      await feeApi.delete(`/api/hospitals/${h.hospitalId}`)
+      $q.notify({ type: 'positive', message: 'Hospital removed', position: 'top-right' })
+      await loadHospitals()
+    } catch { $q.notify({ type: 'negative', message: 'Delete failed', position: 'top-right' }) }
+  })
+}
 
 const ddStyle = {
   backgroundColor: 'rgba(7,15,32,0.96)',
@@ -528,7 +812,7 @@ const debouncedLoad = () => { clearTimeout(searchTimer); searchTimer = setTimeou
 
 // ── Load functions ────────────────────────────────────────────────
 const loadAll = async () => {
-  await Promise.all([loadStats(), loadUsers(), loadPendingDocs(), loadPaymentStats(), loadPayments()])
+  await Promise.all([loadStats(), loadUsers(), loadPendingDocs(), loadPaymentStats(), loadPayments(),loadServiceFee(), loadHospitals(), loadDoctorFees(),])
 }
 
 const loadStats = async () => {

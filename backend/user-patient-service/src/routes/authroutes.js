@@ -8,8 +8,10 @@ const {
   verifyToken,
   changePassword,
   searchDoctorsByName,
+  getDoctorFee,
+  updateDoctorFee,
 } = require("../controllers/authcontroller");
-const { protect } = require("../middleware/auth");
+const { protect, restrictTo } = require("../middleware/auth");
 
 // Public routes (no token needed)
 router.post("/register", register);       // Register patient, doctor, or admin
@@ -20,5 +22,11 @@ router.post("/doctors/search", searchDoctorsByName); // Used by MS2 for name res
 // Protected routes (token required)
 router.get("/me", protect, getMe);                          // Get current user info
 router.patch("/change-password", protect, changePassword);  // Change password
+
+// Internal: MS6 fetches doctor fee
+router.get("/doctors/fee/:doctorId", getDoctorFee);
+
+// Admin: update a doctor's consultation fee
+router.patch("/doctors/:doctorId/fee", protect, restrictTo("admin"), updateDoctorFee);
 
 module.exports = router;

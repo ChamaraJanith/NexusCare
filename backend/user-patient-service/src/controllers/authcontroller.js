@@ -389,6 +389,59 @@ const searchDoctorsByName = async (req, res, next) => {
   }
 };
 
+// ─── GET DOCTOR FEE (internal — called by MS6) ─────────────────────────────
+// GET /api/auth/doctors/fee/:doctorId
+const getDoctorFee = async (req, res, next) => {
+  try {
+    const internalKey = req.headers["x-internal-service-key"];
+    if (internalKey !== process.env.INTERNAL_SERVICE_KEY) {
+      return res.status(403).json({ success: false, message: "Unauthorized." });
+    }
+
+    const { doctorId } = req.params;
+    const profile = await DoctorProfile.findOne({ doctorId });
+
+    if (!profile) {
+      return res.status(404).json({ success: false, message: "Doctor not found." });
+    }
+
+    res.json({ success: true, consultationFee: profile.consultationFee || 0 });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── UPDATE DOCTOR FEE (admin only) ─────────────────────────────────────────
+// PATCH /api/auth/doctors/:doctorId/fee
+const updateDoctorFee = async (req, res, next) => {
+  try {
+    const { doctorId } = req.params;
+    const { consultationFee } = req.body;
+
+    if (consultationFee === undefined || isNaN(Number(consultationFee))) {
+      return res.status(400).json({ success: false, message: "consultationFee is required." });
+    }
+
+    const profile = await DoctorProfile.findOneAndUpdate(
+      { doctorId },
+      { consultationFee: Number(consultationFee) },
+      { new: true }
+    );
+
+    if (!profile) {
+      return res.status(404).json({ success: false, message: "Doctor not found." });
+    }
+
+    res.json({
+      success: true,
+      message: "Doctor consultation fee updated.",
+      data: { doctorId, consultationFee: profile.consultationFee },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -396,4 +449,6 @@ module.exports = {
   verifyToken,
   changePassword,
   searchDoctorsByName,
+  getDoctorFee,
+  updateDoctorFee,
 };

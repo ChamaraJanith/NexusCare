@@ -295,6 +295,36 @@ const deleteUser = async (req, res, next) => {
   }
 };
 
+// GET /api/admin/doctors/fees
+// Returns all doctors with their current consultationFee
+const getAllDoctorFees = async (req, res, next) => {
+  try {
+    const doctors = await DoctorProfile.find().select(
+      "doctorId specialty hospital consultationFee isVerified"
+    );
+
+    // Hydrate with names from User collection
+    const result = await Promise.all(
+      doctors.map(async (profile) => {
+        const user = await User.findOne({ roleId: profile.doctorId }).select("name email");
+        return {
+          doctorId: profile.doctorId,
+          name: user?.name || "Unknown",
+          email: user?.email || "",
+          specialty: profile.specialty,
+          hospital: profile.hospital,
+          consultationFee: profile.consultationFee || 0,
+          isVerified: profile.isVerified,
+        };
+      })
+    );
+
+    res.json({ success: true, count: result.length, data: result });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getAllUsers,
   getUserById,
@@ -303,4 +333,5 @@ module.exports = {
   verifyDoctor,
   getStats,
   deleteUser,
+  getAllDoctorFees,
 };
