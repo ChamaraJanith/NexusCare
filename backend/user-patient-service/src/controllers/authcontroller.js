@@ -40,6 +40,36 @@ const sendRegistrationNotification = async ({ email, name, role }) => {
   }
 };
 
+const NOTIFICATION_SERVICE_SMS_URL = process.env.NOTIFICATION_SERVICE_SMS_URL || "http://localhost:5006/api/notifications/send-sms";
+
+const sendRegistrationSMS = async ({ phoneNumber, name, role }) => {
+  if (!phoneNumber || !name || !role) return;
+
+  // Optional: Sri Lanka-only (uncomment if needed)
+  // if (!/^\+94\d{9}$/.test(phoneNumber)) return;
+
+  const displayRole = role === "doctor" ? "Doctor" : "Patient";
+  const message = `Hello ${name}, your ${displayRole.toLowerCase()} account has been created successfully on NexusCare.`;
+
+  try {
+    const resp = await fetch(NOTIFICATION_SERVICE_SMS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phoneNumber, message }),
+    });
+
+    if (!resp.ok) {
+      const text = await resp.text();
+      console.warn(`SMS service non-2xx response: ${resp.status} ${text}`);
+      return;
+    }
+
+    console.log(`✅ Registration SMS queued for ${phoneNumber}`);
+  } catch (err) {
+    console.warn("⚠️ Failed to post registration SMS", err.message || err);
+  }
+};
+
 // ─── REGISTER ───────────────────────────────────────────────────────────────
 // POST /api/auth/register
 // Body: { name, email, password, phone, role, ...role-specific fields }
@@ -122,6 +152,7 @@ const register = async (req, res, next) => {
 
     // Notify notification-service (non-blocking)
     sendRegistrationNotification({ email: user.email, name: user.name, role: user.role });
+    sendRegistrationSMS({ phoneNumber: phone, name: user.name, role: user.role });
 
     // Generate token
     const token = generateToken(user.userId, user.role, user.roleId);
