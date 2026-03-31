@@ -62,9 +62,14 @@ const appointmentSchema = new mongoose.Schema({
     default: "PENDING"
   },
 
+  hospitalId: {
+    type: String,
+    default: null,
+  },
+
   queueNumber: {
-  type: Number
-}
+    type: Number
+  }
 
 }, { timestamps: true });
 
