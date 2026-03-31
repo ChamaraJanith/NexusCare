@@ -23,6 +23,20 @@ const routes = [
       // AI Symptom Checker
       { path: 'symptoms', component: () => import('pages/SymptomChecker.vue') },
 
+      // Explicit Request: /search pointing to Search Page
+      { path: 'search', component: () => import('pages/appointment/SearchPage.vue') },
+      // Map /appointment to Search Page as well
+      { path: 'appointment', component: () => import('pages/appointment/SearchPage.vue') },
+      
+       // Appointment Booking Flow
+      { path: 'appointment/results', component: () => import('pages/appointment/DoctorResults.vue') },
+      { path: 'appointment/book/:doctorId', component: () => import('pages/appointment/SlotSelection.vue') },
+      { path: 'appointment/form', component: () => import('pages/appointment/PatientForm.vue') },
+      { path: 'appointment/summary', component: () => import('pages/appointment/SummaryPage.vue') },
+      { path: 'appointment/payment', component: () => import('pages/appointment/PaymentPage.vue') },
+      { path: 'appointment/receipt', component: () => import('pages/appointment/ReceiptPage.vue') },
+      { path: 'patient/appointments', component: () => import('pages/appointment/MyAppointments.vue') },
+
       // Video
       { path: 'video', component: () => import('pages/VideoSession.vue') },
       { path: 'doctorVideo', name: 'DoctorVideo', component: () => import('pages/Doctor_Video.vue') },
