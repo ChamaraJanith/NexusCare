@@ -1,5 +1,20 @@
 import Doctor from "../models/Doctor.js";
 import * as doctorService from "../services/doctorService.js";
+import cloudinary from "../config/cloudinary.js";
+import streamifier from "streamifier";
+
+const streamUpload = (buffer) => {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder: "nexuscare/doctors" },
+      (error, result) => {
+        if (result) resolve(result);
+        else reject(error);
+      }
+    );
+    streamifier.createReadStream(buffer).pipe(stream);
+  });
+};
 
 // ─── GET /api/doctors/me ──────────────────────────────────────────────────────
 export const getDoctorMe = async (req, res) => {
@@ -86,11 +101,17 @@ export const updateDoctorMe = async (req, res) => {
  */
 export const uploadProfileImage = async (req, res) => {
   try {
-    // ── DEBUG: log entire request pipeline state ──
+    // ── DEBUG: log request pipeline state ──
     console.log("[uploadProfileImage] ── REQUEST DEBUG ──");
-    console.log("[uploadProfileImage] req.user:", JSON.stringify(req.user, null, 2));
-    console.log("[uploadProfileImage] req.file:", JSON.stringify(req.file, null, 2));
-    console.log("[uploadProfileImage] req.headers.content-type:", req.headers["content-type"]);
+    console.log("[uploadProfileImage] req.user:", req.user);
+    if (req.file) {
+      console.log("[uploadProfileImage] file info:", {
+        originalname: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size
+      });
+    }
+    console.log("[uploadProfileImage] content-type:", req.headers["content-type"]);
     console.log("[uploadProfileImage] req.body keys:", Object.keys(req.body || {}));
 
     // ── Validate auth ──
@@ -122,9 +143,10 @@ export const uploadProfileImage = async (req, res) => {
       });
     }
 
-    // Local disk storage: build URL path from the uploaded filename
-    const imageUrl = `/uploads/${req.file.filename}`;
-    console.log("[uploadProfileImage] imageUrl to save:", imageUrl);
+    // Upload directly to Cloudinary from memory buffer
+    const result = await streamUpload(req.file.buffer);
+    const imageUrl = result.secure_url;
+    console.log("[uploadProfileImage] Cloudinary imageUrl to save:", imageUrl);
 
     // ── Verify doctor exists before update ──
     const existingDoc = await Doctor.findOne({ doctorId });
