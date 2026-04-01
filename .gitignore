@@ -32,3 +32,14 @@ frontend/.cache/
 Thumbs.db
 .idea/
 .vscode/
+
+# Uploads (profile images)
+uploads/
+backend/doctor-service/uploads/
+**/uploads/
+
+# Image files (optional - safer)
+*.jpg
+*.jpeg
+*.png
+*.webp

@@ -2,6 +2,8 @@ import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
 
 import doctorRoutes from "./routes/doctor.routes.js";
 import availabilityRoutes from "./routes/availability.routes.js";
@@ -15,10 +17,48 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// 🔹 Serve uploaded profile images as static files
+app.use("/uploads", express.static("uploads"));
+
 // 🔹 Routes
 app.use("/api/doctors", doctorRoutes);
 app.use("/api/availability", availabilityRoutes);
 app.use("/api/prescriptions", prescriptionRoutes); // 🔥 ADD THIS
+
+// 🔹 Global Error Handler for upload/multer errors
+app.use((err, req, res, next) => {
+  console.error("❌ Global Error Handler:", err);
+  console.error("❌ Error name:", err.name);
+  console.error("❌ Error code:", err.code);
+  console.error("❌ Error field:", err.field);
+  console.error("❌ Error stack:", err.stack);
+
+  // Multer-specific errors (wrong field name, file too large, etc.)
+  if (err.name === "MulterError") {
+    const statusMap = {
+      LIMIT_FILE_SIZE: 413,
+      LIMIT_UNEXPECTED_FILE: 400,
+    };
+    const status = statusMap[err.code] || 400;
+    return res.status(status).json({
+      success: false,
+      message: `Upload error: ${err.message} (code: ${err.code}, field: ${err.field || "unknown"})`,
+    });
+  }
+
+  // Multer file-filter rejection (custom error thrown in fileFilter)
+  if (err.message && err.message.includes("Only image files")) {
+    return res.status(400).json({
+      success: false,
+      message: err.message,
+    });
+  }
+
+  res.status(500).json({
+    success: false,
+    message: err.message || "Internal Server Error",
+  });
+});
 
 // 🔹 Health Check
 app.get("/", (req, res) => {

@@ -1,16 +1,3 @@
-import multer from 'multer';
-import { CloudinaryStorage } from 'multer-storage-cloudinary';
-import cloudinary from '../config/cloudinary.js';
-
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: 'nexuscare_doctors',
-    allowed_formats: ['jpg', 'png', 'jpeg', 'webp'],
-  },
-});
-
-export const upload = multer({ 
-  storage: storage,
-  limits: { fileSize: 2 * 1024 * 1024 } // 2MB limit
-});
+// Re-export the multer upload instance from the centralized config
+// so existing route imports (`from "../middleware/uploadMiddleware.js"`) keep working.
+export { upload } from "../config/multer.js";

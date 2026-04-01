@@ -5,7 +5,7 @@
       <!-- Left: Circular image -->
       <q-avatar size="72px" class="q-mr-lg doctor-avatar shadow-lg">
         <img 
-          :src="doctor.profileImage?.url || defaultAvatar" 
+          :src="resolvedImage" 
           class="w-16 h-16 rounded-full object-cover"
           @error="imgErr=true" 
           v-if="!imgErr" 
@@ -63,11 +63,24 @@
 <script setup>
 import { ref, computed } from 'vue';
 
+const DOCTOR_SERVICE_URL =
+  import.meta.env?.VITE_DOCTOR_SERVICE_URL || 'http://localhost:5002';
+
 const defaultAvatar = "/images/doctor.png";
 
 const props = defineProps({ doctor: { type: Object, required: true } });
 defineEmits(['book']);
 const imgErr = ref(false);
+
+const resolvedImage = computed(() => {
+  const img = props.doctor.profileImage;
+  if (!img) return defaultAvatar;
+  const url = typeof img === 'string' ? img : img.url;
+  if (!url) return defaultAvatar;
+  if (url.startsWith('http')) return url;
+  return `${DOCTOR_SERVICE_URL}${url}`;
+});
+
 const initials = computed(() => {
   if (!props.doctor.name) return 'DR';
   const parts = props.doctor.name.replace('Dr.', '').trim().split(' ');

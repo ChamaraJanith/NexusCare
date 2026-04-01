@@ -1,5 +1,4 @@
 import Doctor from "../models/Doctor.js";
-import cloudinary from "../config/cloudinary.js";
 import * as doctorService from "../services/doctorService.js";
 
 // ─── GET /api/doctors/me ──────────────────────────────────────────────────────
@@ -87,34 +86,60 @@ export const updateDoctorMe = async (req, res) => {
  */
 export const uploadProfileImage = async (req, res) => {
   try {
+    // ── DEBUG: log entire request pipeline state ──
+    console.log("[uploadProfileImage] ── REQUEST DEBUG ──");
+    console.log("[uploadProfileImage] req.user:", JSON.stringify(req.user, null, 2));
+    console.log("[uploadProfileImage] req.file:", JSON.stringify(req.file, null, 2));
+    console.log("[uploadProfileImage] req.headers.content-type:", req.headers["content-type"]);
+    console.log("[uploadProfileImage] req.body keys:", Object.keys(req.body || {}));
+
+    // ── Validate auth ──
+    if (!req.user) {
+      console.error("[uploadProfileImage] FAIL: req.user is missing — auth middleware did not run");
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized: no user context",
+      });
+    }
+
+    // ── Validate file ──
     if (!req.file) {
+      console.error("[uploadProfileImage] FAIL: req.file is missing — multer did not process any file");
       return res.status(400).json({
         success: false,
-        message: "No file uploaded",
+        message: "No file uploaded. Ensure the field name is 'image' and the request is multipart/form-data.",
       });
     }
 
     const doctorId = req.user.doctorId || req.user.roleId;
+    console.log("[uploadProfileImage] Resolved doctorId:", doctorId);
 
     if (!doctorId) {
+      console.error("[uploadProfileImage] FAIL: no doctorId in token payload");
       return res.status(403).json({
         success: false,
         message: "Forbidden: no doctorId in token",
       });
     }
 
-    const imageUrl = req.file.path || req.file.url;
-    const publicId = req.file.filename || req.file.public_id || req.file.asset_id;
+    // Local disk storage: build URL path from the uploaded filename
+    const imageUrl = `/uploads/${req.file.filename}`;
+    console.log("[uploadProfileImage] imageUrl to save:", imageUrl);
 
-    // Upsert profile image (handles old-image cleanup internally)
-    const updated = await doctorService.updateProfileImage(doctorId, imageUrl, publicId);
+    // ── Verify doctor exists before update ──
+    const existingDoc = await Doctor.findOne({ doctorId });
+    console.log("[uploadProfileImage] Existing doctor record:", existingDoc ? "FOUND" : "NOT FOUND (will upsert)");
+
+    const updated = await doctorService.updateProfileImage(doctorId, imageUrl);
+    console.log("[uploadProfileImage] DB update result:", JSON.stringify(updated, null, 2));
 
     return res.status(200).json({
       success: true,
-      data: updated?.profileImage || { url: imageUrl, publicId },
+      data: updated?.profileImage || imageUrl,
     });
   } catch (err) {
-    console.error("[uploadProfileImage] ERROR:", err.message);
+    console.error("[uploadProfileImage] ERROR:", err);
+    console.error("[uploadProfileImage] ERROR stack:", err.stack);
     return res.status(500).json({
       success: false,
       message: err.message,
