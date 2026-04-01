@@ -16,10 +16,11 @@ const doctorSchema = new mongoose.Schema(
       index: true,
     },
 
-    // Cloudinary profile image
+    // Profile image — stores a URL path string (e.g. "/uploads/1234.jpg")
+    // Also supports legacy Cloudinary object format { url, publicId }
     profileImage: {
-      url: { type: String },
-      publicId: { type: String },
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
     },
 
     // Years of clinical experience

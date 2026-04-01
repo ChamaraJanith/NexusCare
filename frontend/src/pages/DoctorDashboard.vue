@@ -65,7 +65,7 @@
         <!-- Doctor Profile -->
         <div class="row items-center no-wrap">
           <q-avatar size="36px" class="q-mr-sm" style="background: #e8e8e8;">
-            <img v-if="identity.profileImage" :src="identity.profileImage" />
+            <img v-if="resolvedProfileImage" :src="resolvedProfileImage" />
             <img v-else src="https://cdn.quasar.dev/img/avatar.png" />
           </q-avatar>
           <div class="column gt-xs">
@@ -313,6 +313,18 @@ const doctorDisplayName = computed(() => {
     || identity.value.firstName
     || professional.value.name
     || 'Doctor';
+});
+
+const DOCTOR_SERVICE_URL =
+  import.meta.env?.VITE_DOCTOR_SERVICE_URL || 'http://localhost:5002';
+
+const resolvedProfileImage = computed(() => {
+  const img = identity.value.profileImage;
+  if (!img) return null;
+  const url = typeof img === 'string' ? img : img.url;
+  if (!url) return null;
+  if (url.startsWith('http')) return url;
+  return `${DOCTOR_SERVICE_URL}${url}`;
 });
 
 const parseJwt = (token) => {

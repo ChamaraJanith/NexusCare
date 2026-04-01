@@ -16,6 +16,16 @@ import { upload } from "../middleware/uploadMiddleware.js";
 
 const router = express.Router();
 
+// 🛠️ TEMP TEST ROUTE
+router.post("/test-image-upload",
+  (req, res, next) => {
+    req.user = { doctorId: "DOC-TEST" };
+    next();
+  },
+  upload.single("image"),
+  uploadProfileImage
+);
+
 // 🔍 SEARCH + FILTER Doctors (public or protected based on requirement)
 router.get("/search", searchDoctors);
 

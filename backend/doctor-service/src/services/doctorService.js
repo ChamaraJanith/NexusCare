@@ -1,7 +1,19 @@
 import Doctor from "../models/Doctor.js";
 import AvailabilitySlot from "../models/AvailabilitySlot.js";
 import { getUserByToken, searchDoctorsByName } from "./userServiceClient.js";
-import cloudinary from "../config/cloudinary.js";
+
+/**
+ * Helper: resolve profileImage to a usable URL string.
+ * Handles both plain string paths ("/uploads/123.jpg") and
+ * legacy Cloudinary objects ({ url: "...", publicId: "..." }).
+ */
+const resolveProfileImage = (doctorImg, fallbackImg) => {
+  if (typeof doctorImg === "string" && doctorImg) return doctorImg;
+  if (doctorImg?.url) return doctorImg.url;
+  if (typeof fallbackImg === "string" && fallbackImg) return fallbackImg;
+  if (fallbackImg?.url) return fallbackImg.url;
+  return null;
+};
 
 // ─── READ ────────────────────────────────────────────────────────────────────
 
@@ -34,7 +46,7 @@ export const getDoctorFullProfile = async (doctorId, bearerToken) => {
     hospital: doctorRecord?.hospital || userIdentity?.hospital || "",
     location: doctorRecord?.location || "",
     bio: doctorRecord?.bio || "",
-    profileImage: doctorRecord?.profileImage?.url ? doctorRecord.profileImage : (userIdentity?.profileImage || null),
+    profileImage: resolveProfileImage(doctorRecord?.profileImage, userIdentity?.profileImage),
     isActive: doctorRecord?.isActive !== undefined ? doctorRecord.isActive : true,
   };
 };
@@ -89,25 +101,14 @@ export const updateDoctorByDoctorId = async (doctorId, data) => {
 };
 
 /**
- * Upsert profile image.
+ * Upsert profile image with a local file URL path.
  * Works even when the MS2 doctor record doesn't exist yet (new doctor).
- * Cleans up old Cloudinary image if one is being replaced.
  */
-export const updateProfileImage = async (doctorId, fileUrl, publicId) => {
-  const existing = await getDoctorByDoctorId(doctorId);
-
-  if (existing?.profileImage?.publicId) {
-    try {
-      await cloudinary.uploader.destroy(existing.profileImage.publicId);
-    } catch (err) {
-      console.error("[Cloudinary] Failed to delete old image:", err.message);
-    }
-  }
-
+export const updateProfileImage = async (doctorId, imageUrl) => {
   return await Doctor.findOneAndUpdate(
-    { doctorId, isDeleted: false },
+    { doctorId },
     {
-      $set: { profileImage: { url: fileUrl, publicId } },
+      $set: { profileImage: imageUrl },
       $setOnInsert: { doctorId },
     },
     {
@@ -231,7 +232,7 @@ export const searchDoctors = async (queryParams) => {
       return {
         ...doc,
         name: identity.name || `Doctor ${doc.doctorId}`,
-        profileImage: doc.profileImage?.url ? doc.profileImage : (identity.profileImage || null),
+        profileImage: resolveProfileImage(doc.profileImage, identity.profileImage),
         isAvailable: availableDoctorIdsSet.has(doc.doctorId),
       };
     });

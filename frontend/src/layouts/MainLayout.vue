@@ -172,13 +172,21 @@ const syncAuthState = () => {
   }
 }
 
+const DOCTOR_SERVICE_URL =
+  import.meta.env?.VITE_DOCTOR_SERVICE_URL || 'http://localhost:5002'
+
 const toImageUrl = (imgValue) => {
   if (!imgValue) return ''
-  if (typeof imgValue === 'string') return imgValue
-  if (typeof imgValue === 'object') {
-    return imgValue.url || imgValue.secure_url || imgValue.path || ''
+  let url = ''
+  if (typeof imgValue === 'string') {
+    url = imgValue
+  } else if (typeof imgValue === 'object') {
+    url = imgValue.url || imgValue.secure_url || imgValue.path || ''
   }
-  return ''
+  if (!url) return ''
+  // Relative paths from local uploads need the service base URL
+  if (url.startsWith('/uploads')) return `${DOCTOR_SERVICE_URL}${url}`
+  return url
 }
 
 const profileImageUrl = computed(() => {

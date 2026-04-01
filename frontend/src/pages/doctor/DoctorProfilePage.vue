@@ -142,9 +142,20 @@ const form = reactive({
 });
 
 // ── Avatar URL ───────────────────────────────────────────────────────────────
+const DOCTOR_SERVICE_URL =
+  import.meta.env?.VITE_DOCTOR_SERVICE_URL || 'http://localhost:5002';
+
 const avatarUrl = computed(() => {
   const d = doctor.value;
-  return d?.profileImage?.url || d?.profileImage || null;
+  const url = d?.profileImage?.url || d?.profileImage || null;
+
+  if (!url || typeof url !== 'string') return null;
+
+  // Already an absolute URL (e.g. Cloudinary or external)
+  if (url.startsWith('http')) return url;
+
+  // Relative path from local uploads — prepend service base URL
+  return `${DOCTOR_SERVICE_URL}${url}`;
 });
 
 // ── Load / re-load full profile from server ──────────────────────────────────

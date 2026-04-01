@@ -99,10 +99,17 @@ const toggleLeftDrawer = () => { leftDrawerOpen.value = !leftDrawerOpen.value; }
 const loading = ref(true);
 const doctor = ref({});
 
+const DOCTOR_SERVICE_URL =
+  import.meta.env?.VITE_DOCTOR_SERVICE_URL || 'http://localhost:5002';
+
 const getAvatarUrl = computed(() => {
   if (!doctor.value?.profileImage) return null;
-  if (typeof doctor.value.profileImage === 'string') return doctor.value.profileImage;
-  return doctor.value.profileImage.url || null;
+  const url = typeof doctor.value.profileImage === 'string'
+    ? doctor.value.profileImage
+    : doctor.value.profileImage.url || null;
+  if (!url) return null;
+  if (url.startsWith('http')) return url;
+  return `${DOCTOR_SERVICE_URL}${url}`;
 });
 
 const parseJwt = (t) => {
