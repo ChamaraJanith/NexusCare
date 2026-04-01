@@ -28,9 +28,9 @@ const routes = [
       // Map /appointment to Search Page as well
       { path: 'appointment', component: () => import('pages/appointment/SearchPage.vue') },
       
-       // Appointment Booking Flow
+      // Appointment Booking Flow
       { path: 'appointment/results', component: () => import('pages/appointment/DoctorResults.vue') },
-      { path: 'appointment/book/:doctorId', component: () => import('pages/appointment/SlotSelection.vue') },
+      { path: 'appointment/book/:doctorId', name: 'SlotSelection', component: () => import('pages/appointment/SlotSelection.vue') },
       { path: 'appointment/form', component: () => import('pages/appointment/PatientForm.vue') },
       { path: 'appointment/summary', component: () => import('pages/appointment/SummaryPage.vue') },
       { path: 'appointment/payment', component: () => import('pages/appointment/PaymentPage.vue') },

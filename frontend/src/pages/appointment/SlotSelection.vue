@@ -10,17 +10,17 @@
       </div>
 
       <!-- DOCTOR DETAILS BLOCK -->
-      <q-card class="nexus-search-card q-mb-xl q-pa-md row items-center no-wrap bg-dark-glass shadow-none" v-if="store.selectedDoctor">
+      <q-card class="nexus-search-card q-mb-xl q-pa-md row items-center no-wrap bg-dark-glass shadow-none" v-if="doctor">
         <q-avatar size="90px" class="q-mr-lg doctor-avatar border-blue">
-           <img :src="store.selectedDoctor.image || store.selectedDoctor.profilePicture || 'https://i.pravatar.cc/150'" />
+           <img :src="getImageUrl(doctor.profileImage || doctor.image || doctor.profilePicture)" />
         </q-avatar>
         <div class="col text-white q-pr-sm">
-          <div class="text-h5 text-weight-bolder tracking-tight q-mb-xs">{{ store.selectedDoctor.name }}</div>
+          <div class="text-h5 text-weight-bolder tracking-tight q-mb-xs">{{ doctor.name }}</div>
           <div class="text-subtitle1 text-blue-4 flex items-center q-mb-xs">
-            <q-icon name="medical_services" class="q-mr-xs" size="18px" /> {{ store.selectedDoctor.specialization || store.selectedDoctor.specialty }}
+            <q-icon name="medical_services" class="q-mr-xs" size="18px" /> {{ doctor.specialization || doctor.specialty }}
           </div>
           <div class="text-caption text-grey-4 flex items-center">
-            <q-icon name="local_hospital" class="q-mr-xs" /> {{ store.selectedDoctor.hospital }}
+            <q-icon name="local_hospital" class="q-mr-xs" /> {{ doctor.hospital }}
           </div>
         </div>
       </q-card>
@@ -167,6 +167,20 @@ import { getDoctorSlots } from '../../services/appointmentService';
 const store = useAppointmentStore();
 const router = useRouter();
 
+const doctor = ref(history.state.doctor || store.selectedDoctor || null);
+
+const getImageUrl = (img) => {
+  if (!img) return "https://cdn-icons-png.flaticon.com/512/3774/3774299.png";
+  if (typeof img === 'object' && img.url) img = img.url;
+  if (typeof img === 'string') {
+    if (img.startsWith("http")) return img;
+    if (img.startsWith("/uploads")) {
+      return `http://localhost:5002${img}`;
+    }
+  }
+  return img;
+};
+
 const today = new Date().toISOString().split('T')[0];
 const selectedDateStr = ref(store.selectedDate || today);
 
@@ -175,7 +189,10 @@ const physicalSlots = ref([]);
 const onlineSlots = ref([]);
 
 onMounted(() => {
-  if (!store.selectedDoctor) { router.push('/search'); return; }
+  if (!doctor.value) { router.push('/search'); return; }
+  if (!store.selectedDoctor && doctor.value) {
+    store.selectDoctor(doctor.value);
+  }
   fetchSlots();
 });
 
@@ -188,8 +205,8 @@ const fetchSlots = async () => {
   store.selectedDate = selectedDateStr.value;
   store.selectedSlot = null; 
   try {
-    console.log("SELECTED DOCTOR:", store.selectedDoctor);
-    const doctorId = store.selectedDoctor.doctorId || store.selectedDoctor._id || store.selectedDoctor.id;
+    console.log("SELECTED DOCTOR:", doctor.value);
+    const doctorId = doctor.value.doctorId || doctor.value._id || doctor.value.id;
     const data = await getDoctorSlots(doctorId, selectedDateStr.value);
     console.log("SLOTS FRONT:", data);
     physicalSlots.value = data.physical || [];

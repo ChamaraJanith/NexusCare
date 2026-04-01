@@ -33,10 +33,10 @@
       </div>
     </div>
 
-    <!-- Bottom: Fee + Book Now -->
+    <!-- Bottom: Consultation Fee + Book Now -->
     <div class="row items-center justify-between q-mt-md">
       <div>
-        <div class="text-caption text-grey-5 q-mb-none font-weight-medium">Fee</div>
+        <div class="text-caption text-grey-5 q-mb-none font-weight-medium">Consultation Fee</div>
         <div class="text-subtitle1 text-weight-bolder text-white">LKR {{ (doctor.fee || doctor.consultationFee || 3000).toLocaleString() }}</div>
       </div>
       <q-btn 
