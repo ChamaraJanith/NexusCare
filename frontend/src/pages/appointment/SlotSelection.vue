@@ -159,14 +159,15 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, onMounted, watch } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { useAppointmentStore } from '../../stores/appointmentStore';
 import { getDoctorSlots } from '../../services/appointmentService';
 import { getDoctorSlotsNext30Days } from '../../services/appointmentService';
 
 const store = useAppointmentStore();
 const router = useRouter();
+const route = useRoute();
 
 const doctor = ref(history.state.doctor || store.selectedDoctor || null);
 
@@ -182,7 +183,7 @@ const getImageUrl = (img) => {
   return img;
 };
 
-const selectedDateStr = ref(null); // 🔥 no default date
+const selectedDateStr = ref(route.query.date || null);
 
 const loadingSlots = ref(true);
 const physicalSlots = ref([]);
@@ -227,6 +228,10 @@ const fetchSlots = async () => {
     physicalSlots.value = [];
     onlineSlots.value = [];
   } finally { loadingSlots.value = false; }
+
+  watch(selectedDateStr, () => {
+    fetchSlots();
+  });
 };
 
 const handleSlotBooking = (slot, type) => {

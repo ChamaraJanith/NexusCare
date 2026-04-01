@@ -54,18 +54,25 @@ onMounted(() => {
 });
 
 const handleBook = (doctor) => {
-  // CRITICAL FIX 8: LOGIN CHECK BEFORE BOOKING
+  // 🔒 LOGIN CHECK
   if (!localStorage.getItem("token") && !localStorage.getItem("nexus_token")) {
     router.push('/login');
     return;
   }
   
+  // 🧠 store doctor
   store.selectDoctor(doctor);
+
+  // 🔥 PASS DATE IF AVAILABLE
   router.push({
     name: 'SlotSelection',
-    params: { doctorId: doctor.doctorId }
+    params: { doctorId: doctor.doctorId },
+    query: {
+      date: store.searchFilters.date || null
+    }
   });
 };
+
 </script>
 
 <style scoped>
