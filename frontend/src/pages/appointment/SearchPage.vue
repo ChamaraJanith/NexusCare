@@ -68,12 +68,14 @@
                 <q-select
                   v-model="filters.hospital"
                   :options="hospitalOptions"
+                  option-label="label"
+                  option-value="value"
+                  emit-value
+                  map-options
                   outlined
                   dark
                   color="blue-5"
                   class="nexus-input"
-                  emit-value
-                  map-options
                   clearable
                 >
                   <template v-slot:prepend>
@@ -169,9 +171,10 @@
 </template>
 
 <script setup>
-import { reactive } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAppointmentStore } from '../../stores/appointmentStore';
+import { fetchHospitals } from 'src/services/doctorApi';
 
 const store = useAppointmentStore();
 const router = useRouter();
@@ -189,24 +192,23 @@ const specialtyOptions = [
   'Cardiology', 'Neurology', 'Pediatrics', 'Dermatology', 'Psychiatry', 'Orthopedics'
 ];
 
-const hospitalOptions = [
-  "Asiri Hospital Colombo",
-  "Asiri Surgical Hospital",
-  "Nawaloka Hospital",
-  "Durdans Hospital",
-  "Lanka Hospitals",
-  "Hemas Hospital Wattala",
-  "Hemas Hospital Thalawathugoda",
-  "Kings Hospital Colombo",
-  "Ninewells Hospital",
-  "Joseph Fraser Memorial Hospital",
-  "Melsta Hospital Ragama",
-  "Asiri Central Hospital Kandy",
-  "Nawaloka Hospital Negombo",
-  "Leesons Hospital",
-  "Golden Key Eye & ENT Hospital",
-  "Oasis Hospital Colombo"
-];
+const hospitalOptions = ref([]);
+
+const loadHospitals = async () => {
+  try {
+    const hospitals = await fetchHospitals();
+    hospitalOptions.value = hospitals.map(h => ({
+      label: h.name,
+      value: h.name
+    }));
+  } catch (err) {
+    console.error("Failed to load hospitals", err);
+  }
+};
+
+onMounted(() => {
+  loadHospitals();
+});
 
 const handleSearch = async () => {
   store.setSearchFilters({ ...filters });
