@@ -426,6 +426,10 @@
             <q-select
               v-model="form.location"
               :options="hospitalOptions"
+              option-label="label"
+              option-value="value"
+              emit-value
+              map-options
               outlined
               use-input
               hide-selected
@@ -496,7 +500,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useQuasar } from 'quasar';
-import { fetchAvailability, fetchAvailabilityByDate, createAvailabilitySlot, updateAvailabilitySlot, deleteAvailabilitySlot } from 'src/services/doctorApi';
+import { fetchAvailability, fetchAvailabilityByDate, createAvailabilitySlot, updateAvailabilitySlot, deleteAvailabilitySlot, fetchHospitals } from 'src/services/doctorApi';
 import SlotCard from 'src/components/doctor/SlotCard.vue';
 
 defineProps({ doctor: Object });
@@ -533,25 +537,21 @@ const dialogError = ref('');
 const slotToDelete = ref(null);
 
 const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-const allHospitals = [
-  "Asiri Hospital Colombo",
-  "Asiri Surgical Hospital",
-  "Nawaloka Hospital",
-  "Durdans Hospital",
-  "Lanka Hospitals",
-  "Hemas Hospital Wattala",
-  "Hemas Hospital Thalawathugoda",
-  "Kings Hospital Colombo",
-  "Ninewells Hospital",
-  "Joseph Fraser Memorial Hospital",
-  "Melsta Hospital Ragama",
-  "Asiri Central Hospital Kandy",
-  "Nawaloka Hospital Negombo",
-  "Leesons Hospital",
-  "Golden Key Eye & ENT Hospital",
-  "Oasis Hospital Colombo"
-];
-const hospitalOptions = ref([...allHospitals]);
+const allHospitals = ref([]);
+const hospitalOptions = ref([]);
+
+const loadHospitals = async () => {
+  try {
+    const data = await fetchHospitals();
+    allHospitals.value = data.map(h => ({
+      label: h.name,
+      value: h.name
+    }));
+    hospitalOptions.value = [...allHospitals.value];
+  } catch (err) {
+    console.error("Failed to load hospitals", err);
+  }
+};
 
 const allPlatforms = [
   "Zoom",
@@ -858,8 +858,8 @@ const executeDelete = async () => {
 const filterHospitals = (val, update) => {
   update(() => {
     hospitalOptions.value = val === ''
-      ? allHospitals
-      : allHospitals.filter(h => h.toLowerCase().includes(val.toLowerCase()));
+      ? allHospitals.value
+      : allHospitals.value.filter(h => h.label.toLowerCase().includes(val.toLowerCase()));
   });
 };
 
@@ -871,7 +871,10 @@ const filterPlatforms = (val, update) => {
   });
 };
 
-onMounted(loadSlots);
+onMounted(() => {
+  loadSlots();
+  loadHospitals();
+});
 </script>
 
 <style>

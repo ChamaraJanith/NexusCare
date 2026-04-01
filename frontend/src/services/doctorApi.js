@@ -174,3 +174,8 @@ export const fetchPrescriptions = async (doctorId) => {
     return [];
   }
 };
+
+export const fetchHospitals = async () => {
+  const res = await axios.get("http://localhost:5007/api/hospitals");
+  return res.data.data;
+};
