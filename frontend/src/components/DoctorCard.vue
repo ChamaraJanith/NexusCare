@@ -4,9 +4,9 @@
     <div class="row no-wrap items-center q-mb-md border-bottom q-pb-md">
       <!-- Left: Circular image -->
       <q-avatar size="72px" class="q-mr-lg doctor-avatar shadow-lg">
-        <img 
-          :src="resolvedImage" 
-          class="w-16 h-16 rounded-full object-cover"
+        <img
+          :src="getImageUrl(doctor.profileImage)"
+          class="doctor-img"
           @error="imgErr=true" 
           v-if="!imgErr" 
         />
@@ -63,23 +63,36 @@
 <script setup>
 import { ref, computed } from 'vue';
 
-const DOCTOR_SERVICE_URL =
-  import.meta.env?.VITE_DOCTOR_SERVICE_URL || 'http://localhost:5002';
+const getImageUrl = (img) => {
+  if (!img) {
+    return "https://cdn-icons-png.flaticon.com/512/3774/3774299.png";
+  }
 
-const defaultAvatar = "/images/doctor.png";
+  // Extract URL if img is an object (e.g. from Cloudinary)
+  if (typeof img === 'object' && img.url) {
+    img = img.url;
+  }
+
+  if (typeof img === 'string') {
+    if (img.startsWith("http")) {
+      return img;
+    }
+
+    if (img.startsWith("/uploads")) {
+      return `http://localhost:5002${img}`;
+    }
+  }
+
+  return typeof img === 'string' ? img : "https://cdn-icons-png.flaticon.com/512/3774/3774299.png";
+};
+
+
 
 const props = defineProps({ doctor: { type: Object, required: true } });
 defineEmits(['book']);
 const imgErr = ref(false);
 
-const resolvedImage = computed(() => {
-  const img = props.doctor.profileImage;
-  if (!img) return defaultAvatar;
-  const url = typeof img === 'string' ? img : img.url;
-  if (!url) return defaultAvatar;
-  if (url.startsWith('http')) return url;
-  return `${DOCTOR_SERVICE_URL}${url}`;
-});
+
 
 const initials = computed(() => {
   if (!props.doctor.name) return 'DR';
@@ -89,6 +102,13 @@ const initials = computed(() => {
 </script>
 
 <style scoped>
+.doctor-img {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
 .nexus-doctor-card {
   border-radius: 16px;
   background: rgba(15, 23, 42, 0.4) !important;

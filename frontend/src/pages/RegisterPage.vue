@@ -357,12 +357,9 @@ const roles = [
   { value: 'doctor', title: 'Doctor', icon: 'medical_services', color: '#0ea5e9', desc: 'Manage patients, issue prescriptions, set availability' }
 ]
 
-const allSpecialties = [
-  'Cardiologist', 'Dermatologist', 'ENT Specialist', 'General Practitioner',
-  'Gastroenterologist', 'Neurologist', 'Obstetrician', 'Oncologist',
-  'Ophthalmologist', 'Orthopedic Surgeon', 'Pediatrician', 'Psychiatrist',
-  'Pulmonologist', 'Radiologist', 'Urologist', 'Endocrinologist'
-]
+import { SPECIALTIES } from 'src/constants/specialties';
+
+const allSpecialties = SPECIALTIES;
 
 const filteredSpecialties = ref([...allSpecialties])
 const filterSpec = (val, update) => {
