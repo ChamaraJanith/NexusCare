@@ -33,3 +33,43 @@ export const cancelAppointment = async (id) => {
   const res = await axios.delete(`${API}/${id}`);
   return res.data;
 };
+
+export const getDoctorSlotsNext30Days = async (doctorId) => {
+  try {
+    const today = new Date();
+    const requests = [];
+
+    for (let i = 0; i < 30; i++) {
+      const date = new Date();
+      date.setDate(today.getDate() + i);
+
+      const dateStr = date.toISOString().split("T")[0];
+
+      requests.push(
+        axios.get(`${API}/doctor/${doctorId}/slots`, {
+          params: { date: dateStr }
+        })
+      );
+    }
+
+    const responses = await Promise.all(requests);
+
+    const physical = [];
+    const online = [];
+
+    responses.forEach(res => {
+      if (res.data.physical) physical.push(...res.data.physical);
+      if (res.data.online) online.push(...res.data.online);
+    });
+
+    // 🔥 MEKA THAMAI OYA AHU WENA THANATA DANNA ONA
+    physical.sort((a, b) => new Date(a.date) - new Date(b.date));
+    online.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    return { physical, online };
+
+  } catch (error) {
+    console.error("❌ ERROR fetching 30-day slots:", error.message);
+    throw error;
+  }
+};
