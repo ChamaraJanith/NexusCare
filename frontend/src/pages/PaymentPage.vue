@@ -333,7 +333,7 @@ const ms1Api = axios.create({
 
 // MS5 — payment service
 const paymentApi = axios.create({
-  baseURL: 'http://localhost:5005',
+  baseURL: 'http://localhost:5009',
   headers: { Authorization: `Bearer ${token}` }
 })
 
