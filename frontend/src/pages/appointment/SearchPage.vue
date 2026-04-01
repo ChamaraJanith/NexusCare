@@ -188,9 +188,9 @@ const filters = reactive({
 
 const today = new Date().toISOString().split('T')[0];
 
-const specialtyOptions = [
-  'Cardiology', 'Neurology', 'Pediatrics', 'Dermatology', 'Psychiatry', 'Orthopedics'
-];
+import { SPECIALTIES } from 'src/constants/specialties';
+
+const specialtyOptions = SPECIALTIES;
 
 const hospitalOptions = ref([]);
 

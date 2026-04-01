@@ -251,7 +251,9 @@ export const searchDoctors = async (req, res) => {
         experience: 1,
         consultationFee: 1,
         name: "$user.name",
-        profileImage: "$user.profileImage",
+        profileImage: {
+          $ifNull: ["$profileImage", "$user.profileImage"]
+        },
         slots: 1
       }
     });
