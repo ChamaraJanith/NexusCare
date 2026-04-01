@@ -61,7 +61,10 @@ const handleBook = (doctor) => {
   }
   
   store.selectDoctor(doctor);
-  router.push(`/appointment/book/${doctor._id || doctor.id}`);
+  router.push({
+    name: 'SlotSelection',
+    params: { doctorId: doctor.doctorId }
+  });
 };
 </script>
 
