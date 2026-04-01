@@ -163,6 +163,7 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAppointmentStore } from '../../stores/appointmentStore';
 import { getDoctorSlots } from '../../services/appointmentService';
+import { getDoctorSlotsNext30Days } from '../../services/appointmentService';
 
 const store = useAppointmentStore();
 const router = useRouter();
@@ -181,8 +182,7 @@ const getImageUrl = (img) => {
   return img;
 };
 
-const today = new Date().toISOString().split('T')[0];
-const selectedDateStr = ref(store.selectedDate || today);
+const selectedDateStr = ref(null); // 🔥 no default date
 
 const loadingSlots = ref(true);
 const physicalSlots = ref([]);
@@ -207,7 +207,17 @@ const fetchSlots = async () => {
   try {
     console.log("SELECTED DOCTOR:", doctor.value);
     const doctorId = doctor.value.doctorId || doctor.value._id || doctor.value.id;
-    const data = await getDoctorSlots(doctorId, selectedDateStr.value);
+    
+    let data;
+
+    if (selectedDateStr.value) {
+      // 🔥 date selected → normal behavior
+      data = await getDoctorSlots(doctorId, selectedDateStr.value);
+    } else {
+      // 🔥 NO DATE → fetch next 30 days
+      data = await getDoctorSlotsNext30Days(doctorId);
+    }
+
     console.log("SLOTS FRONT:", data);
     physicalSlots.value = data.physical || [];
     onlineSlots.value = data.online || [];
