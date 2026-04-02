@@ -115,92 +115,87 @@ const toggleUserStatus = async (req, res, next) => {
   }
 };
 
-// ─── GET PENDING DOCTOR VERIFICATIONS ─────────────────────────────────────────
+// ─── GET PENDING DOCTOR VERIFICATIONS ────────────────────────────────────────
 // GET /api/admin/doctors/pending
-// Admin only - list all doctors waiting for verification
 const getPendingDoctors = async (req, res, next) => {
   try {
     const pendingDoctors = await DoctorProfile.find({ isVerified: false });
-
-    // Get user info for each pending doctor
+ 
     const result = await Promise.all(
       pendingDoctors.map(async (profile) => {
         const user = await User.findOne({ userId: profile.userId });
         return {
           userId: profile.userId,
           doctorId: profile.doctorId,
-          name: user ? user.name : "Unknown",
-          email: user ? user.email : "Unknown",
-          phone: user ? user.phone : null,
+          name: user?.name || "Unknown",
+          email: user?.email || "Unknown",
+          phone: user?.phone || null,
+          isActive: user?.isActive || false,
+ 
           specialty: profile.specialty,
+          subSpecialty: profile.subSpecialty || null,
           registrationNumber: profile.registrationNumber,
-          hospital: profile.hospital,
-          qualifications: profile.qualifications,
-          verificationDocuments: profile.verificationDocuments,
+          hospital: profile.hospital || null,
+          experience: profile.experience ?? null,
+          qualifications: profile.qualifications || [],
+          consultationFee: profile.consultationFee || 0,
+          bio: profile.bio || "",
+ 
+          isVerified: profile.isVerified,
+          rejectionReason: profile.rejectionReason || null,
+ 
+          // Documents uploaded at registration (Cloudinary URLs)
+          verificationDocuments: profile.verificationDocuments || [],
+ 
           createdAt: profile.createdAt,
         };
       })
     );
-
-    res.status(200).json({
-      success: true,
-      count: result.length,
-      data: result,
-    });
+ 
+    res.status(200).json({ success: true, count: result.length, data: result });
   } catch (error) {
     next(error);
   }
 };
-
+ 
 // ─── VERIFY DOCTOR ────────────────────────────────────────────────────────────
 // PATCH /api/admin/doctors/:doctorId/verify
-// Admin only - approve or reject a doctor registration
+// Body: { action: "approve" | "reject", rejectionReason?: string }
 const verifyDoctor = async (req, res, next) => {
   try {
     const { doctorId } = req.params;
     const { action, rejectionReason } = req.body;
-
-    // action must be "approve" or "reject"
+ 
     if (!["approve", "reject"].includes(action)) {
       return res.status(400).json({
         success: false,
         message: "Action must be 'approve' or 'reject'.",
       });
     }
-
+ 
     const profile = await DoctorProfile.findOne({ doctorId });
-
     if (!profile) {
-      return res.status(404).json({
-        success: false,
-        message: "Doctor not found.",
-      });
+      return res.status(404).json({ success: false, message: "Doctor not found." });
     }
-
+ 
     if (action === "approve") {
-      // Verify doctor profile
       profile.isVerified = true;
       profile.verifiedBy = req.user.userId;
       profile.verifiedAt = new Date();
       profile.rejectionReason = undefined;
       await profile.save();
-
-      // Also update the User's isVerified flag
-      await User.findOneAndUpdate(
-        { userId: profile.userId },
-        { isVerified: true }
-      );
-
+ 
+      await User.findOneAndUpdate({ userId: profile.userId }, { isVerified: true });
+ 
       res.status(200).json({
         success: true,
-        message: `Doctor ${doctorId} verified successfully.`,
+        message: `Doctor ${doctorId} approved. They can now log in.`,
       });
     } else {
-      // Reject: set reason but don't delete the account
       profile.isVerified = false;
       profile.rejectionReason = rejectionReason || "No reason provided.";
       await profile.save();
-
+ 
       res.status(200).json({
         success: true,
         message: `Doctor ${doctorId} registration rejected.`,

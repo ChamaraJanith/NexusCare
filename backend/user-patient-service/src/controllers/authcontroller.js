@@ -76,24 +76,21 @@ const sendRegistrationSMS = async ({ phoneNumber, name, role }) => {
 const register = async (req, res, next) => {
   try {
     const { name, email, password, phone, role } = req.body;
-
-    // Validate required fields
+ 
     if (!name || !email || !password || !role) {
       return res.status(400).json({
         success: false,
         message: "Name, email, password, and role are required.",
       });
     }
-
-    // Validate role
+ 
     if (!["patient", "doctor", "admin"].includes(role)) {
       return res.status(400).json({
         success: false,
         message: "Role must be patient, doctor, or admin.",
       });
     }
-
-    // Check if email already exists
+ 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
@@ -101,19 +98,15 @@ const register = async (req, res, next) => {
         message: "Email already registered.",
       });
     }
-
-    // Create user (userId and roleId are auto-generated in pre-save hook)
+ 
     const user = await User.create({ name, email, password, phone, role });
-
-    // Create role-specific profile
+ 
     if (role === "patient") {
-      // Create a basic patient profile linked to this user
       await PatientProfile.create({
         userId: user.userId,
         patientId: user.roleId,
       });
     } else if (role === "doctor") {
-      // Doctor registration requires extra fields
       const {
         registrationNumber,
         specialty,
@@ -124,16 +117,25 @@ const register = async (req, res, next) => {
         bio,
         consultationFee,
       } = req.body;
-
+ 
       if (!registrationNumber || !specialty) {
-        // Rollback: delete the user that was created
         await User.findByIdAndDelete(user._id);
         return res.status(400).json({
           success: false,
           message: "Registration number and specialty are required for doctors.",
         });
       }
-
+ 
+      // ── Build verificationDocuments from uploaded files (if any) ─────────
+      // req.files is set by multer uploadVerificationDoc.array("documents", 5)
+      // Each file is already uploaded to Cloudinary by multer-storage-cloudinary.
+      const verificationDocuments = (req.files || []).map((file) => ({
+        title: file.originalname,
+        fileUrl: file.path,        // Cloudinary secure URL
+        publicId: file.filename,   // Cloudinary public ID (for future deletion)
+        uploadedAt: new Date(),
+      }));
+ 
       await DoctorProfile.create({
         userId: user.userId,
         doctorId: user.roleId,
@@ -147,20 +149,24 @@ const register = async (req, res, next) => {
         hospital,
         bio,
         consultationFee,
+        verificationDocuments,   // ← saved at creation time
       });
     }
-
-    // Notify notification-service (non-blocking)
+ 
     sendRegistrationNotification({ email: user.email, name: user.name, role: user.role });
     sendRegistrationSMS({ phoneNumber: phone, name: user.name, role: user.role });
-
-    // Generate token
+ 
     const token = generateToken(user.userId, user.role, user.roleId);
-
+ 
     res.status(201).json({
       success: true,
-      message: "Registration successful.",
+      message:
+        role === "doctor"
+          ? "Registration successful. Awaiting admin verification."
+          : "Registration successful.",
       token,
+      // Tell the frontend how many docs were saved so it can show confirmation
+      documentsUploaded: (req.files || []).length,
       user: {
         userId: user.userId,
         roleId: user.roleId,
@@ -174,7 +180,6 @@ const register = async (req, res, next) => {
     next(error);
   }
 };
-
 // ─── LOGIN ───────────────────────────────────────────────────────────────────
 // POST /api/auth/login
 // Body: { email, password }
@@ -214,6 +219,36 @@ const login = async (req, res, next) => {
         success: false,
         message: "Invalid email or password.",
       });
+    }
+
+    // Block unverified doctors ────────────────────────────────────────────────
+    if (user.role === "doctor") {
+      const doctorProfile = await DoctorProfile.findOne({ doctorId: user.roleId });
+ 
+      if (!doctorProfile) {
+        return res.status(403).json({
+          success: false,
+          message: "Doctor profile not found. Please contact admin.",
+        });
+      }
+ 
+      if (!doctorProfile.isVerified) {
+        if (doctorProfile.rejectionReason) {
+          return res.status(403).json({
+            success: false,
+            verified: false,
+            rejected: true,
+            message: `Your registration was rejected. Reason: ${doctorProfile.rejectionReason}`,
+          });
+        }
+        return res.status(403).json({
+          success: false,
+          verified: false,
+          rejected: false,
+          message:
+            "Your account is pending admin verification. You will be notified once approved.",
+        });
+      }
     }
 
     // Generate token - includes userId, role, and roleId for other services

@@ -12,6 +12,13 @@ const {
   updateDoctorFee,
 } = require("../controllers/authcontroller");
 const { protect, restrictTo } = require("../middleware/auth");
+const { uploadVerificationDoc } = require("../middleware/upload");
+
+router.post(
+  "/register",
+  uploadVerificationDoc.array("documents", 5),
+  register
+);
 
 // Public routes (no token needed)
 router.post("/register", register);       // Register patient, doctor, or admin
