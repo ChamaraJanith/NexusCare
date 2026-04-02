@@ -424,10 +424,20 @@ const form = reactive({
 })
 
 const specialties = [
-  'Cardiology', 'Dermatology', 'ENT', 'Gastroenterology', 'General Medicine',
-  'General Surgery', 'Gynaecology', 'Neurology', 'Oncology', 'Ophthalmology',
-  'Orthopaedics', 'Paediatrics', 'Psychiatry', 'Pulmonology', 'Radiology',
-  'Rheumatology', 'Urology', 'Anaesthesiology', 'Endocrinology', 'Nephrology',
+  "Cardiologist",
+  "Dermatologist",
+  "Neurologist",
+  "Orthopedic Surgeon",
+  "Pediatrician",
+  "General Practitioner",
+  "Psychiatrist",
+  "Ophthalmologist",
+  "Orthopedic Surgeon",
+  "Pediatrician",
+  "Pulmonologist",
+  "Radiologist",
+  "Urologist",
+  "Endocrinologist",
 ]
 
 // Validation rules
@@ -746,6 +756,7 @@ const handleSubmit = async () => {
 .step-content {
   width: 100%;
   animation: fadeUp 0.4s ease;
+  padding-bottom: 40px;
 }
 
 @keyframes fadeUp {
@@ -1106,16 +1117,33 @@ const handleSubmit = async () => {
   to { opacity: 1; transform: translateY(0); }
 }
 
+.toggle-pw {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  border-radius: 6px;
+  transition: color 0.2s;
+  flex-shrink: 0;
+}
+.toggle-pw:hover { color: #94a3b8; }
+
 /* ─── ACTIONS ──────────────────────────────────────────────── */
 .step-actions {
   display: flex;
-  gap: 16px;
+  gap: 24px;
   justify-content: flex-end;
+  margin-top: 32px;
+  margin-bottom: 40px; 
+  padding: 0 24px; 
 }
 
 .next-btn {
   display: flex; align-items: center; justify-content: center;
-  padding: 0 32px;
+  padding: 0 40px;
   height: 52px;
   background: linear-gradient(135deg, #3b82f6, #2563eb);
   border: none; border-radius: 12px;
@@ -1135,7 +1163,7 @@ const handleSubmit = async () => {
 
 .back-btn {
   display: flex; align-items: center; justify-content: center;
-  padding: 0 24px;
+  padding: 0 32px;
   height: 52px;
   background: rgba(255,255,255,0.04);
   border: 1px solid rgba(255,255,255,0.1);
@@ -1223,7 +1251,11 @@ const handleSubmit = async () => {
   .role-cards { grid-template-columns: 1fr; }
   .form-grid { grid-template-columns: 1fr; }
   .full { grid-column: 1; }
-  .step-actions { flex-direction: column-reverse; }
+  .step-actions { 
+    flex-direction: column-reverse;
+    padding: 0 16px;
+    margin-bottom: 48px;  
+  }
   .next-btn, .back-btn { width: 100%; }
   .step-title { font-size: 1.7rem; }
   .topbar-action { display: none; }
