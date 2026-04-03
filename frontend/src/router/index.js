@@ -33,16 +33,21 @@ export default defineRouter(function (/* { store, ssrContext } */) {
     history: createHistory(process.env.VUE_ROUTER_BASE),
   })
 
-  // GLOBAL NAVIGATION GUARD (Bonus Security)
+  // GLOBAL NAVIGATION GUARD
   Router.beforeEach((to, from, next) => {
+    const token = localStorage.getItem('token') || localStorage.getItem('nexus_token')
+
+    // ── 1. requiresAuth: protect pages that need a logged-in user ───────────
+    if (to.meta?.requiresAuth) {
+      if (!token) {
+        console.warn('Router Guard: Unauthenticated access blocked →', to.fullPath)
+        return next({ path: '/login', query: { redirect: to.fullPath } })
+      }
+    }
+
+    // ── 2. Doctor dashboard guard (role check) ───────────────────────────────
     // Check if the route is strictly in the /doctor namespace
     if (to.path.startsWith('/doctor/dashboard')) {
-      const token = localStorage.getItem('token') || localStorage.getItem('nexus_token')
-      
-      if (!token) {
-        console.warn('Router Guard: Access denied. Token unavailable.')
-        return next('/login')
-      }
 
       // Quick Native Decoding Validation
       try {

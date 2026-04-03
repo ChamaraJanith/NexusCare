@@ -20,7 +20,12 @@ export const getNextQueueNumber = async (doctorId, date) => {
 };
 
 export const bookAppointment = async (data) => {
-  const res = await axios.post(API, data);
+  const token = localStorage.getItem('token') || localStorage.getItem('nexus_token');
+  const res = await axios.post(API, data, {
+    headers: {
+      Authorization: token ? `Bearer ${token}` : undefined,
+    },
+  });
   return res.data;
 };
 

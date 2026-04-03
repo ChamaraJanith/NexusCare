@@ -41,9 +41,11 @@
 import { onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAppointmentStore } from '../../stores/appointmentStore';
+import { useAuthStore } from '../../stores/authStore';
 import DoctorCard from '../../components/DoctorCard.vue';
 
 const store = useAppointmentStore();
+const authStore = useAuthStore();
 const router = useRouter();
 
 onMounted(() => {
@@ -54,10 +56,12 @@ onMounted(() => {
 });
 
 const handleBook = (doctor) => {
-  // 🔒 LOGIN CHECK
-  if (!localStorage.getItem("token") && !localStorage.getItem("nexus_token")) {
-    router.push('/login');
-    return;
+  // 🔒 AUTH CHECK — unregistered users cannot book
+  if (!authStore.isLoggedIn) {
+    const doctorId = doctor.doctorId || doctor._id || doctor.id
+    const redirectPath = `/appointment/book/${doctorId}`
+    router.push({ path: '/login', query: { redirect: redirectPath } })
+    return
   }
   
   // 🧠 store doctor
