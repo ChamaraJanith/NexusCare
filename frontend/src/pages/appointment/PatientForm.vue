@@ -129,8 +129,11 @@
 import { reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAppointmentStore } from '../../stores/appointmentStore';
+import { useAuthStore } from '../../stores/authStore';
+import { getPatientProfile } from '../../services/patientService';
 
 const store = useAppointmentStore();
+const authStore = useAuthStore();
 const router = useRouter();
 
 const titleOptions = ['Mr', 'Mrs', 'Miss', 'Rev', 'Dr'];
@@ -144,11 +147,31 @@ const form = reactive({
   nic: store.patientDetails.nic || ''
 });
 
-onMounted(() => {
+onMounted(async () => {
+  // Redundant auth guard (router guard is primary, this is a safety net)
+  if (!authStore.isLoggedIn) {
+    router.push({ path: '/login', query: { redirect: '/appointment/form' } });
+    return;
+  }
+
   if (!store.selectedSlot) {
     router.push('/search');
     return;
   }
+
+  // 🔥 FETCH FULL PROFILE FOR AUTO-FILL (including phone)
+  try {
+    const profile = await getPatientProfile();
+    if (profile && profile.success) {
+      const data = profile.data;
+      if (!form.name)   form.name   = data.name  || '';
+      if (!form.email)  form.email  = data.email || '';
+      if (!form.mobile) form.mobile = data.phone || '';
+    }
+  } catch (err) {
+    console.error("Failed to auto-fill from profile:", err);
+  }
+
   // User explicitly wants the timer to start right after selecting a slot -> when we land on Patient Details
   if (store.timeLeft <= 0 && !store.timer) {
     store.startTimer();

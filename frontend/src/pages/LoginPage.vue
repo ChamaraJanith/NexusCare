@@ -197,14 +197,17 @@
 
 <script setup>
 import { ref, reactive, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useVuelidate } from '@vuelidate/core'
 import { required, email, minLength, helpers } from '@vuelidate/validators'
 import axios from 'axios'
+import { useAuthStore } from '../stores/authStore'
 
 const router = useRouter()
+const route = useRoute()
 const $q = useQuasar()
+const authStore = useAuthStore()
 
 const MS1_URL = import.meta.env.VITE_MS1_URL || 'http://localhost:5001'
 
@@ -334,10 +337,8 @@ const handleLogin = async () => {
       return
     }
 
-    // Store tokens
-    localStorage.setItem('token', token)
-    localStorage.setItem('nexus_token', token)
-    localStorage.setItem('nexus_user', JSON.stringify(user))
+    // Persist auth via store (updates localStorage + reactive state)
+    authStore.setAuth(token, user)
 
     $q.notify({
       icon: 'check_circle',
@@ -347,14 +348,22 @@ const handleLogin = async () => {
       timeout: 2500
     })
 
+    // If there's a ?redirect= query (e.g. from booking flow), go there.
+    // Otherwise fall through to the role-based dashboard.
+    const redirectTarget = route.query.redirect
+    if (redirectTarget && typeof redirectTarget === 'string') {
+      await router.push(redirectTarget)
+      return
+    }
+
     // Navigate based on role
-    const routes = {
+    const roleRoutes = {
       patient: '/patient/dashboard',
       doctor: '/doctor/dashboard',
       admin: '/admin/dashboard'
     }
 
-    const targetRoute = routes[user.role] || '/'
+    const targetRoute = roleRoutes[user.role] || '/'
     await router.push(targetRoute)
 
   } catch (err) {

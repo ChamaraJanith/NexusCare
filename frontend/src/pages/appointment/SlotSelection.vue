@@ -162,10 +162,12 @@
 import { ref, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAppointmentStore } from '../../stores/appointmentStore';
+import { useAuthStore } from '../../stores/authStore';
 import { getDoctorSlots } from '../../services/appointmentService';
 import { getDoctorSlotsNext30Days } from '../../services/appointmentService';
 
 const store = useAppointmentStore();
+const authStore = useAuthStore();
 const router = useRouter();
 const route = useRoute();
 
@@ -235,7 +237,15 @@ const fetchSlots = async () => {
 };
 
 const handleSlotBooking = (slot, type) => {
+  // Always save the selection first so it survives any redirect
   store.selectSlot(slot, type);
+
+  // 🔒 AUTH GATE — must be logged in to proceed to the booking form
+  if (!authStore.isLoggedIn) {
+    router.push({ path: '/login', query: { redirect: '/appointment/form' } });
+    return;
+  }
+
   router.push('/appointment/form');
 };
 </script>

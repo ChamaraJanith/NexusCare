@@ -31,7 +31,7 @@ const routes = [
       // Appointment Booking Flow
       { path: 'appointment/results', component: () => import('pages/appointment/DoctorResults.vue') },
       { path: 'appointment/book/:doctorId', name: 'SlotSelection', component: () => import('pages/appointment/SlotSelection.vue') },
-      { path: 'appointment/form', component: () => import('pages/appointment/PatientForm.vue') },
+      { path: 'appointment/form', component: () => import('pages/appointment/PatientForm.vue'), meta: { requiresAuth: true } },
       { path: 'appointment/summary', component: () => import('pages/appointment/SummaryPage.vue') },
       { path: 'appointment/payment', component: () => import('pages/appointment/PaymentPage.vue') },
       { path: 'appointment/receipt', component: () => import('pages/appointment/ReceiptPage.vue') },
