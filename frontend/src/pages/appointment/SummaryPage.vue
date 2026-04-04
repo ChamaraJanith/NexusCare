@@ -20,8 +20,25 @@
             <q-card-section>
               <div class="text-subtitle1 text-weight-bolder q-mb-md text-blue-4 border-bottom-dark q-pb-sm">Doctor Details</div>
               <div class="flex items-center q-mb-sm"><q-icon name="account_circle" color="grey-5" class="q-mr-sm" /> <span class="text-weight-bold text-white">{{ store.selectedDoctor?.name }}</span></div>
-              <div class="flex items-center q-mb-sm"><q-icon name="medical_services" color="grey-5" class="q-mr-sm" /> <span class="text-grey-4">{{ store.selectedDoctor?.specialty }} • {{ store.selectedDoctor?.hospital }}</span></div>
-              <div class="flex items-center"><q-icon name="event" color="grey-5" class="q-mr-sm" /> <span class="text-grey-4">{{ store.selectedDate }} at {{ store.selectedSlot?.time }} ({{ store.consultationType }})</span></div>
+              <div class="flex items-center q-mb-sm text-grey-4">
+                <q-icon name="medical_services" color="grey-5" class="q-mr-sm" /> 
+                <span class="text-grey-4">{{ store.selectedDoctor?.specialization || store.selectedDoctor?.specialty }} • {{ store.selectedDoctor?.hospital }}</span>
+              </div>
+              <div class="q-mt-md">
+                <div class="flex items-center text-grey-4 q-mb-sm">
+                  <q-icon :name="store.consultationType === 'Physical' ? 'location_on' : 'videocam'" color="grey-5" class="q-mr-sm" /> 
+                  <span class="text-white">at ({{ store.consultationType }}) </span>
+                  <span class="q-mx-sm text-grey-6">•</span>
+                  <span class="text-grey-4">{{ locationLabel }}</span>
+                </div>
+                <div class="flex items-center text-blue-4 text-weight-bold bg-blue-10 q-px-md q-py-xs rounded-borders w-fit-content">
+                  <q-icon name="event" class="q-mr-xs" size="xs" /> 
+                  <span>{{ formattedDate }}</span>
+                  <span class="q-mx-md text-grey-7">•</span>
+                  <q-icon name="schedule" class="q-mr-xs" size="xs" />
+                  <span>{{ formattedTime }}</span>
+                </div>
+              </div>
             </q-card-section>
           </q-card>
 
@@ -40,10 +57,18 @@
           <q-card class="nexus-search-card shadow-none h-full column">
             <q-card-section class="col">
               <div class="text-subtitle1 text-weight-bolder q-mb-lg text-blue-4 border-bottom-dark q-pb-sm">Payment Breakdown</div>
-              <div class="flex justify-between items-center q-mb-md"><span class="text-grey-4">Doctor Fee</span><span class="text-weight-bold text-white">LKR {{ store.fees.doctorFee.toLocaleString() }}</span></div>
-              <div class="flex justify-between items-center q-mb-md"><span class="text-grey-4">Booking Fee</span><span class="text-weight-bold text-white">LKR {{ store.fees.bookingFee.toLocaleString() }}</span></div>
-              <div class="flex justify-between items-center q-mb-md" v-if="store.consultationType === 'Physical'">
-                <span class="text-grey-4">Hospital Fee</span><span class="text-weight-bold text-white">LKR {{ store.fees.hospitalFee.toLocaleString() }}</span>
+              
+              <div v-if="loadingFees" class="flex flex-center q-py-md column text-grey-5">
+                <q-spinner-dots color="blue-4" size="md" />
+                <div class="q-mt-sm italic text-caption">Fetching secure pricing data...</div>
+              </div>
+
+              <div v-else>
+                <div class="flex justify-between items-center q-mb-md"><span class="text-grey-4">Doctor Fee</span><span class="text-weight-bold text-white">LKR {{ store.fees.doctorFee.toLocaleString() }}</span></div>
+                <div class="flex justify-between items-center q-mb-md"><span class="text-grey-4">Booking Fee</span><span class="text-weight-bold text-white">LKR {{ store.fees.bookingFee.toLocaleString() }}</span></div>
+                <div class="flex justify-between items-center q-mb-md" v-if="store.consultationType === 'Physical'">
+                  <span class="text-grey-4">Hospital Fee</span><span class="text-weight-bold text-white">LKR {{ store.fees.hospitalFee.toLocaleString() }}</span>
+                </div>
               </div>
               <q-separator dark class="q-my-md opacity-20" />
               <div class="flex justify-between items-center text-h6 text-white text-weight-bolder q-mt-lg">
@@ -63,15 +88,106 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue';
+import { onMounted, computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import axios from 'axios';
 import { useAppointmentStore } from '../../stores/appointmentStore';
 
 const store = useAppointmentStore();
 const router = useRouter();
 
-onMounted(() => { 
-  if (!store.selectedSlot) router.push('/search'); 
+const loadingFees = ref(true);
+
+onMounted(async () => { 
+  if (!store.selectedSlot) {
+    router.push('/search'); 
+    return;
+  }
+
+  loadingFees.value = true;
+  try {
+    // 1. Fetch Service Fee (Booking Fee)
+    try {
+       const resSf = await axios.get('http://localhost:5007/api/service-fee');
+       store.fees.bookingFee = resSf.data?.data?.amount || 0;
+    } catch (e) {
+       console.error("Booking Fee API failed:", e);
+       store.fees.bookingFee = 0;
+    }
+    console.log("Service Fee:", store.fees.bookingFee);
+
+    // 2. Resolve Hospital ID & Fetch Hospital Fee
+    console.log("Selected Slot:", store.selectedSlot);
+    console.log("Hospital Name:", store.selectedSlot?.hospital);
+
+    let hospitalId = store.selectedSlot?.hospitalId;
+
+    // Fallback: Resolve hospitalId by name if missing
+    if (!hospitalId && store.consultationType === 'Physical') {
+      try {
+        console.warn("hospitalId missing from slot. Attempting fallback mapping...");
+        const resHospitals = await axios.get('http://localhost:5007/api/hospitals');
+        const hospitals = resHospitals.data?.data || [];
+        const matched = hospitals.find(h => h.name === store.selectedSlot.hospital);
+        if (matched) {
+          hospitalId = matched.hospitalId || matched._id || matched.id;
+        }
+      } catch (err) {
+        console.error("Hospital mapping failed:", err);
+      }
+    }
+
+    console.log("Hospital ID:", hospitalId);
+
+    if (hospitalId && store.consultationType === 'Physical') {
+       try {
+         const resHf = await axios.get(`http://localhost:5007/api/hospitals/${hospitalId}`);
+         store.fees.hospitalFee = resHf.data?.data?.hospitalFee || 0;
+       } catch (e) {
+         console.error("Hospital Fee API failed:", e);
+         store.fees.hospitalFee = 0;
+       }
+    } else {
+       if (!hospitalId && store.consultationType === 'Physical') {
+         console.error("Critical: hospitalId could not be resolved!");
+       }
+       store.fees.hospitalFee = 0;
+    }
+    console.log("Hospital Fee:", store.fees.hospitalFee);
+
+  } finally {
+    loadingFees.value = false;
+  }
+});
+
+const formattedDate = computed(() => {
+  const dateStr = store.selectedSlot?.date || store.selectedDate;
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+});
+
+const formattedTime = computed(() => {
+  const timeStr = store.selectedSlot?.startTime || store.selectedSlot?.time;
+  if (!timeStr) return '';
+  
+  if (timeStr.includes('AM') || timeStr.includes('PM')) return timeStr;
+
+  try {
+    const [hours, minutes] = timeStr.split(':');
+    const date = new Date();
+    date.setHours(parseInt(hours), parseInt(minutes));
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  } catch {
+    return timeStr;
+  }
+});
+
+const locationLabel = computed(() => {
+  if (store.consultationType === 'Online') {
+    return store.selectedSlot?.platform || 'Zoom';
+  }
+  return store.selectedSlot?.hospital || store.selectedDoctor?.hospital;
 });
 
 const proceedToPayment = () => { 
@@ -91,4 +207,5 @@ const proceedToPayment = () => {
 .next-btn:hover { background: #1d4ed8 !important; }
 .timer-badge { border: 1px solid rgba(248, 113, 113, 0.3); background: rgba(220, 38, 38, 0.1); }
 .pb-12 { padding-bottom: 3rem; }
+.w-fit-content { width: fit-content; }
 </style>

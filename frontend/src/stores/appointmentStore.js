@@ -29,8 +29,8 @@ export const useAppointmentStore = defineStore('appointment', {
 
     fees: {
       doctorFee: 0,
-      bookingFee: 300,
-      hospitalFee: 500,
+      bookingFee: 0,
+      hospitalFee: 0,
     },
 
     appointmentId: null,
@@ -79,7 +79,7 @@ export const useAppointmentStore = defineStore('appointment', {
     selectDoctor(doctor) {
       this.selectedDoctor = doctor;
       this.selectedDate = this.searchFilters.date || new Date().toISOString().split('T')[0];
-      this.fees.doctorFee = Number(doctor.fee) || 3000;
+      this.fees.doctorFee = Number(doctor.consultationFee || doctor.fee) || 3000;
       this.selectedSlot = null;
     },
 
@@ -131,7 +131,8 @@ export const useAppointmentStore = defineStore('appointment', {
         time: this.selectedSlot.startTime,
         type: this.consultationType,
         patient: this.patientDetails,
-        totalFee: this.totalFee,
+        totalFee: this.totalFee, // Frontend calculation as initial estimate
+        hospitalId: this.selectedSlot?.hospitalId, // Critical for backend fee calculation
       };
 
       const result = await bookAppointment(payload);
