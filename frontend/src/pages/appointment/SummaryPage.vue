@@ -57,10 +57,18 @@
           <q-card class="nexus-search-card shadow-none h-full column">
             <q-card-section class="col">
               <div class="text-subtitle1 text-weight-bolder q-mb-lg text-blue-4 border-bottom-dark q-pb-sm">Payment Breakdown</div>
-              <div class="flex justify-between items-center q-mb-md"><span class="text-grey-4">Doctor Fee</span><span class="text-weight-bold text-white">LKR {{ store.fees.doctorFee.toLocaleString() }}</span></div>
-              <div class="flex justify-between items-center q-mb-md"><span class="text-grey-4">Booking Fee</span><span class="text-weight-bold text-white">LKR {{ store.fees.bookingFee.toLocaleString() }}</span></div>
-              <div class="flex justify-between items-center q-mb-md" v-if="store.consultationType === 'Physical'">
-                <span class="text-grey-4">Hospital Fee</span><span class="text-weight-bold text-white">LKR {{ store.fees.hospitalFee.toLocaleString() }}</span>
+              
+              <div v-if="loadingFees" class="flex flex-center q-py-md column text-grey-5">
+                <q-spinner-dots color="blue-4" size="md" />
+                <div class="q-mt-sm italic text-caption">Fetching secure pricing data...</div>
+              </div>
+
+              <div v-else>
+                <div class="flex justify-between items-center q-mb-md"><span class="text-grey-4">Doctor Fee</span><span class="text-weight-bold text-white">LKR {{ store.fees.doctorFee.toLocaleString() }}</span></div>
+                <div class="flex justify-between items-center q-mb-md"><span class="text-grey-4">Booking Fee</span><span class="text-weight-bold text-white">LKR {{ store.fees.bookingFee.toLocaleString() }}</span></div>
+                <div class="flex justify-between items-center q-mb-md" v-if="store.consultationType === 'Physical'">
+                  <span class="text-grey-4">Hospital Fee</span><span class="text-weight-bold text-white">LKR {{ store.fees.hospitalFee.toLocaleString() }}</span>
+                </div>
               </div>
               <q-separator dark class="q-my-md opacity-20" />
               <div class="flex justify-between items-center text-h6 text-white text-weight-bolder q-mt-lg">
@@ -80,15 +88,57 @@
 </template>
 
 <script setup>
-import { onMounted, computed } from 'vue';
+import { onMounted, computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import axios from 'axios';
 import { useAppointmentStore } from '../../stores/appointmentStore';
 
 const store = useAppointmentStore();
 const router = useRouter();
 
-onMounted(() => { 
-  if (!store.selectedSlot) router.push('/search'); 
+const loadingFees = ref(true);
+
+onMounted(async () => { 
+  if (!store.selectedSlot) {
+    router.push('/search'); 
+    return;
+  }
+
+  loadingFees.value = true;
+  try {
+    // 1. Fetch Service Fee (Booking Fee)
+    try {
+       const resSf = await axios.get('http://localhost:5007/api/service-fee');
+       store.fees.bookingFee = resSf.data?.data?.amount || 0;
+    } catch (e) {
+       console.error("Booking Fee API failed:", e);
+       store.fees.bookingFee = 0;
+    }
+    console.log("Service Fee:", store.fees.bookingFee);
+
+    // 2. Fetch Hospital Fee
+    const hospitalId = store.selectedSlot?.hospitalId;
+    console.log("Hospital ID:", hospitalId);
+
+    if (hospitalId && store.consultationType === 'Physical') {
+       try {
+         const resHf = await axios.get(`http://localhost:5007/api/hospitals/${hospitalId}`);
+         store.fees.hospitalFee = resHf.data?.data?.hospitalFee || 0;
+       } catch (e) {
+         console.error("Hospital Fee API failed:", e);
+         store.fees.hospitalFee = 0;
+       }
+    } else {
+       if (!hospitalId && store.consultationType === 'Physical') {
+         console.error("Critical: hospitalId is missing from selectedSlot!");
+       }
+       store.fees.hospitalFee = 0;
+    }
+    console.log("Hospital Fee:", store.fees.hospitalFee);
+
+  } finally {
+    loadingFees.value = false;
+  }
 });
 
 const formattedDate = computed(() => {

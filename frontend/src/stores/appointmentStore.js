@@ -29,8 +29,8 @@ export const useAppointmentStore = defineStore('appointment', {
 
     fees: {
       doctorFee: 0,
-      bookingFee: 300,
-      hospitalFee: 500,
+      bookingFee: 0,
+      hospitalFee: 0,
     },
 
     appointmentId: null,
