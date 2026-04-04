@@ -116,8 +116,27 @@ onMounted(async () => {
     }
     console.log("Service Fee:", store.fees.bookingFee);
 
-    // 2. Fetch Hospital Fee
-    const hospitalId = store.selectedSlot?.hospitalId;
+    // 2. Resolve Hospital ID & Fetch Hospital Fee
+    console.log("Selected Slot:", store.selectedSlot);
+    console.log("Hospital Name:", store.selectedSlot?.hospital);
+
+    let hospitalId = store.selectedSlot?.hospitalId;
+
+    // Fallback: Resolve hospitalId by name if missing
+    if (!hospitalId && store.consultationType === 'Physical') {
+      try {
+        console.warn("hospitalId missing from slot. Attempting fallback mapping...");
+        const resHospitals = await axios.get('http://localhost:5007/api/hospitals');
+        const hospitals = resHospitals.data?.data || [];
+        const matched = hospitals.find(h => h.name === store.selectedSlot.hospital);
+        if (matched) {
+          hospitalId = matched.hospitalId || matched._id || matched.id;
+        }
+      } catch (err) {
+        console.error("Hospital mapping failed:", err);
+      }
+    }
+
     console.log("Hospital ID:", hospitalId);
 
     if (hospitalId && store.consultationType === 'Physical') {
@@ -130,7 +149,7 @@ onMounted(async () => {
        }
     } else {
        if (!hospitalId && store.consultationType === 'Physical') {
-         console.error("Critical: hospitalId is missing from selectedSlot!");
+         console.error("Critical: hospitalId could not be resolved!");
        }
        store.fees.hospitalFee = 0;
     }

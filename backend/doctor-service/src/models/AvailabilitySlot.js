@@ -51,6 +51,13 @@ const slotSchema = new mongoose.Schema(
       default: ""
     },
 
+    hospitalId: {
+      type: String,
+      trim: true,
+      default: "",
+      index: true
+    },
+
     location: {
       type: String,
       trim: true,

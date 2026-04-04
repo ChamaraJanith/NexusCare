@@ -2,7 +2,7 @@ import AvailabilitySlot from "../models/AvailabilitySlot.js";
 
 // ─── CREATE SLOT ────────────────────────────────────────────────
 export const addSlot = async (body, doctorId) => {
-  const { type, date, dayOfWeek, startTime, endTime, hospital, location, platform, slotType, slotCount } = body;
+  const { type, date, dayOfWeek, startTime, endTime, hospital, hospitalId, location, platform, slotType, slotCount } = body;
 
   if (!startTime || !endTime) throw new Error("startTime and endTime are required");
   if (startTime >= endTime) throw new Error("startTime must be before endTime");
@@ -13,6 +13,7 @@ export const addSlot = async (body, doctorId) => {
     startTime, 
     endTime, 
     hospital: hospital || location || "", // preserve backwards compatibility if hospital is explicitly passed
+    hospitalId: hospitalId || "",
     location: location || hospital || "",
     platform: platform || "",
     slotType,
@@ -87,6 +88,7 @@ export const getOrCreateSlotInstance = async (doctorId, date, parentSlot) => {
     endTime:      parentSlot.endTime,
     slotType:     parentSlot.slotType,
     hospital:     parentSlot.hospital  || "",
+    hospitalId:   parentSlot.hospitalId || "",
     location:     parentSlot.location  || "",
     platform:     parentSlot.platform  || "",
     slotCount:    parentSlot.slotCount,
@@ -107,12 +109,13 @@ export const updateSlot = async (slotId, body, doctorId) => {
   if (!slot) throw new Error("Slot not found");
   if (slot.doctorId !== doctorId) throw new Error("Forbidden: You can only update your own slots");
 
-  const { type, date, dayOfWeek, startTime, endTime, hospital, location, platform, slotType } = body;
+  const { type, date, dayOfWeek, startTime, endTime, hospital, hospitalId, location, platform, slotType } = body;
 
   const updates = {};
   if (startTime) updates.startTime = startTime;
   if (endTime) updates.endTime = endTime;
   if (hospital !== undefined) updates.hospital = hospital;
+  if (hospitalId !== undefined) updates.hospitalId = hospitalId;
   if (location !== undefined) updates.location = location;
   if (platform !== undefined) updates.platform = platform;
   if (slotType !== undefined) updates.slotType = slotType;
