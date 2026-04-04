@@ -20,8 +20,25 @@
             <q-card-section>
               <div class="text-subtitle1 text-weight-bolder q-mb-md text-blue-4 border-bottom-dark q-pb-sm">Doctor Details</div>
               <div class="flex items-center q-mb-sm"><q-icon name="account_circle" color="grey-5" class="q-mr-sm" /> <span class="text-weight-bold text-white">{{ store.selectedDoctor?.name }}</span></div>
-              <div class="flex items-center q-mb-sm"><q-icon name="medical_services" color="grey-5" class="q-mr-sm" /> <span class="text-grey-4">{{ store.selectedDoctor?.specialty }} • {{ store.selectedDoctor?.hospital }}</span></div>
-              <div class="flex items-center"><q-icon name="event" color="grey-5" class="q-mr-sm" /> <span class="text-grey-4">{{ store.selectedDate }} at {{ store.selectedSlot?.time }} ({{ store.consultationType }})</span></div>
+              <div class="flex items-center q-mb-sm text-grey-4">
+                <q-icon name="medical_services" color="grey-5" class="q-mr-sm" /> 
+                <span class="text-grey-4">{{ store.selectedDoctor?.specialization || store.selectedDoctor?.specialty }} • {{ store.selectedDoctor?.hospital }}</span>
+              </div>
+              <div class="q-mt-md">
+                <div class="flex items-center text-grey-4 q-mb-sm">
+                  <q-icon :name="store.consultationType === 'Physical' ? 'location_on' : 'videocam'" color="grey-5" class="q-mr-sm" /> 
+                  <span class="text-white">at ({{ store.consultationType }}) </span>
+                  <span class="q-mx-sm text-grey-6">•</span>
+                  <span class="text-grey-4">{{ locationLabel }}</span>
+                </div>
+                <div class="flex items-center text-blue-4 text-weight-bold bg-blue-10 q-px-md q-py-xs rounded-borders w-fit-content">
+                  <q-icon name="event" class="q-mr-xs" size="xs" /> 
+                  <span>{{ formattedDate }}</span>
+                  <span class="q-mx-md text-grey-7">•</span>
+                  <q-icon name="schedule" class="q-mr-xs" size="xs" />
+                  <span>{{ formattedTime }}</span>
+                </div>
+              </div>
             </q-card-section>
           </q-card>
 
@@ -63,7 +80,7 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue';
+import { onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAppointmentStore } from '../../stores/appointmentStore';
 
@@ -72,6 +89,36 @@ const router = useRouter();
 
 onMounted(() => { 
   if (!store.selectedSlot) router.push('/search'); 
+});
+
+const formattedDate = computed(() => {
+  const dateStr = store.selectedSlot?.date || store.selectedDate;
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+});
+
+const formattedTime = computed(() => {
+  const timeStr = store.selectedSlot?.startTime || store.selectedSlot?.time;
+  if (!timeStr) return '';
+  
+  if (timeStr.includes('AM') || timeStr.includes('PM')) return timeStr;
+
+  try {
+    const [hours, minutes] = timeStr.split(':');
+    const date = new Date();
+    date.setHours(parseInt(hours), parseInt(minutes));
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  } catch {
+    return timeStr;
+  }
+});
+
+const locationLabel = computed(() => {
+  if (store.consultationType === 'Online') {
+    return store.selectedSlot?.platform || 'Zoom';
+  }
+  return store.selectedSlot?.hospital || store.selectedDoctor?.hospital;
 });
 
 const proceedToPayment = () => { 
@@ -91,4 +138,5 @@ const proceedToPayment = () => {
 .next-btn:hover { background: #1d4ed8 !important; }
 .timer-badge { border: 1px solid rgba(248, 113, 113, 0.3); background: rgba(220, 38, 38, 0.1); }
 .pb-12 { padding-bottom: 3rem; }
+.w-fit-content { width: fit-content; }
 </style>
