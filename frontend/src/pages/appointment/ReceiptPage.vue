@@ -18,31 +18,38 @@
         <q-card-section class="q-px-xl q-pt-none text-left">
           <div class="row q-col-gutter-lg">
             <div class="col-12 col-md-6">
-              <div class="text-caption text-grey-5 text-uppercase text-weight-bold tracking-wider q-mb-xs">Appointment ID</div>
-              <div class="text-h6 text-blue-4 text-weight-bolder">{{ store.appointmentId || 'APPT-XXXX' }}</div>
+              <div class="text-caption text-grey-5 text-uppercase text-weight-bold tracking-wider q-mb-xs">Order ID</div>
+              <div class="text-caption text-blue-4" style="word-break: break-all;">
+                {{ route.params.orderId }}
+              </div>
             </div>
             <div class="col-12 col-md-6">
               <div class="text-caption text-grey-5 text-uppercase text-weight-bold tracking-wider q-mb-xs">Date & Time</div>
-              <div class="text-subtitle1 text-white text-weight-medium">{{ store.selectedDate }} at {{ store.selectedSlot?.time }}</div>
+              <div class="text-subtitle1 text-white text-weight-medium">{{ date }} at {{ time }}</div>
             </div>
           </div>
 
           <div class="q-mt-md">
             <div class="text-caption text-grey-5 text-uppercase text-weight-bold tracking-wider q-mb-xs">Doctor Details</div>
-            <div class="text-weight-bold text-white text-subtitle1">{{ store.selectedDoctor?.name }}</div>
-            <div class="text-caption text-blue-4">{{ store.selectedDoctor?.specialty }} • {{ store.selectedDoctor?.hospital }}</div>
+            <div class="text-weight-bold text-white text-subtitle1">{{ doctorName }}</div>
           </div>
 
           <div class="q-mt-lg">
             <div class="text-caption text-grey-5 text-uppercase text-weight-bold tracking-wider q-mb-xs">Patient Details</div>
-            <div class="text-white text-weight-medium">{{ store.patientDetails.title }}. {{ store.patientDetails.name }}</div>
-            <div class="text-grey-4 text-caption">{{ store.patientDetails.email }} | {{ store.patientDetails.mobile }} | {{ store.patientDetails.nic }}</div>
+            <div class="text-white text-weight-medium">
+              {{ patientName }}
+            </div>
+          </div>
+
+          <div class="q-mt-md">
+            <div class="text-caption text-grey-5 text-uppercase text-weight-bold tracking-wider q-mb-xs">Queue Number</div>
+            <div class="text-white text-h6 text-blue-4">{{ queueNumber }}</div>
           </div>
 
           <div class="q-mt-lg q-pa-md bg-slate-900 rounded-borders flex justify-between items-center border-dark">
             <span class="text-grey-4 text-weight-medium">Payment Status</span>
             <span class="text-green-4 text-weight-bold flex items-center">
-              <q-icon name="check_circle" class="q-mr-xs"/> PAID (LKR {{ store.totalFee.toLocaleString() }})
+              <q-icon name="check_circle" class="q-mr-xs"/> PAID (LKR {{ amount }})
             </span>
           </div>
         </q-card-section>
@@ -51,8 +58,8 @@
           <q-btn outline rounded color="blue-4" class="action-btn q-px-lg font-jakarta text-weight-bold" @click="downloadReceipt">
             <q-icon name="picture_as_pdf" size="xs" class="q-mr-sm" /> Download PDF
           </q-btn>
-          <q-btn unelevated rounded color="primary" class="action-btn-primary q-px-lg font-jakarta text-weight-bold" @click="router.push('/patient/appointments')">
-            Portal <q-icon name="arrow_forward" size="xs" class="q-ml-sm" />
+          <q-btn unelevated rounded color="primary" class="action-btn-primary q-px-lg font-jakarta text-weight-bold" @click="router.push('/patient/dashboard')">
+            Back to Dashboard <q-icon name="arrow_forward" size="xs" class="q-ml-sm" />
           </q-btn>
         </q-card-actions>
       </q-card>
@@ -62,19 +69,79 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import { useAppointmentStore } from '../../stores/appointmentStore';
+import { onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import axios from 'axios'
 
-const store = useAppointmentStore();
-const router = useRouter();
+const route = useRoute()
+const router = useRouter()
 
-onMounted(() => { if (!store.appointmentId) router.push('/search'); });
+const doctorName = ref('')
+const amount = ref(0)
+const queueNumber = ref('N/A')
+const date = ref('-')
+const time = ref('-')
+const patientName = ref('')
 
-const resetAndGoHome = () => { store.clearSession(); router.push('/search'); };
+onMounted(async () => {
+  try {
+    const orderId = route.params.orderId
+
+    const paymentRes = await axios.get(`http://localhost:5005/api/payments/${orderId}`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`
+      }
+    })
+
+    const payment = paymentRes.data.data || paymentRes.data
+
+    const patientId = localStorage.getItem("patientId")
+
+    const apptRes = await axios.get(`http://localhost:5003/api/appointments/patient/${patientId}`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`
+      }
+    })
+
+    const appointments = Array.isArray(apptRes.data)
+      ? apptRes.data
+      : apptRes.data.data || []
+
+    const matched = appointments.find(
+      a => a._id === payment.appointmentId || a.appointmentId === payment.appointmentId
+    )
+
+    // ✅ API success values
+    doctorName.value = payment?.doctorName || localStorage.getItem("doctorName") || "Unknown Doctor"
+    amount.value = payment?.amount || localStorage.getItem("amount") || 0
+    queueNumber.value = matched?.queueNumber || localStorage.getItem("queueNumber") || "N/A"
+    date.value = matched?.date || localStorage.getItem("date") || "-"
+    time.value = matched?.time || localStorage.getItem("time") || "-"
+    patientName.value = localStorage.getItem("patientName") || "Patient"
+
+  } catch (err) {
+    console.error("API failed, using fallback:", err)
+
+    // ✅ FALLBACK (IMPORTANT 🔥)
+    doctorName.value = localStorage.getItem("doctorName") || "Unknown Doctor"
+    amount.value = localStorage.getItem("amount") || 0
+    date.value = localStorage.getItem("date") || "-"
+    time.value = localStorage.getItem("time") || "-"
+    queueNumber.value = localStorage.getItem("queueNumber") || "N/A"
+  }
+})
+
+const resetAndGoHome = () => {
+  localStorage.removeItem("doctorName")
+  localStorage.removeItem("amount")
+  localStorage.removeItem("date")
+  localStorage.removeItem("time")
+  localStorage.removeItem("queueNumber")
+
+  router.push('/patient/dashboard')
+}
 
 const downloadReceipt = () => {
-  // Purely visual print hook triggering standard browser generic PDF flow
   window.print();
 };
 </script>

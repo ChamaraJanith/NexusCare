@@ -191,6 +191,14 @@ const locationLabel = computed(() => {
 });
 
 const proceedToPayment = () => {
+
+  localStorage.setItem("doctorName", store.selectedDoctor?.name || "")
+  localStorage.setItem("amount", store.totalFee || 0)
+  localStorage.setItem("date", formattedDate.value || "")
+  localStorage.setItem("time", formattedTime.value || "")
+  localStorage.setItem("queueNumber", "-")
+  localStorage.setItem("patientName", store.patientDetails.name || "")
+
   console.log("PASSING FEES:", {
     doctorFee: store.fees.doctorFee,
     hospitalFee: store.fees.hospitalFee,
