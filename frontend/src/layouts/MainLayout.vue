@@ -144,69 +144,75 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/authStore'
 
 const router = useRouter()
-const route = useRoute()
 const leftDrawerOpen = ref(false)
-const isLoggedIn = ref(false)
-const currentUser = ref({})
+
+// ✅ Auth store
+const authStore = useAuthStore()
+
+const isLoggedIn = computed(() => authStore.isLoggedIn)
+const currentUser = computed(() => authStore.user)
+
+// UI states
 const isScrolled = ref(false)
 const avatarImageError = ref(false)
 
+// Scroll effect
 const handleScroll = () => {
   isScrolled.value = window.scrollY > 20
 }
 
+// Drawer toggle
 const toggleLeftDrawer = () => {
   leftDrawerOpen.value = !leftDrawerOpen.value
 }
 
-const syncAuthState = () => {
-  isLoggedIn.value = !!localStorage.getItem('nexus_token')
-
-  try {
-    currentUser.value = JSON.parse(localStorage.getItem('nexus_user') || '{}')
-  } catch {
-    currentUser.value = {}
-  }
-}
-
+// Image handling
 const DOCTOR_SERVICE_URL =
   import.meta.env?.VITE_DOCTOR_SERVICE_URL || 'http://localhost:5002'
 
 const toImageUrl = (imgValue) => {
   if (!imgValue) return ''
   let url = ''
+
   if (typeof imgValue === 'string') {
     url = imgValue
   } else if (typeof imgValue === 'object') {
     url = imgValue.url || imgValue.secure_url || imgValue.path || ''
   }
+
   if (!url) return ''
-  // Relative paths from local uploads need the service base URL
-  if (url.startsWith('/uploads')) return `${DOCTOR_SERVICE_URL}${url}`
+
+  if (url.startsWith('/uploads')) {
+    return `${DOCTOR_SERVICE_URL}${url}`
+  }
+
   return url
 }
 
+// Profile image
 const profileImageUrl = computed(() => {
   const user = currentUser.value || {}
+
   return (
-    toImageUrl(user.profileImage)
-    || toImageUrl(user.avatar)
-    || toImageUrl(user.avatarUrl)
-    || toImageUrl(user.photoUrl)
-    || ''
+    toImageUrl(user.profileImage) ||
+    toImageUrl(user.avatar) ||
+    toImageUrl(user.avatarUrl) ||
+    toImageUrl(user.photoUrl) ||
+    ''
   )
 })
 
+// ✅ Logout (FINAL)
 const logout = () => {
-  localStorage.removeItem('nexus_token')
-  localStorage.removeItem('nexus_user')
-  syncAuthState()
+  authStore.logout()
   router.push('/login')
 }
 
+// Profile navigation
 const goProfile = () => {
   const user = currentUser.value || {}
 
@@ -216,9 +222,8 @@ const goProfile = () => {
   else router.push('/')
 }
 
+// Telemedicine navigation (FIXED)
 const goTelemedicine = () => {
-  syncAuthState()
-
   if (leftDrawerOpen.value) {
     leftDrawerOpen.value = false
   }
@@ -230,29 +235,16 @@ const goTelemedicine = () => {
   }
 }
 
-const onStorageChange = (event) => {
-  if (event.key === 'nexus_token' || event.key === 'nexus_user' || event.key === null) {
-    syncAuthState()
-  }
-}
-
+// Lifecycle
 onMounted(() => {
-  syncAuthState()
-  window.addEventListener('storage', onStorageChange)
-  window.addEventListener('focus', syncAuthState)
   window.addEventListener('scroll', handleScroll)
 })
 
 onBeforeUnmount(() => {
-  window.removeEventListener('storage', onStorageChange)
-  window.removeEventListener('focus', syncAuthState)
   window.removeEventListener('scroll', handleScroll)
 })
 
-watch(() => route.fullPath, () => {
-  syncAuthState()
-})
-
+// Reset avatar error when image changes
 watch(profileImageUrl, () => {
   avatarImageError.value = false
 })
