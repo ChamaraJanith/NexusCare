@@ -17,6 +17,7 @@ const routes = [
       { path: 'admin/dashboard', component: () => import('pages/AdminDashboard.vue') },
 
       //{ path: 'payment', component: () => import('pages/PaymentPage.vue') },
+      { path: 'payment', component: () => import('pages/appointment/PaymentSuccess.vue') },
       { path: 'payment/success', redirect: '/payment?status=success' },
       { path: 'payment/cancel',  redirect: '/payment?status=cancel' },
 
@@ -35,6 +36,7 @@ const routes = [
       { path: 'appointment/summary', component: () => import('pages/appointment/SummaryPage.vue') },
       { path: 'appointment/payment', component: () => import('pages/appointment/PaymentPage.vue') },
       { path: 'appointment/receipt', component: () => import('pages/appointment/ReceiptPage.vue') },
+      { path: 'receipt/:orderId', component: () => import('pages/appointment/ReceiptPage.vue') },
       { path: 'patient/appointments', component: () => import('pages/appointment/MyAppointments.vue') },
 
       // Video

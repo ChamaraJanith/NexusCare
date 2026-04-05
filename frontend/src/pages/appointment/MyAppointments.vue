@@ -33,6 +33,8 @@
           <div class="col-12 col-md-5 q-pl-md">
             <div class="text-subtitle1 text-weight-bold text-white">{{ typeof appt.doctor === 'object' ? appt.doctor.name : 'Doctor Appointment' }}</div>
             <div class="text-caption text-grey-5">ID: {{ appt._id || appt.id }}</div>
+            <div class="text-caption text-blue-4" v-if="appt.queueNumber">Queue: #{{ appt.queueNumber }}</div>
+            <div class="text-caption" :class="appt.paymentStatus === 'success' ? 'text-green-4' : 'text-orange-4'">Payment: {{ appt.paymentStatus || 'Pending' }}</div>
           </div>
 
           <div class="col-12 col-md-2 flex flex-center">
@@ -41,7 +43,9 @@
             </q-chip>
           </div>
 
-          <div class="col-12 col-md-2 flex justify-end">
+          <div class="col-12 col-md-3 flex justify-end items-center q-gutter-x-sm">
+            <q-btn v-if="appt.paymentStatus === 'success' && appt.orderId" outline dense color="blue-4" label="View Receipt" @click="router.push(`/receipt/${appt.orderId}`)" />
+            <q-btn v-if="appt.paymentStatus === 'success' && appt.orderId" outline dense color="green-4" label="Download Receipt" @click="downloadReceipt(appt.orderId)" />
             <q-btn v-if="appt.status !== 'Cancelled' && appt.status !== 'Completed'" flat round dense icon="cancel" color="red-4" @click="confirmCancel(appt)" />
           </div>
         </q-card>
@@ -87,6 +91,11 @@ const confirmCancel = (appt) => {
       $q.notify({ type: 'positive', message: 'Cancelled via server.' });
     } catch { $q.notify({ type: 'negative', message: 'Server cancel failed.' }); } finally { $q.loading.hide(); }
   });
+};
+
+const downloadReceipt = (orderId) => {
+  router.push(`/receipt/${orderId}`);
+  setTimeout(() => window.print(), 1000);
 };
 </script>
 
