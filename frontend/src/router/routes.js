@@ -16,7 +16,7 @@ const routes = [
       // Admin
       { path: 'admin/dashboard', component: () => import('pages/AdminDashboard.vue') },
 
-      { path: 'payment', component: () => import('pages/PaymentPage.vue') },
+      //{ path: 'payment', component: () => import('pages/PaymentPage.vue') },
       { path: 'payment/success', redirect: '/payment?status=success' },
       { path: 'payment/cancel',  redirect: '/payment?status=cancel' },
 
