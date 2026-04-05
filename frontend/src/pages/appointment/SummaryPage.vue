@@ -190,9 +190,33 @@ const locationLabel = computed(() => {
   return store.selectedSlot?.hospital || store.selectedDoctor?.hospital;
 });
 
-const proceedToPayment = () => { 
-  if (store.timeLeft > 0) router.push('/appointment/payment'); 
+const proceedToPayment = () => {
+  console.log("PASSING FEES:", {
+    doctorFee: store.fees.doctorFee,
+    hospitalFee: store.fees.hospitalFee,
+    serviceFee: store.fees.bookingFee
+  });
+
+  router.push({
+    path: '/appointment/payment',
+    query: {
+      doctorId: store.selectedDoctor?.doctorId,
+      doctorName: store.selectedDoctor?.name,
+      specialty: store.selectedDoctor?.specialization || store.selectedDoctor?.specialty,
+
+      // ✅ FIXED
+      doctorFee: store.fees.doctorFee,
+      hospitalFee: store.fees.hospitalFee,
+      serviceFee: store.fees.bookingFee,
+
+      date: formattedDate.value,
+      time: formattedTime.value,
+      type: store.consultationType === 'Physical' ? 'PHYSICAL' : 'ONLINE',
+      appointmentId: `TEMP-${Date.now()}`
+    }
+  });
 };
+
 </script>
 
 <style scoped>
