@@ -87,7 +87,7 @@ onMounted(async () => {
   try {
     const orderId = route.params.orderId
 
-    const paymentRes = await axios.get(`http://localhost:5005/api/payments/${orderId}`, {
+    const paymentRes = await axios.get(`http://localhost:5009/api/payments/${orderId}`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem("token")}`
       }
