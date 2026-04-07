@@ -85,28 +85,60 @@
           <div class="glass-card q-pa-xl h-full column">
             <div class="text-h6 text-white text-weight-bold q-mb-lg">Consultation Archive</div>
 
-            <div v-if="completedSessions.length > 0" class="scroll-area flex-1">
-              <div class="q-gutter-y-md">
-                <div v-for="session in completedSessions" :key="session._id" class="condition-item row items-center q-pa-md">
-                  <div class="q-mr-md">
-                    <q-icon name="history" color="blue-4" size="md" />
-                  </div>
-                  <div class="col">
-                    <div class="text-white text-weight-bold text-body1 q-mb-xs">Dr. {{ session.doctorId }}</div>
-                    <div class="text-grey-5 text-caption tracking-wider">
-                      {{ new Date(session.updatedAt).toLocaleString() }}
+            <div class="archive-section q-mb-lg">
+              <div class="text-subtitle2 text-white q-mb-sm">Ongoing Sessions</div>
+
+              <div v-if="ongoingSessions.length > 0" class="scroll-area flex-1">
+                <div class="q-gutter-y-md">
+                  <div v-for="session in ongoingSessions" :key="session._id" class="condition-item row items-center q-pa-md">
+                    <div class="q-mr-md">
+                      <q-icon name="videocam" color="green-4" size="md" />
                     </div>
-                  </div>
-                  <div class="col-auto">
-                    <q-badge outline color="blue-3" label="COMPLETED" class="text-weight-bold q-pa-sm text-caption tracking-wider" />
+                    <div class="col">
+                      <div class="text-white text-weight-bold text-body1 q-mb-xs">Dr. {{ session.doctorId }}</div>
+                      <div class="text-grey-5 text-caption tracking-wider">
+                        Active since {{ new Date(session.createdAt).toLocaleString() }}
+                      </div>
+                    </div>
+                    <div class="col-auto">
+                      <q-badge outline color="green-3" label="ACTIVE" class="text-weight-bold q-pa-sm text-caption tracking-wider" />
+                    </div>
                   </div>
                 </div>
               </div>
+
+              <div v-else class="text-center text-grey-6 flex flex-center flex-1 column q-pa-md">
+                <q-icon name="timelapse" size="3rem" class="q-mb-md opacity-50" />
+                <div class="letter-spacing-1 text-weight-bold uppercase">No active consultations</div>
+              </div>
             </div>
 
-            <div v-else class="text-center text-grey-6 flex flex-center flex-1 column">
-              <q-icon name="cloud_off" size="3rem" class="q-mb-md opacity-50" />
-              <div class="letter-spacing-1 text-weight-bold uppercase">No recent sessions found</div>
+            <div class="archive-section">
+              <div class="text-subtitle2 text-white q-mb-sm">Completed Consultations</div>
+
+              <div v-if="completedSessions.length > 0" class="scroll-area flex-1">
+                <div class="q-gutter-y-md">
+                  <div v-for="session in completedSessions" :key="session._id" class="condition-item row items-center q-pa-md">
+                    <div class="q-mr-md">
+                      <q-icon name="history" color="blue-4" size="md" />
+                    </div>
+                    <div class="col">
+                      <div class="text-white text-weight-bold text-body1 q-mb-xs">Dr. {{ session.doctorId }}</div>
+                      <div class="text-grey-5 text-caption tracking-wider">
+                        {{ new Date(session.updatedAt).toLocaleString() }}
+                      </div>
+                    </div>
+                    <div class="col-auto">
+                      <q-badge outline color="blue-3" label="COMPLETED" class="text-weight-bold q-pa-sm text-caption tracking-wider" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div v-else class="text-center text-grey-6 flex flex-center flex-1 column q-pa-md">
+                <q-icon name="cloud_off" size="3rem" class="q-mb-md opacity-50" />
+                <div class="letter-spacing-1 text-weight-bold uppercase">No completed consultations yet</div>
+              </div>
             </div>
           </div>
         </div>
@@ -162,6 +194,13 @@ const selectedDoctor = computed(() => {
 })
 
 // --- Computed: Filter History ---
+const ongoingSessions = computed(() => {
+  return sessions.value.filter(s =>
+    s.status === 'ACTIVE' &&
+    String(s.patientId).toLowerCase() === String(patientId.value).toLowerCase()
+  ).sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+})
+
 const completedSessions = computed(() => {
   return sessions.value.filter(s =>
     s.status === 'COMPLETED' &&

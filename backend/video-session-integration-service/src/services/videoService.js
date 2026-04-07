@@ -1,143 +1,112 @@
 const { v4: uuidv4 } = require('uuid');
-const DoctorProfile = require('../models/doctorProfileModel');
+const axios = require('axios');
+const DoctorCatalog = require('../models/DoctorCatalog');
 
-const DOCTOR_DB_NAMES = (process.env.DOCTOR_DB_NAMES || 'NexusCare,test')
-  .split(',')
-  .map((name) => name.trim())
-  .filter(Boolean);
-const DOCTOR_COLLECTIONS = (process.env.DOCTOR_COLLECTIONS || 'doctorprofiles,doctorprofile')
-  .split(',')
-  .map((name) => name.trim())
-  .filter(Boolean);
-const USER_COLLECTIONS = (process.env.USER_COLLECTIONS || 'users,user')
-  .split(',')
-  .map((name) => name.trim())
-  .filter(Boolean);
+const DOCTOR_SERVICE_URL = process.env.DOCTOR_SERVICE_URL || 'http://localhost:5002';
 
-const findDoctorsInDb = async (dbName) => {
-  const db = DoctorProfile.db.useDb(dbName, { useCache: true });
+const sanitizeDoctorRecord = (doctor) => {
+  const doctorId = doctor?.doctorId || null;
+  const name = doctor?.name || doctor?.doctorId || `Doctor ${doctorId}`;
+  const specialization = doctor?.specialization || doctor?.specialty || null;
 
-  for (const collectionName of DOCTOR_COLLECTIONS) {
-    const doctors = await db.collection(collectionName).find(
-      {
-        $or: [{ isVerified: true }, { isVerified: { $exists: false } }],
-        isDeleted: { $ne: true }
-      },
-      {
-        projection: {
-          _id: 0,
-          userId: 1,
-          doctorId: 1,
-          specialty: 1,
-          specialization: 1,
-          hospital: 1,
-          location: 1
-        }
-      }
-    )
-      .sort({ doctorId: 1 })
-      .toArray();
-
-    if (Array.isArray(doctors) && doctors.length > 0) {
-      return doctors;
-    }
-  }
-
-  return [];
+  return {
+    doctorId,
+    userId: doctor?.userId || null,
+    name,
+    email: doctor?.email || null,
+    specialization,
+    hospital: doctor?.hospital || null,
+    location: doctor?.location || null,
+    profileImage: doctor?.profileImage || null,
+    isActive: doctor?.isActive !== false,
+  };
 };
 
-const getDoctorsFromDatabase = async () => {
-  const triedDbs = [];
-  for (const dbName of DOCTOR_DB_NAMES) {
-    try {
-      const doctors = await findDoctorsInDb(dbName);
-      triedDbs.push(`${dbName}:${doctors.length}`);
-      if (doctors.length > 0) {
-        return { doctors, sourceDbName: dbName };
-      }
-    } catch (error) {
-      triedDbs.push(`${dbName}:error`);
-    }
-  }
-
-  const currentDbName = DoctorProfile.db?.name;
-  if (currentDbName && !DOCTOR_DB_NAMES.includes(currentDbName)) {
-    try {
-      const doctors = await findDoctorsInDb(currentDbName);
-      triedDbs.push(`${currentDbName}:${doctors.length}`);
-      if (doctors.length > 0) {
-        return { doctors, sourceDbName: currentDbName };
-      }
-    } catch (error) {
-      triedDbs.push(`${currentDbName}:error`);
-    }
-  }
-
-  console.warn('[videoService] doctors not found in configured DBs:', triedDbs.join(', '));
-  return { doctors: [], sourceDbName: null };
+let lastBootstrapStatus = {
+  success: null,
+  timestamp: null,
+  error: null,
+  count: 0,
 };
 
-const getDoctorUserMapFromDatabase = async (dbName, doctors) => {
-  if (!dbName || !Array.isArray(doctors) || doctors.length === 0) {
-    return new Map();
-  }
+const upsertDoctorCatalog = async (doctor) => {
+  if (!doctor?.doctorId) return null;
 
-  const db = DoctorProfile.db.useDb(dbName, { useCache: true });
-  const userIds = [...new Set(doctors.map((doctor) => doctor.userId).filter(Boolean))];
-  const doctorIds = [...new Set(doctors.map((doctor) => doctor.doctorId).filter(Boolean))];
+  const payload = sanitizeDoctorRecord(doctor);
 
-  if (userIds.length === 0 && doctorIds.length === 0) {
-    return new Map();
-  }
+  return await DoctorCatalog.findOneAndUpdate(
+    { doctorId: payload.doctorId },
+    { $set: payload },
+    { new: true, upsert: true, setDefaultsOnInsert: true }
+  );
+};
 
-  const userMap = new Map();
-
-  for (const collectionName of USER_COLLECTIONS) {
-    const users = await db.collection(collectionName).find(
-      {
-        role: 'doctor',
-        isActive: { $ne: false },
-        $or: [
-          { userId: { $in: userIds } },
-          { roleId: { $in: doctorIds } }
-        ]
-      },
-      {
-        projection: {
-          _id: 0,
-          userId: 1,
-          roleId: 1,
-          name: 1,
-          email: 1
-        }
-      }
-    ).toArray();
-
-    if (!Array.isArray(users) || users.length === 0) {
-      continue;
-    }
-
-    users.forEach((user) => {
-      if (user?.userId && user?.roleId) {
-        userMap.set(`${user.userId}::${user.roleId}`, {
-          name: user.name || user.roleId,
-          email: user.email || ''
-        });
-      }
-      if (user?.roleId) {
-        userMap.set(`ROLE::${user.roleId}`, {
-          name: user.name || user.roleId,
-          email: user.email || ''
-        });
-      }
+const fetchDoctorsFromDoctorService = async () => {
+  try {
+    const response = await axios.get(`${DOCTOR_SERVICE_URL}/api/doctors/search`, {
+      timeout: 5000,
     });
 
-    if (userMap.size > 0) {
-      return userMap;
-    }
+    const data = Array.isArray(response.data)
+      ? response.data
+      : response.data?.data;
+
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.warn('[videoService] failed to fetch doctors from doctor-service:', error.message);
+    return [];
+  }
+};
+
+let bootstrapInProgress = false;
+
+const bootstrapDoctorCatalog = async () => {
+  if (bootstrapInProgress) {
+    return [];
   }
 
-  return userMap;
+  bootstrapInProgress = true;
+  try {
+    const remoteDoctors = await fetchDoctorsFromDoctorService();
+    if (!Array.isArray(remoteDoctors) || remoteDoctors.length === 0) {
+      lastBootstrapStatus = {
+        success: false,
+        timestamp: new Date().toISOString(),
+        error: 'No doctors returned from doctor-service',
+        count: 0,
+      };
+      return [];
+    }
+
+    await Promise.all(remoteDoctors.map(upsertDoctorCatalog));
+    lastBootstrapStatus = {
+      success: true,
+      timestamp: new Date().toISOString(),
+      error: null,
+      count: remoteDoctors.length,
+    };
+    return remoteDoctors;
+  } catch (error) {
+    lastBootstrapStatus = {
+      success: false,
+      timestamp: new Date().toISOString(),
+      error: error.message,
+      count: 0,
+    };
+    return [];
+  } finally {
+    bootstrapInProgress = false;
+  }
+};
+
+const scheduleDoctorCatalogBootstrap = (intervalMs = 60000) => {
+  setInterval(async () => {
+    const count = await DoctorCatalog.countDocuments();
+    if (count === 0) {
+      console.log('[videoService] empty catalog, retrying bootstrap from doctor-service');
+      await bootstrapDoctorCatalog();
+    }
+  }, intervalMs);
 };
 
 const generateNeuralLink = async (patientId, doctorId) => {
@@ -150,51 +119,40 @@ const generateNeuralLink = async (patientId, doctorId) => {
     patientId,
     doctorId,
     status: 'ACTIVE',
-    timestamp: new Date()
+    timestamp: new Date(),
   };
 };
 
 const getDoctorsForVideo = async () => {
-  let doctors = [];
-  let sourceDbName = null;
-  let doctorUserMap = new Map();
+  let doctors = await DoctorCatalog.find({ isActive: true }).sort({ doctorId: 1 }).lean();
 
-  try {
-    const doctorData = await getDoctorsFromDatabase();
-    doctors = doctorData.doctors;
-    sourceDbName = doctorData.sourceDbName;
-  } catch (error) {
-    console.warn('[videoService] doctorprofiles DB query failed:', error.message);
-  }
-
-  try {
-    doctorUserMap = await getDoctorUserMapFromDatabase(sourceDbName, doctors);
-  } catch (error) {
-    console.warn('[videoService] users table lookup failed:', error.message);
-  }
-
-  if (doctors.length === 0) {
-    return [];
+  if (!Array.isArray(doctors) || doctors.length === 0) {
+    await bootstrapDoctorCatalog();
+    doctors = await DoctorCatalog.find({ isActive: true }).sort({ doctorId: 1 }).lean();
   }
 
   return doctors.map((doctor) => {
-    const pairKey = `${doctor.userId || ''}::${doctor.doctorId || ''}`;
-    const user = doctorUserMap.get(pairKey)
-      || doctorUserMap.get(`ROLE::${doctor.doctorId || ''}`)
-      || {};
-    const displayName = user.name || doctor.doctorId;
-
+    const doctorName = doctor.name || `Doctor ${doctor.doctorId}`;
     return {
-      userId: doctor.userId || null,
       doctorId: doctor.doctorId,
-      name: displayName,
-      label: `${displayName} (${doctor.doctorId}) - ${doctor.specialization || doctor.specialty || 'General Consultation'}`,
-      specialization: doctor.specialization || doctor.specialty || null,
-      hospital: doctor.hospital || null,
-      location: doctor.location || null,
-      email: user.email || ''
+      userId: doctor.userId,
+      name: doctorName,
+      label: `${doctorName} (${doctor.doctorId}) - ${doctor.specialization || 'General Consultation'}`,
+      specialization: doctor.specialization,
+      hospital: doctor.hospital,
+      location: doctor.location,
+      email: doctor.email || '',
+      profileImage: doctor.profileImage || null,
     };
   });
 };
 
-module.exports = { generateNeuralLink, getDoctorsForVideo };
+const getDoctorCatalogStatus = async () => {
+  const count = await DoctorCatalog.countDocuments();
+  return {
+    count,
+    lastBootstrap: lastBootstrapStatus,
+  };
+};
+
+module.exports = { generateNeuralLink, getDoctorsForVideo, bootstrapDoctorCatalog, scheduleDoctorCatalogBootstrap, getDoctorCatalogStatus };

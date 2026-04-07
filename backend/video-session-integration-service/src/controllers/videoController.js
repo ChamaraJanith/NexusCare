@@ -136,4 +136,20 @@ const getDoctors = async (req, res) => {
     }
 };
 
-module.exports = { initializeSession, endSession, getSessions, getDoctors };
+// 5. Health check for video service and doctor catalog
+const healthCheck = async (req, res) => {
+    try {
+        const status = await videoService.getDoctorCatalogStatus();
+        res.status(200).json({
+            success: true,
+            service: 'video-service',
+            doctorCatalog: status,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('❌ Health Check Error:', error.message);
+        res.status(500).json({ success: false, message: error.message || 'Health check failed' });
+    }
+};
+
+module.exports = { initializeSession, endSession, getSessions, getDoctors, healthCheck };

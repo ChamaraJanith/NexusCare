@@ -1,5 +1,7 @@
 import Doctor from "../models/Doctor.js";
 import * as doctorService from "../services/doctorService.js";
+import * as videoSyncClient from "../services/videoSyncClient.js";
+import * as videoCatalogSyncService from "../services/videoCatalogSyncService.js";
 import cloudinary from "../config/cloudinary.js";
 import streamifier from "streamifier";
 
@@ -9,11 +11,28 @@ const streamUpload = (buffer) => {
       { folder: "nexuscare/doctors" },
       (error, result) => {
         if (result) resolve(result);
-        else reject(error);
+        else reject(new Error(error?.message || 'Upload failed'));
       }
     );
     streamifier.createReadStream(buffer).pipe(stream);
   });
+};
+
+const buildDoctorSyncPayload = (doctorRecord, identity = {}) => {
+  if (!doctorRecord?.doctorId) {
+    return null;
+  }
+
+  return {
+    doctorId: doctorRecord.doctorId,
+    name: identity.name || `Doctor ${doctorRecord.doctorId}`,
+    email: identity.email || null,
+    specialization: doctorRecord.specialty || doctorRecord.specialization || identity.specialization || null,
+    hospital: doctorRecord.hospital || identity.hospital || null,
+    location: doctorRecord.location || identity.location || null,
+    profileImage: doctorRecord.profileImage || identity.profileImage || null,
+    isActive: doctorRecord.isActive !== false,
+  };
 };
 
 // ─── GET /api/doctors/me ──────────────────────────────────────────────────────
@@ -67,7 +86,7 @@ export const updateDoctorMe = async (req, res) => {
     if (experience !== undefined && experience !== null) {
       const num = Number(experience);
 
-      if (!isNaN(num)) {
+      if (!Number.isNaN(num)) {
         updateData.experience = num;
       }
     }
@@ -79,6 +98,16 @@ export const updateDoctorMe = async (req, res) => {
     const updated = await doctorService.updateDoctorProfile(doctorId, updateData);
     
     console.log("UPDATE DATA:", updateData);
+
+    const identity = await doctorService.getDoctorFullProfile(doctorId, req.headers.authorization).catch((err) => {
+      console.warn("[updateDoctorMe] getDoctorFullProfile failed:", err.message);
+      return null;
+    });
+
+    const syncPayload = buildDoctorSyncPayload(updated, identity || {});
+    if (syncPayload) {
+      videoSyncClient.syncDoctor(syncPayload).catch((err) => console.warn("[updateDoctorMe] video sync failed:", err.message));
+    }
 
     return res.status(200).json({
       success: true,
@@ -155,6 +184,16 @@ export const uploadProfileImage = async (req, res) => {
     const updated = await doctorService.updateProfileImage(doctorId, imageUrl);
     console.log("[uploadProfileImage] DB update result:", JSON.stringify(updated, null, 2));
 
+    const identity = await doctorService.getDoctorFullProfile(doctorId, req.headers.authorization).catch((err) => {
+      console.warn("[uploadProfileImage] getDoctorFullProfile failed:", err.message);
+      return null;
+    });
+
+    const syncPayload = buildDoctorSyncPayload(updated, identity || {});
+    if (syncPayload) {
+      videoSyncClient.syncDoctor(syncPayload).catch((err) => console.warn("[uploadProfileImage] video sync failed:", err.message));
+    }
+
     return res.status(200).json({
       success: true,
       data: updated?.profileImage || imageUrl,
@@ -190,6 +229,17 @@ export const getDoctor = async (req, res) => {
       success: false,
       message: err.message,
     });
+  }
+};
+
+// ─── POST /api/doctors/sync/full ─────────────────────────────────────────────
+export const syncDoctorCatalog = async (req, res) => {
+  try {
+    const result = await videoCatalogSyncService.syncFullDoctorCatalog();
+    return res.status(200).json({ success: true, data: result });
+  } catch (err) {
+    console.error("[syncDoctorCatalog] ERROR:", err.message);
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
 
@@ -306,6 +356,11 @@ export const updateDoctor = async (req, res) => {
     }
 
     const updated = await doctorService.updateDoctorByDoctorId(req.params.id, req.body);
+
+    const syncPayload = buildDoctorSyncPayload(updated, {});
+    if (syncPayload) {
+      videoSyncClient.syncDoctor(syncPayload).catch((err) => console.warn("[updateDoctor] video sync failed:", err.message));
+    }
 
     return res.status(200).json({
       success: true,
