@@ -4,6 +4,7 @@ import {
   updateDoctorMe,
   uploadProfileImage,
   getDoctor,
+  getDoctorInternal,
   updateDoctor,
   searchDoctors,
   syncDoctorCatalog,
@@ -30,6 +31,9 @@ router.post("/test-image-upload",
 // 🔍 SEARCH + FILTER Doctors (public or protected based on requirement)
 router.get("/search", searchDoctors);
 router.post("/sync/full", verifyToken, allowRoles("admin"), syncDoctorCatalog);
+
+// Internal doctor contact lookup for service-to-service calls
+router.get("/internal/:id", getDoctorInternal);
 
 // 👤 GET aggregated doctor profile (identity + professional data)
 // MUST be before /:id to prevent "me" being treated as an ID
