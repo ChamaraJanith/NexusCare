@@ -69,7 +69,12 @@ const appointmentSchema = new mongoose.Schema({
 
   queueNumber: {
     type: Number
-  }
+  },
+
+  rejectionReason: {
+  type: String,
+  default: null
+}
 
 }, { timestamps: true });
 

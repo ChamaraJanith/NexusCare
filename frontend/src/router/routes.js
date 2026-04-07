@@ -38,6 +38,7 @@ const routes = [
       { path: 'appointment/receipt', component: () => import('pages/appointment/ReceiptPage.vue') },
       { path: 'receipt/:orderId', component: () => import('pages/appointment/ReceiptPage.vue') },
       { path: 'patient/appointments', component: () => import('pages/appointment/MyAppointments.vue') },
+      { path: 'appointment/pending', component: () => import('pages/appointment/AppointmentPending.vue') },
 
       // Video
       { path: 'video', component: () => import('pages/VideoSession.vue') },

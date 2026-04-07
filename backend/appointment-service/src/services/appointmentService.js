@@ -21,8 +21,8 @@ const fetchCharges = async (doctorId, hospitalId, appointmentType) => {
     if (data.success) return data.data;
     throw new Error("Fee service returned failure");
   } catch (err) {
-    console.error("❌ MS6 unreachable, using fallback fees:", err.message);
-    // Fallback — booking never breaks even if MS6 is down
+    console.warn("⚠️ MS6 unreachable, using fallback fees:", err.message);
+    // Fallback fees
     const serviceFee = 500;
     const doctorFee = 2000;
     const hospitalFee = appointmentType === "PHYSICAL" ? 1000 : 0;
@@ -66,13 +66,18 @@ export const createAppointment = async (data) => {
     throw new Error("Slot already booked");
   }
 
-  // 🔥 LOCK SLOT (Doctor Service)
-  await axios.put(
-    "http://localhost:5002/api/availability/book",
-    { doctorId, date, time }
-  );
+  // 🔥 LOCK SLOT — try/catch so booking doesn't fail if slot lock fails
+  try {
+    await axios.put(
+      "http://localhost:5002/api/availability/book",
+      { doctorId, date, time }
+    );
+  } catch (slotErr) {
+    console.warn("⚠️ Slot lock failed (non-critical):", slotErr.response?.data || slotErr.message);
+    // Continue — don't throw, appointment can still be saved
+  }
 
-  // 🔢 QUEUE NUMBER (same doctor + same date)
+  // 🔢 QUEUE NUMBER
   const count = await Appointment.countDocuments({
     doctorId,
     date,
@@ -89,20 +94,18 @@ export const createAppointment = async (data) => {
   const appointment = new Appointment({
     ...data,
     appointmentId,
-    queueNumber,              // 🔥 NEW (STEP 6)
-    charges,                  // 🔥 STEP 7 ready
-    paymentStatus: "PENDING", // 🔥 STEP 7 ready
+    queueNumber,
+    charges,
+    paymentStatus: "PENDING",
     status: "PENDING"
   });
 
   const saved = await appointment.save();
 
-  // ⚡ REAL-TIME EMIT
   io.emit("appointmentBooked", saved);
 
   return saved;
 };
-
 // ✅ Get appointments
 export const getAppointmentsByPatient = async (patientId) => {
   return await Appointment.find({ patientId });
