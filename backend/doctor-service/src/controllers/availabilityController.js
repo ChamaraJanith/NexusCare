@@ -140,10 +140,15 @@ export const bookSlot = async (req, res) => {
   try {
     const { doctorId, date, time } = req.body;
 
-    // 1. Find the target slot
+    // 🔥 Date range search — handles string vs Date mismatch
+    const selectedDate = new Date(date);
+    selectedDate.setHours(0, 0, 0, 0);
+    const nextDate = new Date(selectedDate);
+    nextDate.setDate(nextDate.getDate() + 1);
+
     const slot = await AvailabilitySlot.findOne({
       doctorId,
-      date: new Date(date),
+      date: { $gte: selectedDate, $lt: nextDate },
       startTime: time,
       isDeleted: false
     });
@@ -152,14 +157,14 @@ export const bookSlot = async (req, res) => {
       return res.status(404).json({ message: "Slot not found" });
     }
 
-    // 2. Block booking on raw recurring templates — always book instances
+    // Block booking on raw recurring templates
     if (slot.isRecurring) {
       return res.status(400).json({
-        message: "Cannot book a recurring template directly. Select a specific date slot."
+        message: "Cannot book a recurring template directly."
       });
     }
 
-    // 2. Block booking if slot has already expired
+    // Check expired
     const now = new Date();
     const slotDateTime = new Date(slot.date);
     const [hours, minutes] = slot.startTime.split(":");
@@ -169,26 +174,21 @@ export const bookSlot = async (req, res) => {
       return res.status(400).json({ message: "This slot has already expired" });
     }
 
-    // 3. Check capacity
+    // Check capacity
     if (slot.bookedCount >= slot.slotCount) {
       return res.status(400).json({ message: "Slot full" });
     }
 
-    // 3. Increment bookedCount and assign queue number
     slot.bookedCount += 1;
     const queueNumber = slot.bookedCount;
 
-    // 4. For ONLINE slots: mark isBooked for backward compatibility
     if (slot.slotType === "ONLINE") {
       slot.isBooked = true;
     }
 
     await slot.save();
 
-    res.json({
-      message: "Booked successfully",
-      queueNumber
-    });
+    res.json({ message: "Booked successfully", queueNumber });
 
   } catch (err) {
     res.status(500).json({ message: err.message });

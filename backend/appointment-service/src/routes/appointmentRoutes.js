@@ -118,4 +118,108 @@ router.put("/admin/verify/:id", async (req, res) => {
   }
 });
 
+// ── NEW: Doctor confirm ──────────────────────────────────────────
+router.put("/doctor/confirm/:id", async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) return res.status(401).json({ error: "No token" });
+    const userData = await verifyUser(token);
+    if (userData.role !== "doctor") return res.status(403).json({ error: "Doctors only" });
+
+    const appointment = await Appointment.findById(req.params.id);
+    if (!appointment) return res.status(404).json({ error: "Not found" });
+    if (appointment.doctorId !== userData.roleId) return res.status(403).json({ error: "Not your appointment" });
+    if (appointment.status === "CANCELLED") return res.status(400).json({ error: "Cannot confirm cancelled appointment" });
+
+    const updated = await Appointment.findByIdAndUpdate(
+      req.params.id,
+      { status: "CONFIRMED" },
+      { new: true }
+    );
+
+    const { io } = await import("../app.js");
+    io.emit("appointmentConfirmed", updated);
+
+    res.json({ message: "Appointment confirmed", appointment: updated });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── NEW: Doctor reject ───────────────────────────────────────────
+router.put("/doctor/reject/:id", async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) return res.status(401).json({ error: "No token" });
+    const userData = await verifyUser(token);
+    if (userData.role !== "doctor") return res.status(403).json({ error: "Doctors only" });
+
+    const appointment = await Appointment.findById(req.params.id);
+    if (!appointment) return res.status(404).json({ error: "Not found" });
+    if (appointment.doctorId !== userData.roleId) return res.status(403).json({ error: "Not your appointment" });
+    if (appointment.status === "COMPLETED") return res.status(400).json({ error: "Cannot reject completed appointment" });
+
+    const { reason } = req.body;
+    const updated = await Appointment.findByIdAndUpdate(
+      req.params.id,
+      { status: "CANCELLED", rejectionReason: reason || "Rejected by doctor" },
+      { new: true }
+    );
+
+    const { io } = await import("../app.js");
+    io.emit("appointmentRejected", updated);
+
+    res.json({ message: "Appointment rejected", appointment: updated });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── NEW: Mark complete ───────────────────────────────────────────
+router.put("/doctor/complete/:id", async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) return res.status(401).json({ error: "No token" });
+    const userData = await verifyUser(token);
+    if (userData.role !== "doctor") return res.status(403).json({ error: "Doctors only" });
+
+    const appointment = await Appointment.findById(req.params.id);
+    if (!appointment) return res.status(404).json({ error: "Not found" });
+    if (appointment.doctorId !== userData.roleId) return res.status(403).json({ error: "Not your appointment" });
+
+    const updated = await Appointment.findByIdAndUpdate(
+      req.params.id,
+      { status: "COMPLETED" },
+      { new: true }
+    );
+
+    const { io } = await import("../app.js");
+    io.emit("appointmentCompleted", updated);
+
+    res.json({ message: "Marked as completed", appointment: updated });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── NEW: Payment status update (called by payment-service webhook) ─
+router.patch("/:id/payment", async (req, res) => {
+  try {
+    const internalKey = req.headers["x-internal-service-key"];
+    if (internalKey !== process.env.INTERNAL_SERVICE_KEY) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+    const { paymentStatus } = req.body;
+    const updated = await Appointment.findByIdAndUpdate(
+      req.params.id,
+      { paymentStatus },
+      { new: true }
+    );
+    if (!updated) return res.status(404).json({ error: "Appointment not found" });
+    res.json({ message: "Payment status updated", appointment: updated });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;
