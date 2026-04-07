@@ -2,6 +2,9 @@ const VideoSession = require('../models/videoSessionModel');
 const videoService = require('../services/videoService');
 const axios = require('axios');
 
+const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:5006/api/notifications/send';
+const NOTIFICATION_SERVICE_SMS_URL = process.env.NOTIFICATION_SERVICE_SMS_URL || 'http://localhost:5006/api/notifications/send-sms';
+
 // 1. Initialize Session
 const initializeSession = async (req, res) => {
     try {
@@ -11,12 +14,9 @@ const initializeSession = async (req, res) => {
             return res.status(400).json({ success: false, message: 'patientId and doctorId are required' });
         }
 
-        // Avoid importing models from other microservices. If emails are missing,
-        // keep them empty and continue session creation.
         const resolvedPatientEmail = patientEmail ? String(patientEmail).trim() : '';
         const resolvedDoctorEmail = doctorEmail ? String(doctorEmail).trim() : '';
 
-        // Avoid double notifications for duplicates
         const existingActiveSession = await VideoSession.findOne({ patientId, doctorId, status: 'ACTIVE' });
         if (existingActiveSession) {
             return res.status(200).json({ success: true, data: existingActiveSession, message: 'Active session already exists' });
@@ -37,11 +37,11 @@ const initializeSession = async (req, res) => {
         await newSession.save();
 
         const startMessage = `Your NexusCare session (Room: ${sessionData.roomId}) has started.`;
-
         const uniqueRecipients = [...new Set([resolvedPatientEmail, resolvedDoctorEmail].filter(Boolean))];
+
         await Promise.all(uniqueRecipients.map(async (toEmail) => {
             try {
-                await axios.post('http://localhost:5006/api/notifications/send', {
+                await axios.post(NOTIFICATION_SERVICE_URL, {
                     email: toEmail,
                     subject: 'NexusCare Consultation Started',
                     message: startMessage
@@ -63,23 +63,20 @@ const initializeSession = async (req, res) => {
 const endSession = async (req, res) => {
     try {
         const { roomId } = req.body;
-        // මුලින්ම සෙෂන් එක Active ද බලනවා
         const session = await VideoSession.findOne({ roomId, status: 'ACTIVE' });
 
         if (!session) {
-            return res.status(404).json({ message: "Active session not found" });
+            return res.status(404).json({ success: false, message: 'Active session not found' });
         }
 
-        // DB එකේ status එක update කරනවා (දෙපාරක් notifications යෑම වැළැක්වීමට මෙය වැදගත්)
         session.status = 'COMPLETED';
         session.updatedAt = new Date();
         await session.save();
 
         console.log(`🏁 Session ${roomId} marked as COMPLETED in DB`);
 
-        // Notification Payload
         const emailPayload = {
-            subject: "Consultation Summary - NexusCare",
+            subject: 'Consultation Summary - NexusCare',
             message: `Your medical session (Room: ${roomId}) has ended successfully. Thank you for using NexusCare.`
         };
 
@@ -87,7 +84,7 @@ const endSession = async (req, res) => {
 
         await Promise.all(uniqueRecipients.map(async (toEmail) => {
             try {
-                await axios.post('http://localhost:5006/api/notifications/send', {
+                await axios.post(NOTIFICATION_SERVICE_URL, {
                     email: toEmail,
                     ...emailPayload
                 });
@@ -97,19 +94,18 @@ const endSession = async (req, res) => {
             }
         }));
 
-        // --- SMS යැවීම ---
         if (session.patientPhone) {
             console.log(`📱 Triggering SMS for: ${session.patientPhone}`);
-            axios.post('http://localhost:5006/api/notifications/send-sms', {
+            axios.post(NOTIFICATION_SERVICE_SMS_URL, {
                 phoneNumber: session.patientPhone,
                 message: `NexusCare: Your session (Room: ${roomId}) is complete.`
-            }).then(() => console.log("✅ SMS Request successfully sent"))
-              .catch(e => console.log("❌ SMS Request Failed:", e.response ? e.response.data : e.message));
+            }).then(() => console.log('✅ SMS Request successfully sent'))
+              .catch(e => console.log('❌ SMS Request Failed:', e.response ? e.response.data : e.message));
         }
 
-        res.status(200).json({ success: true, message: "Notifications Dispatched" });
+        res.status(200).json({ success: true, message: 'Notifications Dispatched' });
     } catch (error) {
-        console.error("❌ End Session Error:", error.message);
+        console.error('❌ End Session Error:', error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 };
@@ -127,7 +123,7 @@ const getSessions = async (req, res) => {
 // 4. Doctors List for Patient Video Booking
 const getDoctors = async (req, res) => {
     try {
-        const doctors = await videoService.getDoctorsForVideo();
+        const doctors = await videoService.getDoctorsForVideo(req.query);
 
         res.status(200).json({ success: true, total: doctors.length, data: doctors });
     } catch (error) {
@@ -135,7 +131,6 @@ const getDoctors = async (req, res) => {
         res.status(500).json({ success: false, message: error.message || 'Failed to fetch doctors' });
     }
 };
-
 // 5. Health check for video service and doctor catalog
 const healthCheck = async (req, res) => {
     try {
