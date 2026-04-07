@@ -4,6 +4,7 @@ const mongoose = require('mongoose'); // 1. Mongoose import කරන්න
 require('dotenv').config();
 
 const videoRoutes = require('./routes/videoRoutes');
+const videoService = require('./services/videoService');
 
 const app = express();
 
@@ -15,7 +16,11 @@ app.use(express.json());
 const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/nexuscare_video'; 
 
 mongoose.connect(mongoURI)
-  .then(() => console.log("✅ MongoDB Connected Successfully"))
+  .then(async () => {
+    console.log("✅ MongoDB Connected Successfully");
+    await videoService.bootstrapDoctorCatalog();
+    videoService.scheduleDoctorCatalogBootstrap(Number(process.env.DOCTOR_BOOTSTRAP_INTERVAL_MS) || 60000);
+  })
   .catch(err => console.error("❌ MongoDB Connection Error:", err));
 
 // Routes

@@ -5,7 +5,8 @@ import {
   uploadProfileImage,
   getDoctor,
   updateDoctor,
-  searchDoctors
+  searchDoctors,
+  syncDoctorCatalog,
 } from "../controllers/doctorController.js";
 
 import { verifyToken } from "../middleware/authMiddleware.js";
@@ -28,6 +29,7 @@ router.post("/test-image-upload",
 
 // 🔍 SEARCH + FILTER Doctors (public or protected based on requirement)
 router.get("/search", searchDoctors);
+router.post("/sync/full", verifyToken, allowRoles("admin"), syncDoctorCatalog);
 
 // 👤 GET aggregated doctor profile (identity + professional data)
 // MUST be before /:id to prevent "me" being treated as an ID

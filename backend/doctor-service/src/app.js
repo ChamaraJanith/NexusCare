@@ -2,8 +2,6 @@ import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
-import path from "path";
-import { fileURLToPath } from "url";
 
 import doctorRoutes from "./routes/doctor.routes.js";
 import availabilityRoutes from "./routes/availability.routes.js";
@@ -47,7 +45,7 @@ app.use((err, req, res, next) => {
   }
 
   // Multer file-filter rejection (custom error thrown in fileFilter)
-  if (err.message && err.message.includes("Only image files")) {
+  if (err.message?.includes("Only image files")) {
     return res.status(400).json({
       success: false,
       message: err.message,
@@ -83,6 +81,14 @@ const startServer = async () => {
     });
 
     console.log("✅ MongoDB Connected");
+
+    try {
+      const syncResult = await import("./services/videoCatalogSyncService.js");
+      const result = await syncResult.syncFullDoctorCatalog();
+      console.log("✅ Full doctor catalog sync triggered at startup:", result);
+    } catch (syncError) {
+      console.warn("⚠️ Full doctor catalog sync failed at startup:", syncError.message);
+    }
 
     app.listen(PORT, () => {
       console.log(`🚀 Doctor Service running on port ${PORT}`);
