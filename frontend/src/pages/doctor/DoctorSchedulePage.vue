@@ -149,7 +149,8 @@ const confirmAppointment = async (apt) => {
       { headers: { Authorization: `Bearer ${getToken()}` } }
     );
     apt.status = 'CONFIRMED';
-    $q.notify({ type: 'positive', message: 'Appointment confirmed! Patient will be notified to pay.' });
+    // DoctorSchedulePage.vue — confirmAppointment function ලේ notify message
+$q.notify({ type: 'positive',message: 'Appointment confirmed! Patient will be notified to complete payment.',timeout: 4000});
   } catch (err) {
     $q.notify({ type: 'negative', message: err.response?.data?.error || 'Failed to confirm' });
   } finally {

@@ -517,64 +517,106 @@
       ───────────────────────────────────── -->
       <div v-show="activeTab === 'appointments'" class="tab-content">
         <div class="content-card">
+      
           <div class="content-card-header">
             <div>
               <div class="content-card-title">My Appointments</div>
               <div class="content-card-sub">{{ appointments.length }} total</div>
             </div>
             <button class="btn-action" @click="$router.push('/appointment')">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/></svg>
               Book New
             </button>
           </div>
-
-          <!-- Status Filter -->
+      
+          <!-- Filter row -->
           <div class="filter-row">
             <button
-              v-for="f in apptFilters"
+              v-for="f in apptFiltersComputed"
               :key="f.value"
               class="filter-btn"
               :class="{ active: apptFilter === f.value }"
               @click="apptFilter = f.value"
-            >{{ f.label }}</button>
+            >
+              {{ f.label }}
+              <span v-if="f.count" class="filter-count">{{ f.count }}</span>
+            </button>
           </div>
-
-          <div v-if="!filteredAppts.length" class="empty-state">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
+      
+          <!-- Loading -->
+          <div v-if="loadingAppts" class="empty-state">
+            <q-spinner-dots color="cyan-5" size="2.5em" />
+          </div>
+      
+          <!-- Empty -->
+          <div v-else-if="!filteredAppts.length" class="empty-state">
             <div class="empty-title">No appointments found</div>
           </div>
-
+      
+          <!-- List -->
           <div v-else class="appointments-list">
-            <div v-for="ap in filteredAppts" :key="ap._id || ap.appointmentId" class="appt-item">
+            <div
+              v-for="ap in filteredAppts"
+              :key="ap._id || ap.appointmentId"
+              class="appt-item"
+              :class="'appt-status-' + ap.status.toLowerCase()"
+            >
+              <!-- Date -->
               <div class="appt-date-block">
                 <span class="appt-day">{{ fmtDay(ap.date) }}</span>
                 <span class="appt-month">{{ fmtMonth(ap.date) }}</span>
               </div>
+      
+              <!-- Info -->
               <div class="appt-info">
                 <div class="appt-title">{{ ap.patientName || profileData.name }}</div>
-                <div class="appt-sub">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
-                  {{ ap.time }} &nbsp;·&nbsp; {{ ap.appointmentType }} &nbsp;·&nbsp; Queue #{{ ap.queueNumber || '—' }}
+                <div class="appt-meta-row">
+                  {{ ap.time }} · {{ ap.appointmentType }} · Queue #{{ ap.queueNumber || '—' }}
                 </div>
-                <div class="appt-payment" v-if="ap.charges?.total">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
+                <div v-if="doctorNames[ap.doctorId]" class="appt-doctor-row">
+                  Dr. {{ doctorNames[ap.doctorId] }}
+                </div>
+                <div v-if="ap.charges?.total" class="appt-payment-row">
                   LKR {{ ap.charges.total.toLocaleString() }}
-                  <span class="pay-badge" :class="ap.paymentStatus === 'PAID' ? 'pay-paid' : 'pay-pending'">{{ ap.paymentStatus }}</span>
+                  <span class="pay-badge" :class="ap.paymentStatus === 'PAID' ? 'pay-paid' : 'pay-pending'">
+                    {{ ap.paymentStatus || 'PENDING' }}
+                  </span>
+                </div>
+                <div v-if="ap.status === 'CANCELLED' && ap.rejectionReason" class="appt-rejection-row">
+                  {{ ap.rejectionReason }}
                 </div>
               </div>
+      
+              <!-- Status + Actions -->
               <div class="appt-right">
                 <span class="status-pill" :class="statusClass(ap.status)">{{ ap.status }}</span>
-                <div class="appt-btns" v-if="['PENDING','CONFIRMED'].includes(ap.status)">
-                  <button class="appt-edit-btn" @click="openEditAppt(ap)">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-                  </button>
-                  <button class="appt-cancel-btn" @click="cancelAppt(ap._id || ap.appointmentId)">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/></svg>
-                  </button>
+      
+                <div class="appt-action-group">
+                  <template v-if="ap.status === 'PENDING'">
+                    <div class="appt-status-hint">Awaiting doctor</div>
+                    <button class="appt-cancel-btn" @click="cancelAppt(ap._id || ap.appointmentId)">✕</button>
+                  </template>
+      
+                  <template v-else-if="ap.status === 'CONFIRMED' && ap.paymentStatus !== 'PAID'">
+                    <button class="btn-pay-now" @click="goToPayment(ap)">Pay Now</button>
+                  </template>
+      
+                  <template v-else-if="ap.status === 'CONFIRMED' && ap.paymentStatus === 'PAID'">
+                    <button class="btn-receipt" @click="viewReceipt(ap)">Receipt</button>
+                    <button v-if="ap.appointmentType === 'ONLINE'" class="btn-video" @click="joinVideo(ap)">Join</button>
+                  </template>
+      
+                  <template v-else-if="ap.status === 'COMPLETED'">
+                    <button class="btn-receipt" @click="viewReceipt(ap)">Receipt</button>
+                  </template>
+      
+                  <template v-else-if="ap.status === 'CANCELLED'">
+                    <span class="appt-status-hint cancelled-hint">Cancelled</span>
+                  </template>
                 </div>
               </div>
             </div>
           </div>
+      
         </div>
       </div>
 
@@ -709,14 +751,32 @@ const expandedRx = ref(null)
 const unreadCount = ref(2)
 const avatarInputRef = ref(null)
 
+const loadingAppts = ref(false)   // ← NEW (was missing)
+const doctorNames  = ref({})      // ← NEW (for resolving doctorId → name)
+
 const bloodGroups = ['A+','A-','B+','B-','AB+','AB-','O+','O-','Unknown']
-const apptFilters = [
-  { label: 'All', value: 'ALL' },
-  { label: 'Pending', value: 'PENDING' },
-  { label: 'Confirmed', value: 'CONFIRMED' },
-  { label: 'Completed', value: 'COMPLETED' },
-  { label: 'Cancelled', value: 'CANCELLED' }
-]
+
+
+const apptFiltersComputed = computed(() => {
+  const counts = { ALL: appointments.value.length }
+  appointments.value.forEach(a => {
+    counts[a.status] = (counts[a.status] || 0) + 1
+  })
+  return [
+    { label: 'All',       value: 'ALL',       count: counts.ALL },
+    { label: 'Pending',   value: 'PENDING',   count: counts.PENDING   || 0 },
+    { label: 'Confirmed', value: 'CONFIRMED', count: counts.CONFIRMED || 0 },
+    { label: 'Completed', value: 'COMPLETED', count: counts.COMPLETED || 0 },
+    { label: 'Cancelled', value: 'CANCELLED', count: counts.CANCELLED || 0 }
+  ].filter(f => f.value === 'ALL' || f.count > 0)
+})
+ 
+const filteredAppts = computed(() => {
+  const sorted = [...appointments.value].sort((a, b) => new Date(b.date) - new Date(a.date))
+  return apptFilter.value === 'ALL'
+    ? sorted
+    : sorted.filter(a => a.status === apptFilter.value)
+})
 
 const editForm = reactive({
   name: '', phone: '', dateOfBirth: '', gender: '', bloodGroup: '',
@@ -732,11 +792,7 @@ const editApptForm = reactive({ date: '', time: '', apptId: '' })
 const upcomingAppointments = computed(() =>
   appointments.value.filter(a => ['PENDING','CONFIRMED'].includes(a.status))
 )
-const filteredAppts = computed(() =>
-  apptFilter.value === 'ALL'
-    ? appointments.value
-    : appointments.value.filter(a => a.status === apptFilter.value)
-)
+
 
 /* ── Stat Cards ── */
 const statCards = computed(() => [
@@ -903,14 +959,35 @@ const loadPrescriptions = async () => {
   }
 }
 const loadAppointments = async () => {
+  loadingAppts.value = true
   try {
     const patId = profileData.value.patientId || storedUser.roleId || ''
     if (!patId) return
+ 
     const { data } = await apptApi.get(`/api/appointments/patient/${patId}`)
-    appointments.value = (Array.isArray(data) ? data : data.data || []).sort((a, b) => new Date(b.date) - new Date(a.date))
+    appointments.value = (Array.isArray(data) ? data : data.data || [])
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
+ 
+    // ── Resolve doctor names from payment history ───────
+    try {
+      const payApi = axios.create({
+        baseURL: 'http://localhost:5009',
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      const pRes = await payApi.get('/api/payments/my')
+      const payments = pRes.data?.data || []
+      payments.forEach(p => {
+        if (p.doctorId && p.doctorName) {
+          doctorNames.value[p.doctorId] = p.doctorName
+        }
+      })
+    } catch { /* payment service down — ignore */ }
+ 
   } catch (e) {
     console.error(e)
     notify('Failed to load appointments', 'negative')
+  } finally {
+    loadingAppts.value = false
   }
 }
 
@@ -994,12 +1071,12 @@ const confirmDelete = async () => {
   }
 }
 
-const openEditAppt = (ap) => {
-  editApptForm.apptId = ap._id || ap.appointmentId
-  editApptForm.date = ap.date?.split('T')[0] || ''
-  editApptForm.time = ap.time || ''
-  editApptDialog.value = true
-}
+// const openEditAppt = (ap) => {
+//   editApptForm.apptId = ap._id || ap.appointmentId
+//   editApptForm.date = ap.date?.split('T')[0] || ''
+//   editApptForm.time = ap.time || ''
+//   editApptDialog.value = true
+// }
 
 const updateAppt = async () => {
   updatingAppt.value = true
@@ -1027,6 +1104,68 @@ onMounted(async () => {
   await loadProfile()
   await Promise.all([loadReports(), loadPrescriptions(), loadAppointments()])
 })
+
+
+// (goToPayment + viewReceipt — the dashboard appt tab needs them)
+ 
+const goToPayment = (ap) => {
+  localStorage.setItem('appointmentId', ap._id)
+  localStorage.setItem('doctorName',    doctorNames.value[ap.doctorId] || ap.doctorId)
+  localStorage.setItem('amount',        ap.charges?.total || 0)
+  localStorage.setItem('date',          ap.date)
+  localStorage.setItem('time',          ap.time)
+  localStorage.setItem('queueNumber',   ap.queueNumber || '-')
+ 
+  router.push({
+    path: '/appointment/payment',
+    query: {
+      appointmentId: ap._id,
+      doctorId:      ap.doctorId,
+      doctorName:    doctorNames.value[ap.doctorId] || ap.doctorId,
+      doctorFee:     ap.charges?.doctorFee   || 0,
+      hospitalFee:   ap.charges?.hospitalFee || 0,
+      serviceFee:    ap.charges?.serviceFee  || 0,
+      date:          ap.date,
+      time:          ap.time,
+      type:          ap.appointmentType
+    }
+  })
+}
+ 
+const viewReceipt = async (ap) => {
+  try {
+    const payApi = axios.create({
+      baseURL: 'http://localhost:5009',
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    const { data } = await payApi.get('/api/payments/my')
+    const payments = data.data || []
+    const matched  = payments.find(p =>
+      p.appointmentId === ap._id || p.appointmentId === ap.appointmentId
+    )
+    if (matched?.orderId) {
+      router.push(`/receipt/${matched.orderId}`)
+    } else {
+      router.push('/appointment/payment')
+    }
+  } catch {
+    router.push('/appointment/payment')
+  }
+}
+ 
+const joinVideo = (ap) => {
+  router.push({
+    path: '/patientVideo',
+    query: {
+      appointmentId: ap._id,
+      patientId:     profileData.value.patientId || '',
+      patientName:   encodeURIComponent(profileData.value.name || ''),
+      doctorId:      ap.doctorId
+    }
+  })
+}
+
+
 </script>
 
 <style scoped>
@@ -2026,5 +2165,67 @@ onMounted(async () => {
   .quick-actions-row { grid-template-columns: 1fr; }
   .header-left { flex-direction: column; align-items: flex-start; gap: 12px; }
 }
+
+.filter-count {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: rgba(6,182,212,0.15); color: #22d3ee;
+  font-size: 10px; font-weight: 700;
+  min-width: 18px; height: 18px; border-radius: 9px;
+  padding: 0 5px; margin-left: 4px;
+}
+.appt-doctor-row {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 12px; color: #22d3ee; margin-bottom: 4px;
+}
+.appt-meta-row {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 12px; color: #64748b; margin-bottom: 4px;
+}
+.appt-payment-row {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: #34d399;
+}
+.pay-badge { font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 6px; }
+.pay-paid    { background: rgba(16,185,129,0.12); color: #34d399; }
+.pay-pending { background: rgba(245,158,11,0.12);  color: #fbbf24; }
+.appt-rejection-row {
+  display: flex; align-items: flex-start; gap: 4px;
+  font-size: 11px; color: #f87171; margin-top: 4px; font-style: italic;
+}
+.appt-action-group {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 6px; margin-top: 4px;
+}
+.appt-status-hint { font-size: 11px; color: #64748b; font-style: italic; }
+.cancelled-hint   { color: #f87171; }
+ 
+.btn-pay-now {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: linear-gradient(135deg, rgba(16,185,129,0.2), rgba(5,150,105,0.2));
+  border: 1px solid rgba(16,185,129,0.35); color: #34d399;
+  border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: all 0.2s; white-space: nowrap;
+}
+.btn-pay-now:hover { background: rgba(16,185,129,0.3); transform: translateY(-1px); }
+ 
+.btn-receipt {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(6,182,212,0.1); border: 1px solid rgba(6,182,212,0.25); color: #22d3ee;
+  border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: all 0.2s; white-space: nowrap;
+}
+.btn-receipt:hover { background: rgba(6,182,212,0.2); }
+ 
+.btn-video {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(139,92,246,0.12); border: 1px solid rgba(139,92,246,0.3); color: #a78bfa;
+  border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: all 0.2s; white-space: nowrap;
+}
+.btn-video:hover { background: rgba(139,92,246,0.22); }
+ 
+.appt-status-pending   { border-left: 3px solid rgba(245,158,11,0.45); }
+.appt-status-confirmed { border-left: 3px solid rgba(16,185,129,0.45); }
+.appt-status-completed { border-left: 3px solid rgba(148,163,184,0.3); }
+.appt-status-cancelled { border-left: 3px solid rgba(239,68,68,0.3); opacity: 0.7; }
 
 </style>
