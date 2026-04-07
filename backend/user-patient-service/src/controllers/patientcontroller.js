@@ -307,7 +307,8 @@ const addPrescription = async (req, res, next) => {
   try {
     // Verify internal service key
     const internalKey = req.headers["x-internal-service-key"];
-    if (internalKey !== process.env.INTERNAL_SERVICE_KEY) {
+    const validKeys = [process.env.INTERNAL_SERVICE_KEY, process.env.INTERNAL_SERVICE_KEY_FALLBACK].filter(Boolean);
+    if (!validKeys.includes(internalKey)) {
       return res.status(403).json({
         success: false,
         message: "Unauthorized internal service call.",
@@ -374,7 +375,8 @@ const addPrescription = async (req, res, next) => {
 const getPatientByPatientId = async (req, res, next) => {
   try {
     const internalKey = req.headers["x-internal-service-key"];
-    if (internalKey !== process.env.INTERNAL_SERVICE_KEY) {
+    const validKeys = [process.env.INTERNAL_SERVICE_KEY, process.env.INTERNAL_SERVICE_KEY_FALLBACK].filter(Boolean);
+    if (!validKeys.includes(internalKey)) {
       return res.status(403).json({
         success: false,
         message: "Unauthorized internal service call.",

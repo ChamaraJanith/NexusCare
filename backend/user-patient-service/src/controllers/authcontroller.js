@@ -42,6 +42,10 @@ const sendRegistrationNotification = async ({ email, name, role }) => {
 
 const NOTIFICATION_SERVICE_SMS_URL = process.env.NOTIFICATION_SERVICE_SMS_URL || "http://localhost:5006/api/notifications/send-sms";
 
+const getValidInternalServiceKeys = () => {
+  return [process.env.INTERNAL_SERVICE_KEY, process.env.INTERNAL_SERVICE_KEY_FALLBACK].filter(Boolean);
+};
+
 const sendRegistrationSMS = async ({ phoneNumber, name, role }) => {
   if (!phoneNumber || !name || !role) return;
 
@@ -429,7 +433,8 @@ const searchDoctorsByName = async (req, res, next) => {
 const getDoctorFee = async (req, res, next) => {
   try {
     const internalKey = req.headers["x-internal-service-key"];
-    if (internalKey !== process.env.INTERNAL_SERVICE_KEY) {
+    const validKeys = getValidInternalServiceKeys();
+    if (!validKeys.includes(internalKey)) {
       return res.status(403).json({ success: false, message: "Unauthorized." });
     }
 

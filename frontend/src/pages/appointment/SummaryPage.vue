@@ -165,6 +165,7 @@ const $q = useQuasar();
 
 const loadingFees = ref(true);
 const submitting = ref(false);
+const resolvedHospitalId = ref(store.selectedSlot?.hospitalId || null);
 
 onMounted(async () => {
   if (!store.selectedSlot) { router.push('/search'); return; }
@@ -183,15 +184,22 @@ onMounted(async () => {
       try {
         const resH = await axios.get('http://localhost:5007/api/hospitals');
         const matched = (resH.data?.data || []).find(
-          h => h.name === store.selectedSlot.hospital
+          h => h.name === store.selectedSlot.hospital || h.name === store.selectedSlot.location
         );
         if (matched) hospitalId = matched.hospitalId || matched._id;
       } catch { /* fallback */ }
     }
 
-    if (hospitalId && store.consultationType === 'Physical') {
+    resolvedHospitalId.value = hospitalId || null;
+    if (resolvedHospitalId.value) {
+      store.selectedSlot = {
+        ...store.selectedSlot,
+        hospitalId: resolvedHospitalId.value,
+      };
+    }
+    if (resolvedHospitalId.value && store.consultationType === 'Physical') {
       try {
-        const resHf = await axios.get(`http://localhost:5007/api/hospitals/${hospitalId}`);
+        const resHf = await axios.get(`http://localhost:5007/api/hospitals/${resolvedHospitalId.value}`);
         store.fees.hospitalFee = resHf.data?.data?.hospitalFee || 0;
       } catch { store.fees.hospitalFee = 0; }
     } else {
@@ -240,12 +248,12 @@ const proceedToRequest = async () => {
       date: slot.date
         ? new Date(slot.date).toISOString().split('T')[0]
         : store.selectedDate,
-      time: formatTo24Hour(slot.startTime), 
+      time: formatTo24Hour(slot.startTime),
       appointmentType: store.consultationType === 'Physical' ? 'PHYSICAL' : 'ONLINE',
       patientName: `${patient.title}. ${patient.name}`,
       email: patient.email,
       phone: patient.mobile,
-      hospitalId: slot.hospitalId || null,
+      hospitalId: resolvedHospitalId.value || null,
     };
 
     const result = await bookAppointment(payload);

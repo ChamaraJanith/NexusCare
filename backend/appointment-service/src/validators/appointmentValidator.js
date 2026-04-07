@@ -7,6 +7,7 @@ export const validateAppointment = (req, res, next) => {
       date,
       time,
       appointmentType,
+      type,
       patientName,
       email,
       phone,
@@ -14,23 +15,28 @@ export const validateAppointment = (req, res, next) => {
       gender
     } = req.body;
 
+    const appointmentTypeValue = (appointmentType || type || "").toString().trim().toUpperCase();
+
     // 🔥 Required fields
-    if (!doctorId || !date || !time || !appointmentType) {
+    if (!doctorId || !date || !time || !appointmentTypeValue) {
       return res.status(400).json({
         error: "doctorId, date, time, appointmentType are required"
       });
     }
 
+    // Normalize to the expected backend string
+    req.body.appointmentType = appointmentTypeValue;
+
     // 🔥 Validate appointment type
     const validTypes = ["ONLINE", "PHYSICAL"];
-    if (!validTypes.includes(appointmentType)) {
+    if (!validTypes.includes(appointmentTypeValue)) {
       return res.status(400).json({
         error: "appointmentType must be ONLINE or PHYSICAL"
       });
     }
 
     // 🔥 Validate date
-    if (isNaN(Date.parse(date))) {
+    if (Number.isNaN(Date.parse(date))) {
       return res.status(400).json({
         error: "Invalid date format"
       });
@@ -80,10 +86,11 @@ export const validateAppointment = (req, res, next) => {
 // 🔥 UPDATE VALIDATION
 export const validateUpdateAppointment = (req, res, next) => {
   try {
-    const { date, time, status, appointmentType } = req.body;
+    const { date, status, appointmentType, type } = req.body;
+    const appointmentTypeValue = type || appointmentType;
 
     // 🔥 Date validation
-    if (date && isNaN(Date.parse(date))) {
+    if (date && Number.isNaN(Date.parse(date))) {
       return res.status(400).json({ error: "Invalid date format" });
     }
 
@@ -94,13 +101,15 @@ export const validateUpdateAppointment = (req, res, next) => {
     }
 
     // 🔥 Appointment type validation
-    if (appointmentType) {
+    if (appointmentTypeValue) {
+      const normalizedType = appointmentTypeValue.toString().trim().toUpperCase();
       const validTypes = ["ONLINE", "PHYSICAL"];
-      if (!validTypes.includes(appointmentType)) {
+      if (!validTypes.includes(normalizedType)) {
         return res.status(400).json({
           error: "appointmentType must be ONLINE or PHYSICAL"
         });
       }
+      req.body.appointmentType = normalizedType;
     }
 
     next();

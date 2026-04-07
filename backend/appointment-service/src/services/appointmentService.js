@@ -9,25 +9,30 @@ const INTERNAL_SERVICE_KEY = process.env.INTERNAL_SERVICE_KEY;
 
 // 🔥 STEP 3 → ADD THIS AT TOP (charges function)
 const fetchCharges = async (doctorId, hospitalId, appointmentType) => {
-  try {
-    const { data } = await axios.post(
-      `${FEE_SERVICE_URL}/api/service-fee/calculate`,
-      { doctorId, hospitalId, appointmentType },
-      {
-        headers: { "x-internal-service-key": INTERNAL_SERVICE_KEY },
-        timeout: 5000,
-      }
-    );
-    if (data.success) return data.data;
-    throw new Error("Fee service returned failure");
-  } catch (err) {
-    console.warn("⚠️ MS6 unreachable, using fallback fees:", err.message);
-    // Fallback fees
-    const serviceFee = 500;
-    const doctorFee = 2000;
-    const hospitalFee = appointmentType === "PHYSICAL" ? 1000 : 0;
-    return { doctorFee, hospitalFee, serviceFee, total: doctorFee + hospitalFee + serviceFee };
+  const internalKeys = [INTERNAL_SERVICE_KEY, process.env.INTERNAL_SERVICE_KEY_FALLBACK].filter(Boolean);
+
+  for (const key of internalKeys) {
+    try {
+      const { data } = await axios.post(
+        `${FEE_SERVICE_URL}/api/service-fee/calculate`,
+        { doctorId, hospitalId, appointmentType },
+        {
+          headers: { "x-internal-service-key": key },
+          timeout: 5000,
+        }
+      );
+      if (data.success) return data.data;
+      console.warn(`⚠️ MS6 returned failure with key ${key}:`, data);
+    } catch (err) {
+      console.warn(`⚠️ MS6 unreachable with key ${key}:`, err.response?.status || err.message);
+    }
   }
+
+  console.warn("⚠️ MS6 unreachable with all internal keys, using fallback fees.");
+  const serviceFee = 500;
+  const doctorFee = 2000;
+  const hospitalFee = appointmentType === "PHYSICAL" ? 1000 : 0;
+  return { doctorFee, hospitalFee, serviceFee, total: doctorFee + hospitalFee + serviceFee };
 };
 
 
@@ -52,7 +57,8 @@ export const getNextQueueNumber = async (doctorId, date) => {
 
 // ✅ CREATE APPOINTMENT (FINAL 🔥)
 export const createAppointment = async (data) => {
-  const { doctorId, date, time, appointmentType } = data;
+  const { doctorId, date, time } = data;
+  const appointmentType = (data.appointmentType || data.type || "").toString().trim().toUpperCase();
 
   // ❌ check duplicate slot
   const existing = await Appointment.findOne({
@@ -93,6 +99,7 @@ export const createAppointment = async (data) => {
 
   const appointment = new Appointment({
     ...data,
+    appointmentType,
     appointmentId,
     queueNumber,
     charges,

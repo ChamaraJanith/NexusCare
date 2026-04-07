@@ -39,12 +39,21 @@ const updateServiceFee = async (req, res, next) => {
 // Body: { doctorId, hospitalId?, appointmentType }
 const calculateFee = async (req, res, next) => {
   try {
-    const { doctorId, hospitalId, appointmentType } = req.body;
+    const { doctorId, hospitalId } = req.body;
+    let appointmentType = (req.body.appointmentType || req.body.type || "").toString().trim().toUpperCase();
 
     if (!doctorId || !appointmentType) {
       return res.status(400).json({
         success: false,
         message: "doctorId and appointmentType are required.",
+      });
+    }
+
+    const validTypes = ["ONLINE", "PHYSICAL"];
+    if (!validTypes.includes(appointmentType)) {
+      return res.status(400).json({
+        success: false,
+        message: "appointmentType must be ONLINE or PHYSICAL.",
       });
     }
 
@@ -59,20 +68,25 @@ const calculateFee = async (req, res, next) => {
     //    MS1 has GET /api/admin/users/:userId — but we have doctorId (DOC-0001).
     //    The cleanest pattern: call MS1's internal doctor lookup endpoint.
     let doctorFee = 2000; // safe fallback
-    try {
-      const ms1Url = process.env.MS1_URL || "http://localhost:5001";
-      const { data } = await axios.get(
-        `${ms1Url}/api/auth/doctors/fee/${doctorId}`,
-        {
-          headers: { "x-internal-service-key": process.env.INTERNAL_SERVICE_KEY },
-          timeout: 5000,
+    const ms1Url = process.env.MS1_URL || "http://localhost:5001";
+    const internalKeys = [process.env.INTERNAL_SERVICE_KEY, process.env.INTERNAL_SERVICE_KEY_FALLBACK].filter(Boolean);
+
+    for (const key of internalKeys) {
+      try {
+        const { data } = await axios.get(
+          `${ms1Url}/api/auth/doctors/fee/${doctorId}`,
+          {
+            headers: { "x-internal-service-key": key },
+            timeout: 5000,
+          }
+        );
+        if (data.success && data.consultationFee !== undefined) {
+          doctorFee = data.consultationFee;
+          break;
         }
-      );
-      if (data.success && data.consultationFee !== undefined) {
-        doctorFee = data.consultationFee;
+      } catch (err) {
+        console.warn(`⚠️ Could not fetch doctor fee from MS1 with key ${key}:`, err.response?.status || err.message);
       }
-    } catch (err) {
-      console.error("❌ Could not fetch doctor fee from MS1, using fallback:", err.message);
     }
 
     // 3. Hospital fee — only for PHYSICAL appointments
