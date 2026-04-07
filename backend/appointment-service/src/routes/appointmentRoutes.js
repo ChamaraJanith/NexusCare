@@ -1,4 +1,5 @@
 import express from "express";
+import axios from "axios";
 import {
   bookAppointment,
   getAppointments,
@@ -16,6 +17,30 @@ import * as doctorService from "../services/doctorService.js";
 import { verifyUser } from "../services/authService.js";
 import Appointment from "../models/Appointment.js";
 import { getNextQueue } from "../controllers/appointmentController.js";
+
+const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || "http://localhost:5006";
+const INTERNAL_SERVICE_KEY = process.env.INTERNAL_SERVICE_KEY;
+
+const sendNotificationEmail = async ({ email, subject, message }) => {
+  if (!email) return false;
+
+  try {
+    const response = await axios.post(
+      `${NOTIFICATION_SERVICE_URL}/api/notifications/send`,
+      { email, subject, message },
+      {
+        headers: { "x-internal-service-key": INTERNAL_SERVICE_KEY },
+        timeout: 5000,
+      }
+    );
+
+    console.log(`📩 Appointment-service email send response for ${email}:`, response.data);
+    return response.data?.success === true;
+  } catch (err) {
+    console.error("❌ Appointment-service failed to send notification email:", err.response?.data || err.message || err);
+    return false;
+  }
+};
 
 const router = express.Router();
 
@@ -140,6 +165,16 @@ router.put("/doctor/confirm/:id", async (req, res) => {
     const { io } = await import("../app.js");
     io.emit("appointmentConfirmed", updated);
 
+    if (updated?.email) {
+      await sendNotificationEmail({
+        email: updated.email,
+        subject: "NexusCare Appointment Confirmed",
+        message: `Hello ${updated.patientName || 'Patient'},\n\nYour appointment scheduled on ${updated.date} at ${updated.time} has been confirmed by Dr. ${updated.doctorId}.\n\nThank you for using NexusCare.`,
+      });
+    } else {
+      console.warn("⚠️ Appointment confirmed but no patient email was available to send notification");
+    }
+
     res.json({ message: "Appointment confirmed", appointment: updated });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -168,6 +203,16 @@ router.put("/doctor/reject/:id", async (req, res) => {
 
     const { io } = await import("../app.js");
     io.emit("appointmentRejected", updated);
+
+    if (updated?.email) {
+      await sendNotificationEmail({
+        email: updated.email,
+        subject: "NexusCare Appointment Rejected",
+        message: `Hello ${updated.patientName || 'Patient'},\n\nYour appointment scheduled on ${updated.date} at ${updated.time} has been rejected by the doctor.\n\nReason: ${reason || 'Rejected by doctor'}\n\nPlease book another appointment or contact NexusCare support.`,
+      });
+    } else {
+      console.warn("⚠️ Appointment rejected but no patient email was available to send notification");
+    }
 
     res.json({ message: "Appointment rejected", appointment: updated });
   } catch (error) {

@@ -208,6 +208,41 @@ export const uploadProfileImage = async (req, res) => {
   }
 };
 
+// ─── GET /api/doctors/internal/:id ────────────────────────────────────────────
+export const getDoctorInternal = async (req, res) => {
+  try {
+    const internalKey = req.headers["x-internal-service-key"];
+    if (internalKey !== process.env.INTERNAL_SERVICE_KEY) {
+      return res.status(403).json({ success: false, message: "Unauthorized" });
+    }
+
+    const doctorId = req.params.id;
+    const doctor = await doctorService.getDoctorByDoctorId(doctorId);
+    const user = await mongoose.connection.collection("users").findOne(
+      { roleId: doctorId },
+      { projection: { email: 1, name: 1, phone: 1 } }
+    );
+
+    if (!doctor && !user) {
+      return res.status(404).json({ success: false, message: "Doctor not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        doctorId,
+        email: user?.email || null,
+        name: user?.name || null,
+        phone: user?.phone || null,
+        profile: doctor || null,
+      },
+    });
+  } catch (err) {
+    console.error("[getDoctorInternal] ERROR:", err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 // ─── GET /api/doctors/:id ─────────────────────────────────────────────────────
 export const getDoctor = async (req, res) => {
   try {

@@ -3,6 +3,63 @@ const axios  = require("axios");                          // ✅ ADD THIS if not
 const Payment = require("../models/Payment");
 const { generateHash, verifyWebhookHash } = require("../config/payhere");
 
+const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || "http://localhost:5006";
+const DOCTOR_SERVICE_URL = process.env.DOCTOR_SERVICE_URL || "http://localhost:5002";
+const INTERNAL_SERVICE_KEY = process.env.INTERNAL_SERVICE_KEY;
+
+const logNotificationEvent = async (data) => {
+  try {
+    await axios.post(
+      `${NOTIFICATION_SERVICE_URL}/api/notifications/log`,
+      data,
+      {
+        headers: { "x-internal-service-key": INTERNAL_SERVICE_KEY },
+        timeout: 5000,
+      }
+    );
+  } catch (err) {
+    console.warn('⚠️ Notification log failed:', err.response?.data || err.message || err);
+  }
+};
+
+const sendPaymentEmail = async ({ email, subject, message }) => {
+  if (!email) {
+    console.warn('⚠️ No email address available for payment notification');
+    return false;
+  }
+
+  try {
+    console.log(`📩 Payment-service requesting notification-service email send to ${email}`);
+    const response = await axios.post(`${NOTIFICATION_SERVICE_URL}/api/notifications/send`, {
+      email,
+      subject,
+      message,
+    });
+    console.log(`✅ Notification-service responded for ${email}:`, response.data);
+    return response.data?.success === true;
+  } catch (err) {
+    console.warn('⚠️ Failed to send payment email:', err.response?.data || err.message || err);
+    return false;
+  }
+};
+
+const getDoctorContact = async (doctorId) => {
+  try {
+    const response = await axios.get(
+      `${DOCTOR_SERVICE_URL}/api/doctors/internal/${doctorId}`,
+      {
+        headers: { "x-internal-service-key": INTERNAL_SERVICE_KEY },
+        timeout: 5000,
+      }
+    );
+
+    return response.data?.data || null;
+  } catch (err) {
+    console.warn('⚠️ Failed to resolve doctor contact:', err.response?.data || err.message || err);
+    return null;
+  }
+};
+
 // ─── INITIATE PAYMENT ─────────────────────────────────────────────────────────
 const initiatePayment = async (req, res, next) => {
   try {
@@ -96,6 +153,35 @@ const payhereWebhook = async (req, res, next) => {
 
     console.log(`✅ Webhook: ${order_id} → ${newStatus}`);
 
+    await logNotificationEvent({
+      type: 'payment',
+      event: 'payment_status',
+      status: newStatus === 'success' ? 'success' : newStatus === 'failed' || newStatus === 'cancelled' ? 'failed' : newStatus,
+      appointmentId: payment.appointmentId,
+      paymentId: payment._id?.toString(),
+      patientId: payment.patientId,
+      email: payment.patientEmail,
+      message: `Payment ${newStatus} for order ${order_id}`,
+      payload: { status_code, order_id, payment_id },
+    });
+
+    if (newStatus === 'success') {
+      await sendPaymentEmail({
+        email: payment.patientEmail,
+        subject: 'NexusCare Payment Received',
+        message: `Hello ${payment.patientName || 'Patient'},\n\nYour payment for appointment ${payment.appointmentId || ''} has been successfully received.\n\nThank you for using NexusCare.\n\nOrder: ${order_id}`,
+      });
+
+      const doctorContact = await getDoctorContact(payment.doctorId);
+      if (doctorContact?.email && doctorContact.email !== payment.patientEmail) {
+        await sendPaymentEmail({
+          email: doctorContact.email,
+          subject: 'NexusCare Payment Received for Your Patient',
+          message: `Hello ${doctorContact.name || 'Doctor'},\n\nA payment has been completed for appointment ${payment.appointmentId || ''} with patient ${payment.patientName || 'Unknown patient'}.\n\nAmount: ${payment.amount} ${payment.currency}\n\nOrder: ${order_id}\n\nPlease review the appointment details in NexusCare.`,
+        });
+      }
+    }
+
     // ✅ NEW — notify appointment-service to mark PAID after successful payment
     if (newStatus === "success" && payment.appointmentId) {
       try {
@@ -154,6 +240,35 @@ const confirmPayment = async (req, res, next) => {
       { status: "success" },
       { new: true }
     ).select("-webhookData -__v");
+
+    if (updated) {
+      await logNotificationEvent({
+        type: 'payment',
+        event: 'payment_confirmed',
+        status: 'success',
+        appointmentId: updated.appointmentId,
+        paymentId: updated._id?.toString(),
+        patientId: updated.patientId,
+        email: updated.patientEmail,
+        message: `Payment confirmed via return_url for order ${orderId}`,
+        payload: { orderId },
+      });
+
+      await sendPaymentEmail({
+        email: updated.patientEmail,
+        subject: 'NexusCare Payment Confirmed',
+        message: `Hello ${updated.patientName || 'Patient'},\n\nYour payment for appointment ${updated.appointmentId || ''} has been confirmed successfully.\n\nThank you for choosing NexusCare.\n\nOrder: ${orderId}`,
+      });
+
+      const doctorContact = await getDoctorContact(updated.doctorId);
+      if (doctorContact?.email && doctorContact.email !== updated.patientEmail) {
+        await sendPaymentEmail({
+          email: doctorContact.email,
+          subject: 'NexusCare Payment Received for Your Patient',
+          message: `Hello ${doctorContact.name || 'Doctor'},\n\nA payment has been confirmed for appointment ${updated.appointmentId || ''} with patient ${updated.patientName || 'Unknown patient'}.\n\nAmount: ${updated.amount} ${updated.currency}\n\nOrder: ${orderId}\n\nPlease review your appointment in NexusCare.`,
+        });
+      }
+    }
 
     console.log(`✅ Payment confirmed via return_url: ${orderId}`);
     res.status(200).json({ success: true, data: updated });

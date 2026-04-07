@@ -1,5 +1,6 @@
 const twilio = require('twilio');
 const nodemailer = require('nodemailer');
+const Notification = require('../models/Notification');
 require('dotenv').config();
 
 // --- Twilio Configuration ---
@@ -198,12 +199,72 @@ const sendSMS = async (req, res) => {
     }
 };
 
+const saveNotificationRecord = async (data) => {
+    const notification = new Notification(data);
+    return notification.save();
+};
+
+const logNotification = async (req, res) => {
+    const internalKey = req.headers['x-internal-service-key'];
+    if (internalKey !== process.env.INTERNAL_SERVICE_KEY) {
+        return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const {
+        type,
+        event,
+        status,
+        appointmentId,
+        paymentId,
+        doctorId,
+        patientId,
+        email,
+        phoneNumber,
+        message,
+        payload = {},
+    } = req.body;
+
+    if (!type || !event || !status) {
+        return res.status(400).json({ success: false, message: 'type, event, and status are required' });
+    }
+
+    try {
+        const saved = await saveNotificationRecord({
+            type,
+            event,
+            status,
+            appointmentId,
+            paymentId,
+            doctorId,
+            patientId,
+            email,
+            phoneNumber,
+            message,
+            payload,
+        });
+
+        return res.status(201).json({ success: true, data: saved });
+    } catch (error) {
+        console.error('❌ Notification log error:', error.message);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 const getEmailTransporter = () => {
+    const user = process.env.GMAIL_USER;
+    const pass = process.env.GMAIL_PASS ? process.env.GMAIL_PASS.replace(/\s+/g, '') : undefined;
+
+    if (!user || !pass) {
+        throw new Error('GMAIL_USER and GMAIL_PASS must be configured for notification email delivery');
+    }
+
     return nodemailer.createTransport({
-        service: 'gmail',
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false,
         auth: {
-            user: process.env.GMAIL_USER,
-            pass: process.env.GMAIL_PASS,
+            user,
+            pass,
         },
         tls: {
             rejectUnauthorized: false,
@@ -217,24 +278,31 @@ const getEmailTransporter = () => {
 const sendEmail = async (req, res) => {
     const { email, subject, message } = req.body;
     
+    if (!email || !subject || !message) {
+        return res.status(400).json({ success: false, error: 'email, subject, and message are required' });
+    }
+
     const transporter = getEmailTransporter();
 
+    console.log(`📩 Notification-service will send email to: ${email}`);
+
     try {
-        await transporter.sendMail({
+        const info = await transporter.sendMail({
             from: `"NexusCare" <${process.env.GMAIL_USER}>`,
             to: email,
             subject: subject,
-            text: message
+            text: message,
         });
 
-        console.log(`✅ Email sent successfully to: ${email}`);
+        console.log(`✅ Email sent successfully to: ${email}`, info);
         res.status(200).json({ 
             success: true, 
-            message: `Email sent to ${email}` 
+            message: `Email sent to ${email}`,
+            info,
         });
     } catch (error) {
-        console.error("❌ Email Error:", error.message);
-        res.status(500).json({ success: false, error: error.message });
+        console.error("❌ Email Error:", error);
+        res.status(500).json({ success: false, error: error.message || 'Email send failed', details: error });
     }
 };
 
@@ -276,4 +344,4 @@ const sendRegistrationEmail = async (req, res) => {
 };
 
 
-module.exports = { sendEmail, sendSMS, sendRegistrationEmail };
+module.exports = { sendEmail, sendSMS, sendRegistrationEmail, logNotification };

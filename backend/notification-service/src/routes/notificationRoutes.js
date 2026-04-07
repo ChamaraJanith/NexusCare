@@ -6,6 +6,7 @@ const {
   sendEmail,
   sendSMS,
   sendRegistrationEmail,
+  logNotification,
 } = require('../controllers/notificationController');
 
 /**
@@ -19,6 +20,12 @@ router.post('/send', sendEmail);
  * Description: New doctor/patient registration email යැවීමට
  */
 router.post('/register', sendRegistrationEmail);
+
+/**
+ * Route: POST /api/notifications/log
+ * Description: Persist notification events in the notification database
+ */
+router.post('/log', logNotification);
 
 /**
  * Route: POST /api/notifications/send-sms
