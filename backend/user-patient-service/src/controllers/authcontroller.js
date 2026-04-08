@@ -6,12 +6,12 @@ const PatientProfile = require("../models/PatientProfile");
 const DoctorProfile = require("../models/DoctorProfile");
 const cloudinary = require("../config/cloudinary");
 
-const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || "http://localhost:5006/api/notifications/register";
+const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || " 6/api/notifications/register";
 
 // Helper: Generate JWT token from userId and role
-const generateToken = (userId, role, roleId) => {
+const generateToken = (userId, role, roleId, name) => {
   return jwt.sign(
-    { userId, role, roleId },
+    { userId, role, roleId, name },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
   );
@@ -160,7 +160,7 @@ const register = async (req, res, next) => {
     sendRegistrationNotification({ email: user.email, name: user.name, role: user.role });
     sendRegistrationSMS({ phoneNumber: phone, name: user.name, role: user.role });
  
-    const token = generateToken(user.userId, user.role, user.roleId);
+    const token = generateToken(user.userId, user.role, user.roleId, user.name);
  
     res.status(201).json({
       success: true,
@@ -255,8 +255,8 @@ const login = async (req, res, next) => {
       }
     }
 
-    // Generate token - includes userId, role, and roleId for other services
-    const token = generateToken(user.userId, user.role, user.roleId);
+    // Generate token - includes userId, role, roleId, and name for frontend use
+    const token = generateToken(user.userId, user.role, user.roleId, user.name);
 
     res.status(200).json({
       success: true,
@@ -400,16 +400,18 @@ const changePassword = async (req, res, next) => {
   }
 };
 
-// ─── SEARCH DOCTORS BY NAME (Used by MS2) ──────────────────────────────────
+// ─── SEARCH DOCTORS BY NAME OR ID (Used by MS2) ────────────────────────────
 // POST /api/auth/doctors/search
-// Body: { name: string }
+// Body: { name?: string, doctorId?: string }
 // Returns: Array of { doctorId, name, profileImage }
 const searchDoctorsByName = async (req, res, next) => {
   try {
-    const { name } = req.body;
+    const { name, doctorId } = req.body;
 
     const query = { role: "doctor", isActive: true };
-    if (name) {
+    if (doctorId) {
+      query.roleId = doctorId;
+    } else if (name) {
       query.name = { $regex: name, $options: "i" };
     }
 

@@ -144,12 +144,39 @@ const currentPageTitle = computed(() => {
 provide('doctor', doctor);
 provide('doctorLoading', loading);
 
+const decodeJwtPayload = (token) => {
+  try {
+    const base64Url = token.split('.')[1] || '';
+    let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const padLength = 4 - (base64.length % 4);
+    if (padLength > 0 && padLength < 4) {
+      base64 += '='.repeat(padLength);
+    }
+    return JSON.parse(atob(base64));
+  } catch (e) {
+    console.warn('[DoctorLayout] JWT decode failed:', e.message);
+    return null;
+  }
+};
+
 const loadDoctorProfile = async () => {
   loading.value = true;
+
+  // Set name immediately from JWT — no API call needed
+  const token = localStorage.getItem('token') || localStorage.getItem('nexus_token');
+  if (token) {
+    const decoded = decodeJwtPayload(token);
+    if (decoded?.name) doctor.value = { ...doctor.value, name: decoded.name };
+  }
+
   try {
     const data = await fetchDoctorProfile();
-    doctor.value = data;
-    console.log('[DoctorLayout] Doctor profile loaded:', data);
+    // Merge but keep name from JWT if doctor model has empty name
+    doctor.value = {
+      ...data,
+      name: doctor.value.name || data.name || ''
+    };
+    console.log('[DoctorLayout] Doctor profile loaded:', doctor.value);
   } catch (err) {
     console.error('[DoctorLayout] Failed to load profile:', err);
   } finally {

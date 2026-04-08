@@ -271,9 +271,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue';
+import { ref, reactive, onMounted, computed, inject } from 'vue';
 import { useRouter } from 'vue-router';
 import { fetchDoctorDashboardData } from 'src/services/doctorDashboardApi';
+import axios from 'axios';
 
 const router = useRouter();
 
@@ -307,11 +308,25 @@ const stats = reactive({
 });
 
 // ─── Helpers ─────────────────────────────────────────────────────
+
+// Inject doctor from DoctorLayout (already fetched from /api/auth/me there)
+const layoutDoctor = inject('doctor', ref({}));
+
+const userRealName = ref('');
+
+const normalizeDoctorName = (name) => {
+  if (!name) return '';
+  const normalized = name.replace(/^Dr\.\s*/i, '').trim();
+  return normalized === 'Dr.' ? '' : normalized;
+};
+
 const doctorDisplayName = computed(() => {
-  return identity.value.name
-    || identity.value.fullName
-    || identity.value.firstName
-    || professional.value.name
+  return normalizeDoctorName(userRealName.value)
+    || normalizeDoctorName(layoutDoctor.value?.name)
+    || normalizeDoctorName(identity.value.name)
+    || normalizeDoctorName(identity.value.fullName)
+    || normalizeDoctorName(identity.value.firstName)
+    || normalizeDoctorName(professional.value.name)
     || 'Doctor';
 });
 
@@ -381,6 +396,9 @@ const loadDashboardData = async () => {
       return;
     }
 
+    // Set name immediately from JWT — no API call needed
+    if (decoded.name) userRealName.value = decoded.name;
+
     const doctorId = decoded.roleId || decoded.doctorId || decoded.id;
     log('[3] Doctor ID: ' + doctorId);
 
@@ -390,22 +408,43 @@ const loadDashboardData = async () => {
       return;
     }
 
+    // Fetch real name directly from user model via /api/auth/me
+    let realName = '';
+    try {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+      const meRes = await axios.get(`${API_URL}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const user = meRes.data?.user || meRes.data?.data || meRes.data;
+      realName = user?.name || '';
+      if (realName) userRealName.value = realName;
+      log('[me] User name fetched: ' + (realName || 'none'));
+    } catch (meErr) {
+      log('[me] /api/auth/me failed: ' + meErr.message);
+    }
+
     log('[4] Calling fetchDoctorDashboardData...');
-    const data = await fetchDoctorDashboardData(doctorId);
+    const dashData = await fetchDoctorDashboardData(doctorId);
+
     log('[5] API Response: ' + JSON.stringify({
-      success: data.success,
-      identityKeys: Object.keys(data.identity || {}),
-      identity: data.identity,
-      professionalKeys: Object.keys(data.professional || {}),
-      appointmentsCount: (data.appointments || []).length,
-      availabilityCount: (data.availability || []).length,
+      success: dashData.success,
+      identityKeys: Object.keys(dashData.identity || {}),
+      identity: dashData.identity,
+      professionalKeys: Object.keys(dashData.professional || {}),
+      appointmentsCount: (dashData.appointments || []).length,
+      availabilityCount: (dashData.availability || []).length,
     }, null, 2));
 
-    if (data.success) {
-      identity.value = data.identity || {};
-      professional.value = data.professional || {};
-      appointments.value = Array.isArray(data.appointments) ? data.appointments : [];
-      availability.value = Array.isArray(data.availability) ? data.availability : [];
+    if (dashData.success) {
+      const goodName = identity.value.name; // preserve name fetched from /api/auth/me
+      identity.value = { ...(dashData.identity || {}), name: realName || goodName || dashData.identity?.name || '' };
+      professional.value = dashData.professional || {};
+      // Restore the real name if backend returned a fallback DOC id
+      if (goodName && (!identity.value.name || identity.value.name.startsWith('Doctor '))) {
+        identity.value.name = goodName;
+      }
+      appointments.value = Array.isArray(dashData.appointments) ? dashData.appointments : [];
+      availability.value = Array.isArray(dashData.availability) ? dashData.availability : [];
 
       stats.totalConsultations = appointments.value.length;
       stats.pendingReports = 0;

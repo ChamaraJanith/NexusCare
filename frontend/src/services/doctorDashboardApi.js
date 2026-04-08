@@ -91,7 +91,7 @@ export const fetchDoctorDashboardData = async (doctorId) => {
   return {
     success: true,
     identity: {
-      name: profile.name,
+      name: profile.name || '',
       email: profile.email,
       profileImage: profile.profileImage,
       phone: profile.phone,

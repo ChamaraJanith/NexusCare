@@ -50,9 +50,23 @@ export const getUserByToken = async (bearerToken) => {
 
 /**
  * Calls user-patient-service POST /api/auth/doctors/search
- * to retrieve a batch list of doctor identities (and their doctorIds)
- * matching the provided name.
+ * to get user identity (name, email) from doctorId.
  */
+export const getUserByDoctorId = async (doctorId) => {
+  try {
+    const response = await axios.post(
+      `${USER_SERVICE_URL}/api/auth/doctors/search`,
+      { doctorId }
+    );
+    if (response.data?.success) {
+      return response.data.data?.[0] || null;
+    }
+    return null;
+  } catch (err) {
+    console.error('[userServiceClient] getUserByDoctorId failed:', err.response?.data || err.message);
+    return null;
+  }
+};
 export const searchDoctorsByName = async (name) => {
   try {
     const response = await axios.post(
