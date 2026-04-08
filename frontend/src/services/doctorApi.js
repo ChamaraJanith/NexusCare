@@ -1,10 +1,7 @@
 import axios from 'axios';
 
-const DOCTOR_SERVICE_URL =
-  import.meta.env?.VITE_DOCTOR_SERVICE_URL || 'http://localhost:5002';
-
-const APPOINTMENT_SERVICE_URL =
-  import.meta.env?.VITE_APPOINTMENT_SERVICE_URL || 'http://localhost:5003';
+const DOCTOR_SERVICE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const APPOINTMENT_SERVICE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 /**
  * Doctor Service Axios Instance
@@ -176,6 +173,6 @@ export const fetchPrescriptions = async (doctorId) => {
 };
 
 export const fetchHospitals = async () => {
-  const res = await axios.get("http://localhost:5007/api/hospitals");
+  const res = await axios.get(`${DOCTOR_SERVICE_URL}/api/hospitals`);
   return res.data.data;
 };

@@ -3,10 +3,11 @@
 
 import axios from 'axios'
 
-const MS1 = import.meta.env.VITE_MS1_URL || 'http://localhost:5001'
-const MS3 = import.meta.env.VITE_MS3_URL || 'http://localhost:5003'
-const MS5 = import.meta.env.VITE_MS5_URL || 'http://localhost:5009'
-const MS6 = import.meta.env.VITE_MS6_URL || 'http://localhost:5007'
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+const MS1 = API
+const MS3 = API
+const MS5 = API
+const MS6 = API
 
 const getHeaders = () => ({
   Authorization: `Bearer ${localStorage.getItem('token') || localStorage.getItem('nexus_token') || ''}`

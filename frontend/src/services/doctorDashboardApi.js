@@ -1,8 +1,8 @@
 import axios from 'axios';
 
 // Define base URLs explicitly (can be overridden by environment variables)
-const DOCTOR_SERVICE_URL = import.meta.env?.VITE_DOCTOR_SERVICE_URL || 'http://localhost:5002';
-const APPOINTMENT_SERVICE_URL = import.meta.env?.VITE_APPOINTMENT_SERVICE_URL || 'http://localhost:5003';
+const DOCTOR_SERVICE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const APPOINTMENT_SERVICE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 /**
  * Helper to retrieve Authorization headers.
