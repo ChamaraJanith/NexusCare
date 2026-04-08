@@ -79,7 +79,7 @@ const getImageUrl = (img) => {
     }
 
     if (img.startsWith("/uploads")) {
-      return `http://localhost:5002${img}`;
+      return `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}${img}`;
     }
   }
 

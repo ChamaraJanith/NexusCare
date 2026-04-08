@@ -393,7 +393,7 @@ import { ref, reactive, computed } from 'vue'
 import { useVuelidate } from '@vuelidate/core'
 import { required, email, minLength, sameAs, helpers } from '@vuelidate/validators'
 
-const MS1_URL = import.meta.env.VITE_MS1_URL || 'http://localhost:5001'
+const MS1_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
 const currentStep = ref(1)
 const isLoading = ref(false)

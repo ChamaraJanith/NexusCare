@@ -209,7 +209,7 @@ const route = useRoute()
 const $q = useQuasar()
 const authStore = useAuthStore()
 
-const MS1_URL = import.meta.env.VITE_MS1_URL || 'http://localhost:5001'
+const MS1_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
 // Form data
 const form = reactive({ email: '', password: '' })

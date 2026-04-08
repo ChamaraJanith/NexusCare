@@ -136,7 +136,7 @@ onMounted(async () => {
     if (!patientId) { loading.value = false; return; }
 
     const { data } = await axios.get(
-      `http://localhost:5003/api/appointments/patient/${patientId}`,
+      `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/appointments/patient/${patientId}`,
       { headers: { Authorization: `Bearer ${getToken()}` } }
     );
     appointments.value = Array.isArray(data) ? data : (data.appointments || []);
@@ -183,7 +183,7 @@ const confirmCancel = (appt) => {
     try {
       $q.loading.show();
       await axios.delete(
-        `http://localhost:5003/api/appointments/${appt._id}`,
+        `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/appointments/${appt._id}`,
         { headers: { Authorization: `Bearer ${getToken()}` } }
       );
       const idx = appointments.value.findIndex(a => a._id === appt._id);

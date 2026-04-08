@@ -174,7 +174,7 @@ onMounted(async () => {
   try {
     // Service fee
     try {
-      const resSf = await axios.get('http://localhost:5007/api/service-fee');
+      const resSf = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/service-fee`);
       store.fees.bookingFee = resSf.data?.data?.amount || 0;
     } catch { store.fees.bookingFee = 0; }
 
@@ -182,7 +182,7 @@ onMounted(async () => {
     let hospitalId = store.selectedSlot?.hospitalId;
     if (!hospitalId && store.consultationType === 'Physical') {
       try {
-        const resH = await axios.get('http://localhost:5007/api/hospitals');
+        const resH = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/hospitals`);
         const matched = (resH.data?.data || []).find(
           h => h.name === store.selectedSlot.hospital || h.name === store.selectedSlot.location
         );
@@ -199,7 +199,7 @@ onMounted(async () => {
     }
     if (resolvedHospitalId.value && store.consultationType === 'Physical') {
       try {
-        const resHf = await axios.get(`http://localhost:5007/api/hospitals/${resolvedHospitalId.value}`);
+        const resHf = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/hospitals/${resolvedHospitalId.value}`);
         store.fees.hospitalFee = resHf.data?.data?.hospitalFee || 0;
       } catch { store.fees.hospitalFee = 0; }
     } else {

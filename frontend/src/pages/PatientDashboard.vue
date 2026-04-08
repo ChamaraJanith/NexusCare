@@ -924,8 +924,9 @@ const statusClass = (s) => ({
 const notify = (msg, type = 'positive') => $q.notify({ message: msg, color: type === 'positive' ? 'teal-7' : 'red-7', position: 'top-right', timeout: 2500, icon: type === 'positive' ? 'check_circle' : 'error' })
 
 /* ── API ── */
-const api     = axios.create({ baseURL: 'http://localhost:5001', headers: { Authorization: `Bearer ${token}` } })
-const apptApi = axios.create({ baseURL: 'http://localhost:5003', headers: { Authorization: `Bearer ${token}` } })
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+const api     = axios.create({ baseURL: API_URL, headers: { Authorization: `Bearer ${token}` } })
+const apptApi = axios.create({ baseURL: API_URL, headers: { Authorization: `Bearer ${token}` } })
 
 const loadProfile = async () => {
   try {
@@ -971,7 +972,7 @@ const loadAppointments = async () => {
     // ── Resolve doctor names from payment history ───────
     try {
       const payApi = axios.create({
-        baseURL: 'http://localhost:5009',
+        baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080',
         headers: { Authorization: `Bearer ${token}` }
       })
       const pRes = await payApi.get('/api/payments/my')
@@ -1135,7 +1136,7 @@ const goToPayment = (ap) => {
 const viewReceipt = async (ap) => {
   try {
     const payApi = axios.create({
-      baseURL: 'http://localhost:5009',
+      baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080',
       headers: { Authorization: `Bearer ${token}` }
     })
     const { data } = await payApi.get('/api/payments/my')

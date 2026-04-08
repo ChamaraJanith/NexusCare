@@ -144,7 +144,7 @@ const confirmAppointment = async (apt) => {
   actionId.value = apt._id + '_confirm';
   try {
     await axios.put(
-      `http://localhost:5003/api/appointments/doctor/confirm/${apt._id}`,
+      `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/appointments/doctor/confirm/${apt._id}`,
       {},
       { headers: { Authorization: `Bearer ${getToken()}` } }
     );
@@ -170,7 +170,7 @@ const submitReject = async () => {
   actionId.value = rejectDlg.appointment._id + '_reject';
   try {
     await axios.put(
-      `http://localhost:5003/api/appointments/doctor/reject/${rejectDlg.appointment._id}`,
+      `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/appointments/doctor/reject/${rejectDlg.appointment._id}`,
       { reason: rejectDlg.reason },
       { headers: { Authorization: `Bearer ${getToken()}` } }
     );
@@ -190,7 +190,7 @@ const markComplete = async (apt) => {
   actionId.value = apt._id + '_complete';
   try {
     await axios.put(
-      `http://localhost:5003/api/appointments/doctor/complete/${apt._id}`,
+      `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/appointments/doctor/complete/${apt._id}`,
       {},
       { headers: { Authorization: `Bearer ${getToken()}` } }
     );
@@ -210,7 +210,7 @@ onMounted(async () => {
   if (doctorId) {
     try {
       const { data } = await axios.get(
-        `http://localhost:5003/api/appointments/doctor/${doctorId}`,
+        `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/appointments/doctor/${doctorId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       appointments.value = Array.isArray(data) ? data : [];

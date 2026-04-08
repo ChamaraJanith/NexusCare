@@ -211,7 +211,7 @@ const completedSessions = computed(() => {
 // --- Methods ---
 const fetchSessions = async () => {
   try {
-    const res = await axios.get('http://localhost:5005/api/video/sessions')
+    const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/video/sessions`)
     if (res.data.success) {
       sessions.value = res.data.data
     }
@@ -222,7 +222,7 @@ const fetchSessions = async () => {
 
 const fetchDoctors = async () => {
   try {
-    const videoRes = await axios.get('http://localhost:5005/api/video/doctors')
+    const videoRes = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/video/doctors`)
 
     if (videoRes.data.success) {
       doctors.value = Array.isArray(videoRes.data.data) ? videoRes.data.data : []
@@ -275,7 +275,7 @@ const startJitsiCall = (roomName) => {
         videoConferenceLeft: async () => {
           try {
             // කෝල් එක ඉවර වූ විට Backend (5005) එකට දැනුම් දීම
-            await axios.post('http://localhost:5005/api/video/end-session', { roomId: roomName });
+            await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/video/end-session`, { roomId: roomName });
 
             await fetchSessions();
 
@@ -309,7 +309,7 @@ const processBooking = async () => {
     // If doctor email is not provided by buyer, try from query or empty
     const activeDoctorEmail = (booking.value.doctorEmail || doctorEmail.value).trim();
 
-    const response = await axios.post('http://localhost:5005/api/video/initialize-link', {
+    const response = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/video/initialize-link`, {
       patientId: String(patientId.value).trim(),
       doctorId: String(booking.value.doctorId).trim(),
       patientEmail: patientEmail.value, // 👈 Dynamic Email from logged in user
