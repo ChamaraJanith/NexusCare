@@ -227,10 +227,19 @@ const fetchDoctors = async () => {
     if (videoRes.data.success) {
       doctors.value = Array.isArray(videoRes.data.data) ? videoRes.data.data : []
 
+      if (videoRes.data.degraded) {
+        $q.notify({
+          color: 'warning',
+          message: videoRes.data.message || 'Doctor service unavailable. Showing cached doctor list.',
+        })
+      }
+
       if (!doctors.value.length) {
         $q.notify({
           color: 'warning',
-          message: 'Doctor list is empty in doctor-service.'
+          message: videoRes.data.degraded
+            ? 'Doctor service unavailable and there is no cached doctor list.'
+            : 'Doctor list is empty in doctor-service.'
         })
       }
     }
@@ -274,7 +283,7 @@ const startJitsiCall = (roomName) => {
       jitsiApi.addEventListeners({
         videoConferenceLeft: async () => {
           try {
-            // කෝල් එක ඉවර වූ විට Backend (5005) එකට දැනුම් දීම
+
             await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/video/end-session`, { roomId: roomName });
 
             await fetchSessions();
@@ -305,15 +314,13 @@ const processBooking = async () => {
 
   isBooking.value = true
   try {
-    // 💡 මෙතනදී තමයි නිවැරදි දත්ත Backend එකට යවන්නේ
-    // If doctor email is not provided by buyer, try from query or empty
     const activeDoctorEmail = (booking.value.doctorEmail || doctorEmail.value).trim();
 
     const response = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/video/initialize-link`, {
       patientId: String(patientId.value).trim(),
       doctorId: String(booking.value.doctorId).trim(),
-      patientEmail: patientEmail.value, // 👈 Dynamic Email from logged in user
-      patientPhone: "+94767691846",      // 👈 ඔයාගේ Twilio Verified Phone Number එක
+      patientEmail: patientEmail.value,
+      patientPhone: "+94767691846",
       doctorEmail: activeDoctorEmail || '',
       doctorName: selectedDoctor.value?.name || '',
       doctorSpecialization: selectedDoctor.value?.specialization || ''

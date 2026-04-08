@@ -1,9 +1,6 @@
 const VideoSession = require('../models/videoSessionModel');
 const videoService = require('../services/videoService');
-const axios = require('axios');
-
-const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:5006/api/notifications/send';
-const NOTIFICATION_SERVICE_SMS_URL = process.env.NOTIFICATION_SERVICE_SMS_URL || 'http://localhost:5006/api/notifications/send-sms';
+const notificationClient = require('../services/notificationClient');
 
 // 1. Initialize Session
 const initializeSession = async (req, res) => {
@@ -41,10 +38,10 @@ const initializeSession = async (req, res) => {
 
         await Promise.all(uniqueRecipients.map(async (toEmail) => {
             try {
-                await axios.post(NOTIFICATION_SERVICE_URL, {
-                    email: toEmail,
-                    subject: 'NexusCare Consultation Started',
-                    message: startMessage
+                await notificationClient.sendEmail({
+                  email: toEmail,
+                  subject: 'NexusCare Consultation Started',
+                  message: startMessage,
                 });
                 console.log(`✅ Email sent to ${toEmail}`);
             } catch (sendErr) {
@@ -84,9 +81,10 @@ const endSession = async (req, res) => {
 
         await Promise.all(uniqueRecipients.map(async (toEmail) => {
             try {
-                await axios.post(NOTIFICATION_SERVICE_URL, {
-                    email: toEmail,
-                    ...emailPayload
+                await notificationClient.sendEmail({
+                  email: toEmail,
+                  subject: 'Consultation Summary - NexusCare',
+                  message: emailPayload.message,
                 });
                 console.log(`✅ Email sent to: ${toEmail}`);
             } catch (sendErr) {
@@ -96,10 +94,11 @@ const endSession = async (req, res) => {
 
         if (session.patientPhone) {
             console.log(`📱 Triggering SMS for: ${session.patientPhone}`);
-            axios.post(NOTIFICATION_SERVICE_SMS_URL, {
+            notificationClient.sendSms({
                 phoneNumber: session.patientPhone,
-                message: `NexusCare: Your session (Room: ${roomId}) is complete.`
-            }).then(() => console.log('✅ SMS Request successfully sent'))
+                message: `NexusCare: Your session (Room: ${roomId}) is complete.`,
+            })
+              .then(() => console.log('✅ SMS Request successfully sent'))
               .catch(e => console.log('❌ SMS Request Failed:', e.response ? e.response.data : e.message));
         }
 
@@ -123,12 +122,23 @@ const getSessions = async (req, res) => {
 // 4. Doctors List for Patient Video Booking
 const getDoctors = async (req, res) => {
     try {
-        const doctors = await videoService.getDoctorsForVideo(req.query);
+        const result = await videoService.getDoctorsForVideo(req.query);
 
-        res.status(200).json({ success: true, total: doctors.length, data: doctors });
+        res.status(200).json({
+            success: true,
+            total: result.doctors.length,
+            data: result.doctors,
+            degraded: result.degraded || false,
+            message: result.message || null,
+            cachedAt: result.cachedAt || null,
+        });
     } catch (error) {
-        console.error('❌ Get Doctors Error:', error.message);
-        res.status(500).json({ success: false, message: error.message || 'Failed to fetch doctors' });
+        console.error('❌ Get Doctors Error:', error.message, error.response?.data || '');
+        const statusCode = error.statusCode || error.response?.status || 503;
+        res.status(statusCode).json({
+            success: false,
+            message: error.response?.data?.message || error.message || 'Service unavailable',
+        });
     }
 };
 // 5. Health check for video service and doctor catalog

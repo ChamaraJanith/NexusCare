@@ -6,6 +6,11 @@ import httpProxy from 'http-proxy'
 const app = express()
 const proxy = httpProxy.createProxyServer({})
 
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:9000')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean)
+
 proxy.on('error', (err, req, res) => {
   console.error('Proxy error:', err.message)
   res.writeHead(502, { 'Content-Type': 'application/json' })
@@ -13,7 +18,13 @@ proxy.on('error', (err, req, res) => {
 })
 
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS || 'http://localhost:9000',
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true)
+    } else {
+      callback(new Error('CORS policy violation'))
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-internal-service-key']
 }))
