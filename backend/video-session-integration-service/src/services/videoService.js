@@ -1,8 +1,10 @@
 const { v4: uuidv4 } = require('uuid');
-const axios = require('axios');
+const doctorClient = require('./doctorClient');
 
-const DOCTOR_SERVICE_URL = process.env.DOCTOR_SERVICE_URL || 'http://localhost:5002';
-let cachedDoctors = [];
+let doctorCache = {
+  data: [],
+  lastUpdated: null,
+};
 
 const generateNeuralLink = async (patientId, doctorId) => {
   const roomId = `nexus-link-${uuidv4().substring(0, 8)}`;
@@ -20,30 +22,49 @@ const generateNeuralLink = async (patientId, doctorId) => {
 
 const getDoctorsForVideo = async (query = {}) => {
   try {
-    const response = await axios.get(`${DOCTOR_SERVICE_URL}/api/doctors/search`, {
-      params: query,
-      timeout: 5000,
-    });
+    const doctors = await doctorClient.searchDoctors(query);
 
-    let data;
-
-    if (Array.isArray(response.data)) {
-      data = response.data;
-    } else if (Array.isArray(response.data?.data)) {
-      data = response.data.data;
-    } else {
-      data = [];
+    if (doctors.length > 0) {
+      doctorCache.data = doctors;
+      doctorCache.lastUpdated = new Date().toISOString();
     }
 
-    if (data.length > 0) {
-      cachedDoctors = data;
-    }
-
-    return data.length > 0 ? data : cachedDoctors;
+    return {
+      doctors,
+      degraded: false,
+      cachedAt: doctorCache.lastUpdated,
+    };
   } catch (error) {
     console.error('[videoService] failed to fetch doctors from doctor-service:', error.message);
-    return cachedDoctors;
+
+    if (doctorCache.data.length > 0) {
+      return {
+        doctors: doctorCache.data,
+        degraded: true,
+        message: 'Doctor service currently unavailable. Showing cached doctor list.',
+        cachedAt: doctorCache.lastUpdated,
+      };
+    }
+
+    throw error;
   }
 };
 
-module.exports = { generateNeuralLink, getDoctorsForVideo };
+const getDoctorCatalogStatus = async () => {
+  try {
+    const healthy = await doctorClient.checkHealth();
+    return {
+      doctorService: healthy ? 'ok' : 'down',
+      lastChecked: new Date().toISOString(),
+    };
+  } catch (error) {
+    console.error('[videoService] doctor-service health check failed:', error.message);
+    return {
+      doctorService: 'down',
+      error: error.message,
+      lastChecked: new Date().toISOString(),
+    };
+  }
+};
+
+module.exports = { generateNeuralLink, getDoctorsForVideo, getDoctorCatalogStatus };

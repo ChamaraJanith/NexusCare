@@ -1,0 +1,114 @@
+services:
+  user-patient-service:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./backend/user-patient-service:/app
+    command: sh -c "npm install && npm run dev"
+    environment:
+      - NODE_ENV=development
+    networks:
+      - nexuscare
+
+  doctor-service:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./backend/doctor-service:/app
+    command: sh -c "npm install && npm run dev"
+    environment:
+      - NODE_ENV=development
+    networks:
+      - nexuscare
+
+  appointment-service:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./backend/appointment-service:/app
+    command: sh -c "npm install && npm run dev"
+    environment:
+      - NODE_ENV=development
+    networks:
+      - nexuscare
+
+  ai-symptom-service:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./backend/ai-symptom-service:/app
+    command: sh -c "npm install && npm run dev"
+    environment:
+      - NODE_ENV=development
+    networks:
+      - nexuscare
+
+  video-session-integration-service:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./backend/video-session-integration-service:/app
+    command: sh -c "npm install && npm run dev"
+    environment:
+      - NODE_ENV=development
+    networks:
+      - nexuscare
+
+  notification-service:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./backend/notification-service:/app
+    command: sh -c "npm install && npm start"
+    environment:
+      - NODE_ENV=development
+    networks:
+      - nexuscare
+
+  fee-management-service:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./backend/fee-management-service:/app
+    command: sh -c "npm install && npm run dev"
+    environment:
+      - NODE_ENV=development
+    networks:
+      - nexuscare
+
+  payment-service:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./backend/payment-service:/app
+    command: sh -c "npm install && npm run dev"
+    environment:
+      - NODE_ENV=development
+    networks:
+      - nexuscare
+
+  api-gateway:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./backend/api-gateway:/app
+    ports:
+      - '8080:8080'
+    command: sh -c "npm install && npm run dev"
+    environment:
+      - NODE_ENV=development
+    depends_on:
+      - user-patient-service
+      - doctor-service
+      - appointment-service
+      - ai-symptom-service
+      - video-session-integration-service
+      - notification-service
+      - fee-management-service
+      - payment-service
+    networks:
+      - nexuscare
+
+networks:
+  nexuscare:
+    driver: bridge
