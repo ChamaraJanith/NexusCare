@@ -92,8 +92,24 @@ export const createAppointment = async (data) => {
 
   const queueNumber = count + 1;
 
-  // 💰 CALCULATE CHARGES
-  const charges = await fetchCharges(doctorId, data.hospitalId || null, appointmentType);
+  // 💰 USE PROVIDED CHARGES WHEN AVAILABLE, OR FALL BACK TO SERVICE CALCULATION
+  let charges = null;
+  if (data.charges && typeof data.charges === "object") {
+    const doctorFee = Number(data.charges.doctorFee) || 0;
+    const hospitalFee = Number(data.charges.hospitalFee) || 0;
+    const serviceFee = Number(data.charges.serviceFee) || 0;
+    const totalValue = Number(data.charges.total);
+    charges = {
+      doctorFee,
+      hospitalFee,
+      serviceFee,
+      total: Number.isFinite(totalValue) && totalValue > 0
+        ? totalValue
+        : doctorFee + hospitalFee + serviceFee
+    };
+  } else {
+    charges = await fetchCharges(doctorId, data.hospitalId || null, appointmentType);
+  }
 
   const appointmentId = await generateAppointmentId();
 
