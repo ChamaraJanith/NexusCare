@@ -2,7 +2,7 @@ import Appointment from "../models/Appointment.js";
 import axios from "axios"; // 🔥 IMPORTANT (missing in your code)
 import { io } from "../app.js";
 
-const FEE_SERVICE_URL = process.env.FEE_SERVICE_URL || "http://localhost:5007";
+const FEE_SERVICE_URL = process.env.FEE_SERVICE_URL || "http://fee-management-service:5007";
 const INTERNAL_SERVICE_KEY = process.env.INTERNAL_SERVICE_KEY;
 
 
@@ -75,7 +75,7 @@ export const createAppointment = async (data) => {
   // 🔥 LOCK SLOT — try/catch so booking doesn't fail if slot lock fails
   try {
     await axios.put(
-      "http://localhost:5002/api/availability/book",
+      `${DOCTOR_SERVICE_URL}/api/availability/book`,
       { doctorId, date, time }
     );
   } catch (slotErr) {
@@ -223,7 +223,7 @@ export const cancelAppointment = async (id, patientId) => {
 export const getDoctorSlots = async (doctorId, date) => {
   try {
     const res = await axios.get(
-      `http://localhost:5002/api/availability/${doctorId}/by-date`,
+      `${DOCTOR_SERVICE_URL}/api/availability/${doctorId}/by-date`,
       {
         params: { date }
       }

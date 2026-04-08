@@ -68,7 +68,7 @@ const calculateFee = async (req, res, next) => {
     //    MS1 has GET /api/admin/users/:userId — but we have doctorId (DOC-0001).
     //    The cleanest pattern: call MS1's internal doctor lookup endpoint.
     let doctorFee = 2000; // safe fallback
-    const ms1Url = process.env.MS1_URL || "http://localhost:5001";
+    const ms1Url = process.env.MS1_URL || "http://user-patient-service:5001";
     const internalKeys = [process.env.INTERNAL_SERVICE_KEY, process.env.INTERNAL_SERVICE_KEY_FALLBACK].filter(Boolean);
 
     for (const key of internalKeys) {
