@@ -5,7 +5,11 @@ import dotenv from 'dotenv'
 dotenv.config()
 
 const app = express()
-app.use(cors())
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGINS || 'http://localhost:9000',
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-internal-service-key']
+}))
 
 // Route each path prefix to the correct service
 app.use('/api/auth',         createProxyMiddleware({ target: process.env.USER_SERVICE_URL,        changeOrigin: true }))
