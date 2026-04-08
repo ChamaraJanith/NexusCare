@@ -334,13 +334,13 @@ const storedUser = JSON.parse(localStorage.getItem('nexus_user') || '{}')
 // ── API clients ─────────────────────────────────────────────────────────────
 // MS1 — user/patient service (to get patient profile for payment initiation)
 const ms1Api = axios.create({
-  baseURL: 'http://localhost:5001',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080',
   headers: { Authorization: `Bearer ${token}` }
 })
 
 // MS5 — payment service
 const paymentApi = axios.create({
-  baseURL: 'http://localhost:5009',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080',
   headers: { Authorization: `Bearer ${token}` }
 })
 

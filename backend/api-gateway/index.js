@@ -1,26 +1,61 @@
+import 'dotenv/config'
 import express from 'express'
-import { createProxyMiddleware } from 'http-proxy-middleware'
 import cors from 'cors'
-import dotenv from 'dotenv'
-dotenv.config()
+import httpProxy from 'http-proxy'
 
 const app = express()
+const proxy = httpProxy.createProxyServer({})
+
+proxy.on('error', (err, req, res) => {
+  console.error('Proxy error:', err.message)
+  res.writeHead(502, { 'Content-Type': 'application/json' })
+  res.end(JSON.stringify({ error: 'Bad Gateway', message: err.message }))
+})
+
 app.use(cors({
   origin: process.env.ALLOWED_ORIGINS || 'http://localhost:9000',
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-internal-service-key']
 }))
 
-// Route each path prefix to the correct service
-app.use('/api/auth',         createProxyMiddleware({ target: process.env.USER_SERVICE_URL,        changeOrigin: true }))
-app.use('/api/patient',      createProxyMiddleware({ target: process.env.USER_SERVICE_URL,        changeOrigin: true }))
-app.use('/api/admin',        createProxyMiddleware({ target: process.env.USER_SERVICE_URL,        changeOrigin: true }))
-app.use('/api/doctors',      createProxyMiddleware({ target: process.env.DOCTOR_SERVICE_URL,      changeOrigin: true }))
-app.use('/api/appointments', createProxyMiddleware({ target: process.env.APPOINTMENT_SERVICE_URL, changeOrigin: true }))
-app.use('/api/ai',           createProxyMiddleware({ target: process.env.AI_SERVICE_URL,          changeOrigin: true }))
-app.use('/api/payments',     createProxyMiddleware({ target: process.env.PAYMENT_SERVICE_URL,     changeOrigin: true }))
-app.use('/api/service-fee',  createProxyMiddleware({ target: process.env.FEE_SERVICE_URL,         changeOrigin: true }))
-app.use('/api/notifications',createProxyMiddleware({ target: process.env.NOTIFICATION_SERVICE_URL,changeOrigin: true }))
-app.use('/api/video',        createProxyMiddleware({ target: process.env.VIDEO_SERVICE_URL,       changeOrigin: true }))
+// Health check
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    routes: {
+      user:         process.env.USER_SERVICE_URL,
+      doctor:       process.env.DOCTOR_SERVICE_URL,
+      appointment:  process.env.APPOINTMENT_SERVICE_URL,
+      ai:           process.env.AI_SERVICE_URL,
+      video:        process.env.VIDEO_SERVICE_URL,
+      notification: process.env.NOTIFICATION_SERVICE_URL,
+      fee:          process.env.FEE_SERVICE_URL,
+      payment:      process.env.PAYMENT_SERVICE_URL,
+    }
+  })
+})
 
-app.listen(process.env.PORT || 8080, () => console.log('Gateway running on :8080'))
+const route = (target) => (req, res) => {
+  // http-proxy strips the matched prefix — restore the original full URL
+  req.url = req.originalUrl
+  proxy.web(req, res, { target, changeOrigin: true })
+}
+
+app.use('/api/auth',          route(process.env.USER_SERVICE_URL))
+app.use('/api/patient',       route(process.env.USER_SERVICE_URL))
+app.use('/api/admin',         route(process.env.USER_SERVICE_URL))
+app.use('/api/doctors',       route(process.env.DOCTOR_SERVICE_URL))
+app.use('/api/availability',  route(process.env.DOCTOR_SERVICE_URL))
+app.use('/api/prescriptions', route(process.env.DOCTOR_SERVICE_URL))
+app.use('/api/appointments',  route(process.env.APPOINTMENT_SERVICE_URL))
+app.use('/api/ai',            route(process.env.AI_SERVICE_URL))
+app.use('/api/payments',      route(process.env.PAYMENT_SERVICE_URL))
+app.use('/api/service-fee',   route(process.env.FEE_SERVICE_URL))
+app.use('/api/hospitals',     route(process.env.FEE_SERVICE_URL))
+app.use('/api/notifications', route(process.env.NOTIFICATION_SERVICE_URL))
+app.use('/api/video',         route(process.env.VIDEO_SERVICE_URL))
+
+app.listen(process.env.PORT || 8080, () => {
+  console.log(`Gateway running on :${process.env.PORT || 8080}`)
+  console.log(`user-service → ${process.env.USER_SERVICE_URL}`)
+})

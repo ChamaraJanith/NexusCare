@@ -100,7 +100,7 @@ const loading = ref(true);
 const doctor = ref({});
 
 const DOCTOR_SERVICE_URL =
-  import.meta.env?.VITE_DOCTOR_SERVICE_URL || 'http://localhost:5002';
+  import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 const getAvatarUrl = computed(() => {
   if (!doctor.value?.profileImage) return null;

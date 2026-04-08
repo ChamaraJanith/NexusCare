@@ -158,7 +158,7 @@ onMounted(async () => {
 
   try {
     const { data } = await axios.get(
-      `http://localhost:5003/api/appointments/doctor/${doctorId}`,
+      `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/appointments/doctor/${doctorId}`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
@@ -179,7 +179,7 @@ onMounted(async () => {
 // ── Join video session ────────────────────────────────────────────────────────
 const joinVideo = (apt) => {
   // Replace with your actual Agora/Jitsi/Twilio room URL pattern
-  const roomUrl = `http://localhost:5005/room/${apt._id}`;
+  const roomUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/room/${apt._id}`;
   window.open(roomUrl, '_blank');
 };
 
@@ -204,7 +204,7 @@ const savePrescription = async () => {
 
   try {
     await axios.post(
-      'http://localhost:5002/api/prescriptions',
+      `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/prescriptions`,
       {
         patientId: rxDlg.appointment.patientId,
         medicines,
@@ -232,7 +232,7 @@ const markComplete = async (apt) => {
 
   try {
     await axios.put(
-      `http://localhost:5003/api/appointments/doctor/complete/${apt._id}`,
+      `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/appointments/doctor/complete/${apt._id}`,
       {},
       { headers: { Authorization: `Bearer ${token}` } }
     );

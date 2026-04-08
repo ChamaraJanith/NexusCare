@@ -207,7 +207,7 @@ const handleCheck = async () => {
   loading.value = true
   try {
     // Calling MS4 AI Symptom Service
-    const response = await api.post('http://localhost:5004/api/ai/symptom-check', form)
+    const response = await api.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/ai/symptom-check`, form)
     if (response.data.success) {
       result.value = response.data.data
       $q.notify({ icon: 'cloud_done', color: 'cyan-9', message: 'Neural analysis complete.' })

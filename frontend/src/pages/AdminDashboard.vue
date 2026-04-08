@@ -626,7 +626,7 @@ const paymentTotalPages = ref(1)
 
 // Fee Management
 const feeApi = axios.create({
-  baseURL: 'http://localhost:5007',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080',
   headers: { Authorization: `Bearer ${token}` }
 })
 
@@ -769,12 +769,12 @@ const paymentStatusOptions = [
 
 // API clients
 const api = axios.create({
-  baseURL: 'http://localhost:5001',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080',
   headers: { Authorization: `Bearer ${token}` }
 })
 
 const paymentApi = axios.create({
-  baseURL: 'http://localhost:5009',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080',
   headers: { Authorization: `Bearer ${token}` }
 })
 

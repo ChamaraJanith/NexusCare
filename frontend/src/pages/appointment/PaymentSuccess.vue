@@ -33,7 +33,7 @@ const orderId = rawOrderId ? String(rawOrderId).split(',')[0] : null
     try {
       const token = localStorage.getItem('nexus_token') || localStorage.getItem('token')
       
-      await axios.post('http://localhost:5009/api/payments/confirm', 
+      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/payments/confirm`, 
         { orderId },
         { headers: { Authorization: `Bearer ${token}` } }
       )

@@ -87,7 +87,7 @@ onMounted(async () => {
   try {
     const orderId = route.params.orderId
 
-    const paymentRes = await axios.get(`http://localhost:5009/api/payments/${orderId}`, {
+    const paymentRes = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/payments/${orderId}`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem("token")}`
       }
@@ -97,7 +97,7 @@ onMounted(async () => {
 
     const patientId = localStorage.getItem("patientId")
 
-    const apptRes = await axios.get(`http://localhost:5003/api/appointments/patient/${patientId}`, {
+    const apptRes = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/appointments/patient/${patientId}`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem("token")}`
       }

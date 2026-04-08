@@ -142,8 +142,7 @@ const form = reactive({
 });
 
 // ── Avatar URL ───────────────────────────────────────────────────────────────
-const DOCTOR_SERVICE_URL =
-  import.meta.env?.VITE_DOCTOR_SERVICE_URL || 'http://localhost:5002';
+const DOCTOR_SERVICE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 const avatarUrl = computed(() => {
   const d = doctor.value;
