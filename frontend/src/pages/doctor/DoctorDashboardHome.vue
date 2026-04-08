@@ -127,8 +127,15 @@ const getInitials = (name) => {
 
 const parseJwt = (token) => {
   try {
-    return JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-  } catch { return null; }
+    let base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padLength = 4 - (base64.length % 4);
+    if (padLength > 0 && padLength < 4) {
+      base64 += '='.repeat(padLength);
+    }
+    return JSON.parse(atob(base64));
+  } catch {
+    return null;
+  }
 };
 
 onMounted(async () => {
@@ -143,6 +150,10 @@ onMounted(async () => {
 
   const token = localStorage.getItem('token') || localStorage.getItem('nexus_token');
   const decoded = token ? parseJwt(token) : null;
+  if (!doctor.value.name && decoded?.name) {
+    doctor.value.name = decoded.name;
+  }
+
   const doctorId = decoded?.roleId || doctor.value?.doctorId;
   if (doctorId) {
     try {

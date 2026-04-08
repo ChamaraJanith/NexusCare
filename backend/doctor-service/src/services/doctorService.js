@@ -1,6 +1,6 @@
 import Doctor from "../models/Doctor.js";
 import AvailabilitySlot from "../models/AvailabilitySlot.js";
-import { getUserByToken, searchDoctorsByName } from "./userServiceClient.js";
+import { getUserByToken, getUserByDoctorId, searchDoctorsByName } from "./userServiceClient.js";
 
 /**
  * Helper: resolve profileImage to a usable URL string.
@@ -25,11 +25,16 @@ export const getDoctorByDoctorId = async (doctorId) => {
 export const getDoctorFullProfile = async (doctorId, bearerToken) => {
   const doctorRecord = await Doctor.findOne({ doctorId });
 
-  // Safely wrap MS1 call
-  const userIdentity = await getUserByToken(bearerToken).catch(err => {
-    console.warn("[getDoctorFullProfile] getUserByToken failed:", err.message);
-    return null;
-  });
+  // Try getUserByDoctorId first (more reliable — uses doctorId directly)
+  let userIdentity = await getUserByDoctorId(doctorId).catch(() => null);
+
+  // Fallback to token-based lookup
+  if (!userIdentity?.name) {
+    userIdentity = await getUserByToken(bearerToken).catch(err => {
+      console.warn("[getDoctorFullProfile] getUserByToken failed:", err.message);
+      return null;
+    });
+  }
 
   console.log("DB specialization:", doctorRecord?.specialization);
   console.log("MS1 specialty:", userIdentity?.specialty);
@@ -38,7 +43,7 @@ export const getDoctorFullProfile = async (doctorId, bearerToken) => {
 
   return {
     doctorId,
-    name: userIdentity?.name || `Doctor ${doctorId}`,
+    name: userIdentity?.name || '',
     email: userIdentity?.email || "",
     phone: userIdentity?.phone || "",
     specialization: doctorRecord?.specialty || userIdentity?.specialty || "",
@@ -231,7 +236,7 @@ export const searchDoctors = async (queryParams) => {
       const identity = ms1Dict[doc.doctorId] || {};
       return {
         ...doc,
-        name: identity.name || `Doctor ${doc.doctorId}`,
+        name: identity.name || '',
         profileImage: resolveProfileImage(doc.profileImage, identity.profileImage),
         isAvailable: availableDoctorIdsSet.has(doc.doctorId),
       };
