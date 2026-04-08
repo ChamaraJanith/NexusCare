@@ -3,8 +3,8 @@ const axios  = require("axios");                          // ✅ ADD THIS if not
 const Payment = require("../models/Payment");
 const { generateHash, verifyWebhookHash } = require("../config/payhere");
 
-const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || "http://localhost:5006";
-const DOCTOR_SERVICE_URL = process.env.DOCTOR_SERVICE_URL || "http://localhost:5002";
+const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || "http://notification-service:5006";
+const DOCTOR_SERVICE_URL = process.env.DOCTOR_SERVICE_URL || "http://doctor-service:5002";
 const INTERNAL_SERVICE_KEY = process.env.INTERNAL_SERVICE_KEY;
 
 const logNotificationEvent = async (data) => {
@@ -186,7 +186,7 @@ const payhereWebhook = async (req, res, next) => {
     if (newStatus === "success" && payment.appointmentId) {
       try {
         await axios.patch(
-          `${process.env.APPOINTMENT_SERVICE_URL || "http://localhost:5003"}/api/appointments/${payment.appointmentId}/payment`,
+          `${process.env.APPOINTMENT_SERVICE_URL || "http://appointment-service:5003"}/api/appointments/${payment.appointmentId}/payment`,
           { paymentStatus: "PAID" },
           {
             headers: {
@@ -277,7 +277,7 @@ const confirmPayment = async (req, res, next) => {
     if (updated && updated.appointmentId) {
       try {
         await axios.patch(
-          `${process.env.APPOINTMENT_SERVICE_URL || "http://localhost:5003"}/api/appointments/${updated.appointmentId}/payment`,
+          `${process.env.APPOINTMENT_SERVICE_URL || "http://appointment-service:5003"}/api/appointments/${updated.appointmentId}/payment`,
           { paymentStatus: "PAID" },
           {
             headers: {

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const VIDEO_SERVICE_URL = process.env.VIDEO_SERVICE_URL || 'http://localhost:5005';
+const VIDEO_SERVICE_URL = process.env.VIDEO_SERVICE_URL || 'http://video-session-integration-service:5005';
 const INTERNAL_SERVICE_KEY = process.env.INTERNAL_SERVICE_KEY;
 
 const getHeaders = () => {

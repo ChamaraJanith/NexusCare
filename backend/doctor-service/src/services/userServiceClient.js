@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const USER_SERVICE_URL = process.env.USER_SERVICE_URL || "http://localhost:5001";
+const USER_SERVICE_URL = process.env.USER_SERVICE_URL || "http://user-patient-service:5001";
 
 /**
  * Calls user-patient-service POST /api/auth/verify-token
