@@ -28,12 +28,18 @@ export const getDoctorFullProfile = async (doctorId, bearerToken) => {
   // Try getUserByDoctorId first (more reliable — uses doctorId directly)
   let userIdentity = await getUserByDoctorId(doctorId).catch(() => null);
 
-  // Fallback to token-based lookup
-  if (!userIdentity?.name) {
-    userIdentity = await getUserByToken(bearerToken).catch(err => {
+  // Fallback to token-based lookup if we lack either a name or email.
+  if (!userIdentity?.name || !userIdentity?.email) {
+    const tokenIdentity = await getUserByToken(bearerToken).catch(err => {
       console.warn("[getDoctorFullProfile] getUserByToken failed:", err.message);
       return null;
     });
+    if (tokenIdentity) {
+      userIdentity = {
+        ...userIdentity,
+        ...tokenIdentity,
+      };
+    }
   }
 
   console.log("DB specialization:", doctorRecord?.specialization);

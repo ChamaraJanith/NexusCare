@@ -25,7 +25,7 @@
               <img v-if="previewImage" :src="previewImage" style="object-fit: cover;" />
               <img v-else-if="avatarUrl" :src="avatarUrl" style="object-fit: cover;" />
               <div v-else class="text-h2 text-grey-5">
-                {{ doctor.name ? doctor.name.charAt(0).toUpperCase() : 'DR' }}
+                {{ doctorDisplayName.charAt(0).toUpperCase() }}
               </div>
             </q-avatar>
 
@@ -45,7 +45,7 @@
 
           <div class="q-mt-lg">
             <h2 class="text-h5 text-weight-bold text-dark q-mb-xs">
-              Dr. {{ doctor.name || '—' }}
+              Dr. {{ doctorDisplayName || '—' }}
             </h2>
 
             <q-badge color="blue-1" text-color="blue-8" class="q-px-sm q-py-xs text-weight-bold">
@@ -127,8 +127,29 @@ const $q = useQuasar();
 
 const layoutDoctor = inject('doctor', ref({}));
 const doctor = ref({});
+const tokenPayload = ref(null);
 const pageLoading = ref(true);
 const saving = ref(false);
+
+const parseJwt = (token) => {
+  try {
+    let base64 = token.split('.')[1] || '';
+    base64 = base64.replace(/-/g, '+').replace(/_/g, '/');
+    const padLength = 4 - (base64.length % 4);
+    if (padLength > 0 && padLength < 4) {
+      base64 += '='.repeat(padLength);
+    }
+    return JSON.parse(atob(base64));
+  } catch {
+    return null;
+  }
+};
+
+const doctorDisplayName = computed(() => {
+  const name = doctor.value?.name || layoutDoctor.value?.name || tokenPayload.value?.name;
+  if (!name) return '';
+  return String(name).replace(/^Dr\.\s*/i, '').trim();
+});
 
 const fileInputRef = ref(null);
 const previewImage = ref(null);
@@ -162,6 +183,12 @@ const loadProfile = async () => {
   try {
     const res = await fetchDoctorProfile();
     const profile = res?.data || res || {};
+    const storedUser = JSON.parse(localStorage.getItem('nexus_user') || '{}');
+
+    // If the server did not provide a name or email, fallback to layout, token payload, or stored user.
+    profile.name = profile.name || layoutDoctor.value?.name || tokenPayload.value?.name || storedUser?.name || '';
+    profile.email = profile.email || layoutDoctor.value?.email || tokenPayload.value?.email || storedUser?.email || '';
+    profile.profileImage = profile.profileImage || layoutDoctor.value?.profileImage || null;
 
     doctor.value = profile;
 
@@ -181,6 +208,9 @@ const loadProfile = async () => {
 };
 
 onMounted(async () => {
+  const token = localStorage.getItem('token') || localStorage.getItem('nexus_token');
+  tokenPayload.value = token ? parseJwt(token) : null;
+
   await loadProfile();
   pageLoading.value = false;
 });

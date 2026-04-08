@@ -171,10 +171,12 @@ const loadDoctorProfile = async () => {
 
   try {
     const data = await fetchDoctorProfile();
+    const storedUser = JSON.parse(localStorage.getItem('nexus_user') || '{}');
     // Merge but keep name from JWT if doctor model has empty name
     doctor.value = {
       ...data,
-      name: doctor.value.name || data.name || ''
+      name: doctor.value.name || data.name || storedUser?.name || '',
+      email: data.email || doctor.value.email || storedUser?.email || ''
     };
     console.log('[DoctorLayout] Doctor profile loaded:', doctor.value);
   } catch (err) {

@@ -415,13 +415,14 @@ const searchDoctorsByName = async (req, res, next) => {
       query.name = { $regex: name, $options: "i" };
     }
 
-    const doctors = await User.find(query).select("roleId name profileImage");
+    const doctors = await User.find(query).select("roleId name profileImage email");
 
     res.status(200).json({
       success: true,
       data: doctors.map(d => ({
         doctorId: d.roleId,
         name: d.name,
+        email: d.email,
         profileImage: d.profileImage
       }))
     });
