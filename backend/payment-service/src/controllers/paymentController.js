@@ -3,9 +3,45 @@ const axios  = require("axios");                          // ✅ ADD THIS if not
 const Payment = require("../models/Payment");
 const { generateHash, verifyWebhookHash } = require("../config/payhere");
 
-const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || "http://notification-service:5006";
-const DOCTOR_SERVICE_URL = process.env.DOCTOR_SERVICE_URL || "http://doctor-service:5002";
-const INTERNAL_SERVICE_KEY = process.env.INTERNAL_SERVICE_KEY;
+const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || "http://localhost:5006";
+const DOCTOR_SERVICE_URL = process.env.DOCTOR_SERVICE_URL || "http://localhost:5002";
+const APPOINTMENT_SERVICE_URL = process.env.APPOINTMENT_SERVICE_URL || "http://localhost:5003";
+const SELF_URL = process.env.SELF_URL || `http://localhost:${process.env.PORT || 5009}`;
+const INTERNAL_SERVICE_KEY = process.env.INTERNAL_SERVICE_KEY || process.env.INTERNAL_SERVICE_KEY_FALLBACK;
+
+const getAppointmentServiceUrls = () => {
+  return [
+    process.env.APPOINTMENT_SERVICE_URL,
+    process.env.API_GATEWAY_URL,
+    "http://localhost:5003",
+    "http://localhost:8080"
+  ].filter(Boolean);
+};
+
+const notifyAppointmentService = async (appointmentId, body) => {
+  const urls = getAppointmentServiceUrls();
+  let lastError = null;
+
+  for (const baseUrl of urls) {
+    try {
+      const response = await axios.patch(
+        `${baseUrl}/api/appointments/${appointmentId}/payment`,
+        body,
+        {
+          headers: { "x-internal-service-key": INTERNAL_SERVICE_KEY },
+          timeout: 5000
+        }
+      );
+      console.log(`✅ Appointment ${appointmentId} marked as PAID via ${baseUrl}`);
+      return response.data;
+    } catch (err) {
+      lastError = err;
+      console.warn(`⚠️ Failed to notify appointment service at ${baseUrl}:`, err.response?.data || err.message);
+    }
+  }
+
+  throw lastError || new Error("Failed to notify appointment service to update payment status");
+};
 
 const logNotificationEvent = async (data) => {
   try {
@@ -91,7 +127,7 @@ const initiatePayment = async (req, res, next) => {
     });
 
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:9000";
-    const selfUrl     = process.env.SELF_URL      || "http://localhost:5005";
+    const selfUrl     = SELF_URL;
 
     res.status(200).json({
       success: true,
@@ -185,20 +221,10 @@ const payhereWebhook = async (req, res, next) => {
     // ✅ NEW — notify appointment-service to mark PAID after successful payment
     if (newStatus === "success" && payment.appointmentId) {
       try {
-        await axios.patch(
-          `${process.env.APPOINTMENT_SERVICE_URL || "http://appointment-service:5003"}/api/appointments/${payment.appointmentId}/payment`,
-          { paymentStatus: "PAID" },
-          {
-            headers: {
-              "x-internal-service-key": process.env.INTERNAL_SERVICE_KEY
-            },
-            timeout: 5000
-          }
-        );
-        console.log(`✅ Appointment ${payment.appointmentId} marked as PAID`);
+        await notifyAppointmentService(payment.appointmentId, { paymentStatus: "PAID" });
       } catch (notifyErr) {
         // Log but don't fail — if we return non-200, PayHere will keep retrying
-        console.error("Failed to notify appointment service:", notifyErr.message);
+        console.error("Failed to notify appointment service:", notifyErr.response?.data || notifyErr.message);
       }
     }
 
@@ -229,8 +255,16 @@ const confirmPayment = async (req, res, next) => {
       return res.status(403).json({ success: false, message: "Access denied." });
     }
 
-    // If webhook already updated status, just return current status
+    // If webhook already updated status, still notify appointment-service for PAYED appointments
     if (payment.status !== "pending") {
+      if (payment.status === "success" && payment.appointmentId) {
+        try {
+          await notifyAppointmentService(payment.appointmentId, { paymentStatus: "PAID" });
+          console.log(`✅ Appointment ${payment.appointmentId} marked as PAID via return_url (existing payment record)`);
+        } catch (notifyErr) {
+          console.error("Failed to notify appointment service for existing payment record:", notifyErr.response?.data || notifyErr.message);
+        }
+      }
       return res.status(200).json({ success: true, data: payment });
     }
 
@@ -276,19 +310,9 @@ const confirmPayment = async (req, res, next) => {
     // (webhook can't reach localhost in sandbox, so we do it here too)
     if (updated && updated.appointmentId) {
       try {
-        await axios.patch(
-          `${process.env.APPOINTMENT_SERVICE_URL || "http://appointment-service:5003"}/api/appointments/${updated.appointmentId}/payment`,
-          { paymentStatus: "PAID" },
-          {
-            headers: {
-              "x-internal-service-key": process.env.INTERNAL_SERVICE_KEY
-            },
-            timeout: 5000
-          }
-        );
-        console.log(`✅ Appointment ${updated.appointmentId} marked as PAID via confirmPayment`);
+        await notifyAppointmentService(updated.appointmentId, { paymentStatus: "PAID" });
       } catch (notifyErr) {
-        console.error("Failed to notify appointment service:", notifyErr.message);
+        console.error("Failed to notify appointment service:", notifyErr.response?.data || notifyErr.message);
         // Don't fail the response — payment is confirmed, appointment update is best-effort
       }
     }

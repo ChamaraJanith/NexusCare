@@ -251,12 +251,19 @@ router.put("/doctor/complete/:id", async (req, res) => {
 router.patch("/:id/payment", async (req, res) => {
   try {
     const internalKey = req.headers["x-internal-service-key"];
-    if (internalKey !== process.env.INTERNAL_SERVICE_KEY) {
+    const allowedKeys = [process.env.INTERNAL_SERVICE_KEY, process.env.INTERNAL_SERVICE_KEY_FALLBACK].filter(Boolean);
+    if (!allowedKeys.includes(internalKey)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
     const { paymentStatus } = req.body;
-    const updated = await Appointment.findByIdAndUpdate(
-      req.params.id,
+    const appointmentId = req.params.id;
+    const updated = await Appointment.findOneAndUpdate(
+      {
+        $or: [
+          { _id: appointmentId },
+          { appointmentId }
+        ]
+      },
       { paymentStatus },
       { new: true }
     );

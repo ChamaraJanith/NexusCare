@@ -254,6 +254,12 @@ const proceedToRequest = async () => {
       email: patient.email,
       phone: patient.mobile,
       hospitalId: resolvedHospitalId.value || null,
+      charges: {
+        doctorFee: Number(store.fees.doctorFee) || 0,
+        hospitalFee: Number(store.fees.hospitalFee) || 0,
+        serviceFee: Number(store.fees.bookingFee) || 0,
+        total: Number(store.totalFee) || 0,
+      }
     };
 
     const result = await bookAppointment(payload);
