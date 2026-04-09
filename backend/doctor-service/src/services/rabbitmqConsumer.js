@@ -3,6 +3,7 @@ import Doctor from '../models/Doctor.js';
 
 const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://guest:guest@rabbitmq:5672';
 const QUEUE = 'doctor.registered';
+const VERIFY_QUEUE = 'doctor.verified';
 
 export const startRabbitMQConsumer = async () => {
   let connection;
@@ -19,8 +20,9 @@ export const startRabbitMQConsumer = async () => {
 
     channel = await connection.createChannel();
     await channel.assertQueue(QUEUE, { durable: true });
+    await channel.assertQueue(VERIFY_QUEUE, { durable: true });
 
-    console.log(`📥 Doctor Service RabbitMQ consumer connected, listening for ${QUEUE}`);
+    console.log(`📥 Doctor Service RabbitMQ consumer connected, listening for ${QUEUE} and ${VERIFY_QUEUE}`);
 
     channel.consume(
       QUEUE,
@@ -61,6 +63,40 @@ export const startRabbitMQConsumer = async () => {
           channel.ack(msg);
         } catch (error) {
           console.error('❌ Failed to process doctor.registered event', error);
+          const redelivered = msg.fields.redelivered;
+          channel.nack(msg, false, !redelivered);
+        }
+      },
+      { noAck: false }
+    );
+
+    channel.consume(
+      VERIFY_QUEUE,
+      async (msg) => {
+        if (!msg) return;
+
+        try {
+          const payload = JSON.parse(msg.content.toString());
+          console.log('📬 Received doctor.verified event:', payload);
+
+          if (!payload?.doctorId || typeof payload.isVerified !== 'boolean') {
+            throw new Error('Invalid doctor.verified payload');
+          }
+
+          const doctorRecord = await Doctor.findOneAndUpdate(
+            { doctorId: payload.doctorId },
+            {
+              $set: {
+                isVerified: payload.isVerified,
+              },
+            },
+            { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
+          );
+
+          console.log(`✅ Doctor verification status synchronized in doctor-service DB:`, doctorRecord.doctorId, 'isVerified=', doctorRecord.isVerified);
+          channel.ack(msg);
+        } catch (error) {
+          console.error('❌ Failed to process doctor.verified event', error);
           const redelivered = msg.fields.redelivered;
           channel.nack(msg, false, !redelivered);
         }

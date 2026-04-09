@@ -2,6 +2,7 @@
 const User = require("../models/User");
 const PatientProfile = require("../models/PatientProfile");
 const DoctorProfile = require("../models/DoctorProfile");
+const { publishDoctorVerifiedEvent } = require("../services/rabbitmq");
 
 // ─── GET ALL USERS ────────────────────────────────────────────────────────────
 // GET /api/admin/users
@@ -186,6 +187,7 @@ const verifyDoctor = async (req, res, next) => {
       await profile.save();
  
       await User.findOneAndUpdate({ userId: profile.userId }, { isVerified: true });
+      await publishDoctorVerifiedEvent({ doctorId, isVerified: true });
  
       res.status(200).json({
         success: true,
@@ -195,6 +197,8 @@ const verifyDoctor = async (req, res, next) => {
       profile.isVerified = false;
       profile.rejectionReason = rejectionReason || "No reason provided.";
       await profile.save();
+      await User.findOneAndUpdate({ userId: profile.userId }, { isVerified: false });
+      await publishDoctorVerifiedEvent({ doctorId, isVerified: false });
  
       res.status(200).json({
         success: true,
