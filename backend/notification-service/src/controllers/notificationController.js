@@ -1,22 +1,20 @@
 const twilio = require('twilio');
 const nodemailer = require('nodemailer');
 const Notification = require('../models/Notification');
-require('dotenv').config();
+const config = require('../config/config');
 
 // --- Twilio Configuration ---
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const twilioNumber = process.env.TWILIO_PHONE_NUMBER;
-const twilioMessagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
-const twilioClient = new twilio(accountSid, authToken);
+const twilioClient = new twilio(config.TWILIO_ACCOUNT_SID, config.TWILIO_AUTH_TOKEN);
+const twilioNumber = config.TWILIO_PHONE_NUMBER;
+const twilioMessagingServiceSid = config.TWILIO_MESSAGING_SERVICE_SID;
 
 // --- Notify.lk configuration ---
-const notifyLKUserId = process.env.NOTIFYLK_USER_ID;
-const notifyLKApiKey = process.env.NOTIFYLK_API_KEY;
-const notifyLKsenderId = process.env.NOTIFYLK_SENDER_ID || 'NEXUSCARE';
+const notifyLKUserId = config.NOTIFYLK_USER_ID;
+const notifyLKApiKey = config.NOTIFYLK_API_KEY;
+const notifyLKsenderId = config.NOTIFYLK_SENDER_ID || 'NEXUSCARE';
 
 // Provider selection
-const SMS_PROVIDER = (process.env.SMS_PROVIDER || 'twilio').toLowerCase();
+const SMS_PROVIDER = config.SMS_PROVIDER;
 
 /**
  * 1. Send SMS Function
@@ -50,8 +48,6 @@ const sendSMSViaNotifyLK = async (phoneNumber, message) => {
         throw new Error('notify.lk requires 11-digit Sri Lankan number (e.g. 947XXXXXXXX)');
     }
 
-    const baseUrl = process.env.NOTIFYLK_BASE_URL || 'https://app.notify.lk';
-
     const bodyVariants = [
         new URLSearchParams({
             userId: notifyLKUserId,
@@ -74,7 +70,7 @@ const sendSMSViaNotifyLK = async (phoneNumber, message) => {
     // 1) Attempt POST in both parameter styles
     for (const formBody of bodyVariants) {
         try {
-            const url = new URL('/api/v1/send', baseUrl);
+            const url = new URL('/api/v1/send', config.NOTIFYLK_BASE_URL);
             console.log('notify.lk POST request to', url.toString(), 'body', formBody);
             const response = await fetch(url.toString(), {
                 method: 'POST',
@@ -123,7 +119,7 @@ const sendSMSViaNotifyLK = async (phoneNumber, message) => {
         }).toString(),
     ]) {
         try {
-            const url = `${baseUrl}/api/v1/send?${queryString}`;
+            const url = `${config.NOTIFYLK_BASE_URL}/api/v1/send?${queryString}`;
             console.log('notify.lk GET fallback request to', url);
             const response = await fetch(url, { method: 'GET' });
             const data = await response.json();
@@ -206,7 +202,7 @@ const saveNotificationRecord = async (data) => {
 
 const logNotification = async (req, res) => {
     const internalKey = req.headers['x-internal-service-key'];
-    if (internalKey !== process.env.INTERNAL_SERVICE_KEY) {
+    if (internalKey !== config.INTERNAL_SERVICE_KEY) {
         return res.status(403).json({ success: false, message: 'Unauthorized' });
     }
 
@@ -251,8 +247,8 @@ const logNotification = async (req, res) => {
 };
 
 const getEmailTransporter = () => {
-    const user = process.env.GMAIL_USER;
-    const pass = process.env.GMAIL_PASS ? process.env.GMAIL_PASS.replace(/\s+/g, '') : undefined;
+    const user = config.GMAIL_USER;
+    const pass = config.GMAIL_PASS;
 
     if (!user || !pass) {
         throw new Error('GMAIL_USER and GMAIL_PASS must be configured for notification email delivery');
@@ -288,7 +284,7 @@ const sendEmail = async (req, res) => {
 
     try {
         const info = await transporter.sendMail({
-            from: `"NexusCare" <${process.env.GMAIL_USER}>`,
+            from: `"NexusCare" <${config.GMAIL_USER}>`,
             to: email,
             subject: subject,
             text: message,
@@ -329,7 +325,7 @@ const sendRegistrationEmail = async (req, res) => {
     try {
         const transporter = getEmailTransporter();
         await transporter.sendMail({
-            from: `"NexusCare" <${process.env.GMAIL_USER}>`,
+            from: `"NexusCare" <${config.GMAIL_USER}>`,
             to: email,
             subject,
             text: message

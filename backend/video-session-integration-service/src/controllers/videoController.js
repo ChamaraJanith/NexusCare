@@ -119,6 +119,36 @@ const getSessions = async (req, res) => {
     }
 };
 
+// 3.5. Sync a doctor record from doctor-service into video service
+const syncDoctor = async (req, res) => {
+    try {
+        const doctorPayload = req.body;
+        console.log('🔁 Received doctor sync request', { doctorId: doctorPayload?.doctorId });
+
+        // In this implementation, video service accepts the synced doctor payload.
+        // A real implementation would persist or reconcile this data as needed.
+        res.status(200).json({ success: true, message: 'Doctor sync received', data: doctorPayload });
+    } catch (error) {
+        console.error('❌ Sync Doctor Error:', error.message);
+        res.status(500).json({ success: false, message: error.message || 'Doctor sync failed' });
+    }
+};
+
+const removeDoctor = async (req, res) => {
+    try {
+        const { doctorId } = req.params;
+        if (!doctorId) {
+            return res.status(400).json({ success: false, message: 'doctorId is required' });
+        }
+
+        console.log('🗑️ Received doctor removal request for', doctorId);
+        res.status(200).json({ success: true, message: `Doctor ${doctorId} removed from video sync` });
+    } catch (error) {
+        console.error('❌ Remove Doctor Error:', error.message);
+        res.status(500).json({ success: false, message: error.message || 'Doctor removal failed' });
+    }
+};
+
 // 4. Doctors List for Patient Video Booking
 const getDoctors = async (req, res) => {
     try {
@@ -157,4 +187,4 @@ const healthCheck = async (req, res) => {
     }
 };
 
-module.exports = { initializeSession, endSession, getSessions, getDoctors, healthCheck };
+module.exports = { initializeSession, endSession, getSessions, syncDoctor, removeDoctor, getDoctors, healthCheck };

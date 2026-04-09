@@ -1,5 +1,7 @@
 import axios from "axios";
 
+const DOCTOR_SERVICE_URL = process.env.DOCTOR_SERVICE_URL || "http://doctor-service:5002";
+
 export const searchDoctors = async (filters) => {
   try {
     const query = new URLSearchParams();
@@ -11,7 +13,7 @@ export const searchDoctors = async (filters) => {
     if (filters.date) query.append("date", filters.date);
 
     const res = await axios.get(
-      `http://localhost:5002/api/doctors/search?${query.toString()}`
+      `${DOCTOR_SERVICE_URL}/api/doctors/search?${query.toString()}`
     );
 
     console.log("🔥 DOCTOR SERVICE RESPONSE:", res.data);
@@ -30,7 +32,7 @@ export const searchDoctors = async (filters) => {
 export const getDoctorSlots = async (doctorId, date) => {
   try {
     const res = await axios.get(
-      `http://localhost:5002/api/availability/${doctorId}/by-date?date=${date}`
+      `${DOCTOR_SERVICE_URL}/api/availability/${doctorId}/by-date?date=${date}`
     );
 
     return res.data;

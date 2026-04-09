@@ -3,7 +3,7 @@ import axios from "axios";
 export const verifyUser = async (token) => {
   try {
     const res = await axios.post(
-      "http://localhost:5001/api/auth/verify-token",
+      `${process.env.USER_SERVICE_URL || "http://user-patient-service:5001"}/api/auth/verify-token`,
       { token }
     );
 
