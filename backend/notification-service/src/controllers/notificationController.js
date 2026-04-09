@@ -165,30 +165,49 @@ const normalizePhoneNumber = (number) => {
     return null;
 };
 
+const sendSMSPayload = async ({ phoneNumber, message }) => {
+    const normalized = normalizePhoneNumber(phoneNumber);
+    if (!normalized) {
+        throw new Error('Invalid phone number format. Use +947xxxxxxx or 07xxxxxxx.');
+    }
+
+    if (SMS_PROVIDER === 'notifylk') {
+        const result = await sendSMSViaNotifyLK(normalized, message);
+        console.log(`✅ notify.lk SMS sent to ${normalized}`, result);
+        return result;
+    }
+
+    const result = await sendSMSViaTwilio(normalized, message);
+    console.log(`✅ Twilio SMS sent to ${normalized}`, result.sid);
+    return result;
+};
+
 const sendSMS = async (req, res, next) => {
     try {
         const { phoneNumber, message } = req.body;
-        const normalized = normalizePhoneNumber(phoneNumber);
-        if (!normalized) {
-            const error = new Error('Invalid phone number format. Use +947xxxxxxx or 07xxxxxxx.');
-            error.statusCode = 400;
-            throw error;
-        }
-
-        let result;
-        if (SMS_PROVIDER === 'notifylk') {
-            result = await sendSMSViaNotifyLK(normalized, message);
-            console.log(`✅ notify.lk SMS sent to ${normalized}`, result);
-        } else {
-            result = await sendSMSViaTwilio(normalized, message);
-            console.log(`✅ Twilio SMS sent to ${normalized}`, result.sid);
-        }
-
+        const result = await sendSMSPayload({ phoneNumber, message });
         return res.status(200).json({ success: true, provider: SMS_PROVIDER, result });
     } catch (error) {
         error.statusCode = error.statusCode || 500;
         next(error);
     }
+};
+
+const sendRegistrationEmailPayload = async ({ email, name, role }) => {
+    const displayRole = role === 'doctor' ? 'Doctor' : 'Patient';
+    const subject = `Welcome to NexusCare, ${displayRole}!`;
+    const message = `Hello ${name},\n\n` +
+        `Your ${displayRole.toLowerCase()} account has been created successfully on NexusCare.\n` +
+        `You can now login and use the platform.\n\n` +
+        `Best regards,\nNexusCare Team`;
+
+    const transporter = getEmailTransporter();
+    return transporter.sendMail({
+        from: `"NexusCare" <${config.GMAIL_USER}>`,
+        to: email,
+        subject,
+        text: message,
+    });
 };
 
 const saveNotificationRecord = async (data) => {
@@ -296,20 +315,7 @@ const sendEmail = async (req, res, next) => {
 const sendRegistrationEmail = async (req, res, next) => {
     try {
         const { email, name, role } = req.body;
-        const displayRole = role === 'doctor' ? 'Doctor' : 'Patient';
-        const subject = `Welcome to NexusCare, ${displayRole}!`;
-        const message = `Hello ${name},\n\n` +
-            `Your ${displayRole.toLowerCase()} account has been created successfully on NexusCare.\n` +
-            `You can now login and use the platform.\n\n` +
-            `Best regards,\nNexusCare Team`;
-
-        const transporter = getEmailTransporter();
-        await transporter.sendMail({
-            from: `"NexusCare" <${config.GMAIL_USER}>`,
-            to: email,
-            subject,
-            text: message,
-        });
+        await sendRegistrationEmailPayload({ email, name, role });
 
         console.log(`✅ Registration Email sent to: ${email}`);
         res.status(200).json({ success: true, message: `Registration email sent to ${email}` });
@@ -320,4 +326,4 @@ const sendRegistrationEmail = async (req, res, next) => {
 };
 
 
-module.exports = { sendEmail, sendSMS, sendRegistrationEmail, logNotification };
+module.exports = { sendEmail, sendSMS, sendRegistrationEmail, sendRegistrationEmailPayload, sendSMSPayload, logNotification };

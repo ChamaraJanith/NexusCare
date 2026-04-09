@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const config = require('./config/config');
 const connectDB = require('./config/db');
 const notificationRoutes = require('./routes/notificationRoutes');
+const { startRabbitMQConsumer } = require('./services/rabbitmqConsumer');
 
 const app = express();
 
@@ -64,7 +65,11 @@ module.exports = app;
 
 if (require.main === module) {
   connectDB(config.MONGO_URI)
-    .then(() => {
+    .then(async () => {
+      await startRabbitMQConsumer().catch((err) => {
+        console.error('❌ RabbitMQ consumer failed to start:', err);
+      });
+
       const PORT = config.PORT;
       app.listen(PORT, () => {
         console.log(`🔔 Notification Service Active on Port ${PORT}`);

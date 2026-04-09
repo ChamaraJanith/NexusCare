@@ -5,8 +5,7 @@ const User = require("../models/User");
 const PatientProfile = require("../models/PatientProfile");
 const DoctorProfile = require("../models/DoctorProfile");
 const cloudinary = require("../config/cloudinary");
-
-const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || " 6/api/notifications/register";
+const { publishRegistrationEvent } = require("../services/rabbitmq");
 
 // Helper: Generate JWT token from userId and role
 const generateToken = (userId, role, roleId, name) => {
@@ -17,61 +16,8 @@ const generateToken = (userId, role, roleId, name) => {
   );
 };
 
-// helper for cross-service registration notification
-const sendRegistrationNotification = async ({ email, name, role }) => {
-  if (!email || !name || !role) return;
-
-  try {
-    const resp = await fetch(NOTIFICATION_SERVICE_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, name, role }),
-    });
-
-    if (!resp.ok) {
-      const text = await resp.text();
-      console.warn(`Notification service non-2xx response: ${resp.status} ${text}`);
-      return;
-    }
-
-    console.log(`✅ Registration notification posted for ${email}`);
-  } catch (err) {
-    console.warn("⚠️ Failed to post registration notification", err.message || err);
-  }
-};
-
-const NOTIFICATION_SERVICE_SMS_URL = process.env.NOTIFICATION_SERVICE_SMS_URL || "http://localhost:5006/api/notifications/send-sms";
-
 const getValidInternalServiceKeys = () => {
   return [process.env.INTERNAL_SERVICE_KEY, process.env.INTERNAL_SERVICE_KEY_FALLBACK].filter(Boolean);
-};
-
-const sendRegistrationSMS = async ({ phoneNumber, name, role }) => {
-  if (!phoneNumber || !name || !role) return;
-
-  // Optional: Sri Lanka-only (uncomment if needed)
-  // if (!/^\+94\d{9}$/.test(phoneNumber)) return;
-
-  const displayRole = role === "doctor" ? "Doctor" : "Patient";
-  const message = `Hello ${name}, your ${displayRole.toLowerCase()} account has been created successfully on NexusCare.`;
-
-  try {
-    const resp = await fetch(NOTIFICATION_SERVICE_SMS_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phoneNumber, message }),
-    });
-
-    if (!resp.ok) {
-      const text = await resp.text();
-      console.warn(`SMS service non-2xx response: ${resp.status} ${text}`);
-      return;
-    }
-
-    console.log(`✅ Registration SMS queued for ${phoneNumber}`);
-  } catch (err) {
-    console.warn("⚠️ Failed to post registration SMS", err.message || err);
-  }
 };
 
 // ─── REGISTER ───────────────────────────────────────────────────────────────
@@ -157,8 +103,15 @@ const register = async (req, res, next) => {
       });
     }
  
-    sendRegistrationNotification({ email: user.email, name: user.name, role: user.role });
-    sendRegistrationSMS({ phoneNumber: phone, name: user.name, role: user.role });
+    publishRegistrationEvent({
+      userId: user.userId,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      phone,
+    }).catch((err) => {
+      console.warn("⚠️ Failed to publish registration event", err.message || err);
+    });
  
     const token = generateToken(user.userId, user.role, user.roleId, user.name);
  
