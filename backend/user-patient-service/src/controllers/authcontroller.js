@@ -5,7 +5,7 @@ const User = require("../models/User");
 const PatientProfile = require("../models/PatientProfile");
 const DoctorProfile = require("../models/DoctorProfile");
 const cloudinary = require("../config/cloudinary");
-const { publishRegistrationEvent } = require("../services/rabbitmq");
+const { publishRegistrationEvent, publishDoctorRegisteredEvent } = require("../services/rabbitmq");
 
 // Helper: Generate JWT token from userId and role
 const generateToken = (userId, role, roleId, name) => {
@@ -86,9 +86,11 @@ const register = async (req, res, next) => {
         uploadedAt: new Date(),
       }));
  
-      await DoctorProfile.create({
+      const doctorProfile = await DoctorProfile.create({
         userId: user.userId,
         doctorId: user.roleId,
+        name: user.name,
+        email: user.email,
         registrationNumber,
         specialty,
         subSpecialty,
@@ -100,6 +102,27 @@ const register = async (req, res, next) => {
         bio,
         consultationFee,
         verificationDocuments,   // ← saved at creation time
+      });
+
+      publishDoctorRegisteredEvent({
+        eventType: "doctor.registered",
+        timestamp: new Date().toISOString(),
+        userId: user.userId,
+        doctorId: user.roleId,
+        name: user.name,
+        email: user.email,
+        phone,
+        specialty,
+        subSpecialty,
+        registrationNumber,
+        hospital,
+        bio,
+        consultationFee,
+        experience,
+        qualifications: qualifications ? qualifications.split(",").map((q) => q.trim()) : [],
+        verificationDocuments,
+      }).catch((err) => {
+        console.warn("⚠️ Failed to publish doctor.registered event", err.message || err);
       });
     }
  
