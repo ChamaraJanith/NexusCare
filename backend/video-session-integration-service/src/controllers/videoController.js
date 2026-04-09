@@ -52,7 +52,7 @@ const initializeSession = async (req, res) => {
         res.status(200).json({ success: true, data: newSession });
     } catch (error) {
         console.error('❌ Initialization Error:', error);
-        res.status(500).json({ success: false, message: error.message || 'Internal Server Error' });
+        next(error);
     }
 };
 
@@ -105,22 +105,22 @@ const endSession = async (req, res) => {
         res.status(200).json({ success: true, message: 'Notifications Dispatched' });
     } catch (error) {
         console.error('❌ End Session Error:', error.message);
-        res.status(500).json({ success: false, error: error.message });
+        next(error);
     }
 };
 
 // 3. Get All Sessions
-const getSessions = async (req, res) => {
+const getSessions = async (req, res, next) => {
     try {
         const data = await VideoSession.find().sort({ createdAt: -1 });
         res.status(200).json({ success: true, data });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        next(error);
     }
 };
 
 // 3.5. Sync a doctor record from doctor-service into video service
-const syncDoctor = async (req, res) => {
+const syncDoctor = async (req, res, next) => {
     try {
         const doctorPayload = req.body;
         console.log('🔁 Received doctor sync request', { doctorId: doctorPayload?.doctorId });
@@ -130,27 +130,29 @@ const syncDoctor = async (req, res) => {
         res.status(200).json({ success: true, message: 'Doctor sync received', data: doctorPayload });
     } catch (error) {
         console.error('❌ Sync Doctor Error:', error.message);
-        res.status(500).json({ success: false, message: error.message || 'Doctor sync failed' });
+        next(error);
     }
 };
 
-const removeDoctor = async (req, res) => {
+const removeDoctor = async (req, res, next) => {
     try {
         const { doctorId } = req.params;
         if (!doctorId) {
-            return res.status(400).json({ success: false, message: 'doctorId is required' });
+            const error = new Error('doctorId is required');
+            error.statusCode = 400;
+            return next(error);
         }
 
         console.log('🗑️ Received doctor removal request for', doctorId);
         res.status(200).json({ success: true, message: `Doctor ${doctorId} removed from video sync` });
     } catch (error) {
         console.error('❌ Remove Doctor Error:', error.message);
-        res.status(500).json({ success: false, message: error.message || 'Doctor removal failed' });
+        next(error);
     }
 };
 
 // 4. Doctors List for Patient Video Booking
-const getDoctors = async (req, res) => {
+const getDoctors = async (req, res, next) => {
     try {
         const result = await videoService.getDoctorsForVideo(req.query);
 
@@ -164,15 +166,12 @@ const getDoctors = async (req, res) => {
         });
     } catch (error) {
         console.error('❌ Get Doctors Error:', error.message, error.response?.data || '');
-        const statusCode = error.statusCode || error.response?.status || 503;
-        res.status(statusCode).json({
-            success: false,
-            message: error.response?.data?.message || error.message || 'Service unavailable',
-        });
+        error.statusCode = error.statusCode || error.response?.status || 503;
+        next(error);
     }
 };
 // 5. Health check for video service and doctor catalog
-const healthCheck = async (req, res) => {
+const healthCheck = async (req, res, next) => {
     try {
         const status = await videoService.getDoctorCatalogStatus();
         res.status(200).json({
@@ -183,7 +182,7 @@ const healthCheck = async (req, res) => {
         });
     } catch (error) {
         console.error('❌ Health Check Error:', error.message);
-        res.status(500).json({ success: false, message: error.message || 'Health check failed' });
+        next(error);
     }
 };
 
