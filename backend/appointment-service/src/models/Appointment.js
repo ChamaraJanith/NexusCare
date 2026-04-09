@@ -56,6 +56,16 @@ const appointmentSchema = new mongoose.Schema({
     default: "PENDING"
   },
 
+  videoRoomId: {
+    type: String,
+    default: null
+  },
+
+  videoRoomUrl: {
+    type: String,
+    default: null
+  },
+
   status: {
     type: String,
     enum: ["PENDING", "VERIFIED", "CONFIRMED", "COMPLETED", "CANCELLED"],

@@ -3,7 +3,7 @@
     <div class="page-bg-gradient"></div>
 
     <div v-if="!isInCall" class="max-width-1200 q-mx-auto q-px-md z-top relative-position">
-      
+
       <div class="row items-center justify-between q-mb-xl mt-120">
         <div>
           <div class="trusted-badge q-py-xs q-px-sm row items-center inline no-wrap q-mb-sm">
@@ -106,6 +106,8 @@ const $q = useQuasar()
 // State
 const sessions = ref([])
 const isInCall = ref(false)
+const appointmentId = ref(route.query.appointmentId || null)
+const roomOverride = ref(null)
 let jitsiApi = null
 let pollInterval = null
 
@@ -155,9 +157,8 @@ const joinCall = (roomId) => {
   }
 
   setTimeout(() => {
-    if (window.JitsiMeetExternalAPI) {
-      jitsiApi = new window.JitsiMeetExternalAPI(domain, options)
-
+      if (globalThis.JitsiMeetExternalAPI) {
+        jitsiApi = new globalThis.JitsiMeetExternalAPI(domain, options)
       jitsiApi.addEventListeners({
         videoConferenceLeft: async () => {
           try {
@@ -185,6 +186,12 @@ const joinCall = (roomId) => {
 onMounted(() => {
   fetchSessions()
   pollInterval = setInterval(fetchSessions, 5000) // තත්පර 5කට වරක් නව කෝල් පරීක්ෂා කිරීම
+
+  if (appointmentId.value) {
+    const safeId = String(appointmentId.value).replace(/[^A-Za-z0-9_-]/g, '')
+    roomOverride.value = `nexus-appointment-${safeId}`
+    joinCall(roomOverride.value)
+  }
 })
 
 onBeforeUnmount(() => {
@@ -211,7 +218,7 @@ onBeforeUnmount(() => {
   position: absolute;
   top: 0; left: 0; width: 100%; height: 100%;
   pointer-events: none;
-  background: 
+  background:
     radial-gradient(circle at 10% 20%, rgba(37, 99, 235, 0.08), transparent 60%),
     radial-gradient(circle at 90% 80%, rgba(56, 189, 248, 0.04), transparent 50%),
     radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.05), transparent 50%);

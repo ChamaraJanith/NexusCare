@@ -5,7 +5,8 @@ import {
   getAppointments,
   getDoctorAppointments,
   updateAppointment,
-  cancelAppointment
+  cancelAppointment,
+  getNextQueue
 } from "../controllers/appointmentController.js";
 
 import {
@@ -16,9 +17,9 @@ import {
 import * as doctorService from "../services/doctorService.js";
 import { verifyUser } from "../services/authService.js";
 import Appointment from "../models/Appointment.js";
-import { getNextQueue } from "../controllers/appointmentController.js";
 
 const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || "http://notification-service:5006";
+const VIDEO_SERVICE_URL = process.env.VIDEO_SERVICE_URL || "http://video-session-integration-service:5012";
 const INTERNAL_SERVICE_KEY = process.env.INTERNAL_SERVICE_KEY;
 
 const sendNotificationEmail = async ({ email, subject, message }) => {
@@ -40,6 +41,48 @@ const sendNotificationEmail = async ({ email, subject, message }) => {
     console.error("❌ Appointment-service failed to send notification email:", err.response?.data || err.message || err);
     return false;
   }
+};
+
+const ensureVideoSession = async (appointment) => {
+  if (!appointment) return null;
+  if (appointment.appointmentType !== "ONLINE") return appointment;
+  if (appointment.status !== "CONFIRMED") return appointment;
+  if (appointment.paymentStatus !== "PAID") return appointment;
+  if (appointment.videoRoomId && appointment.videoRoomUrl) return appointment;
+
+  try {
+    const response = await axios.post(
+      `${VIDEO_SERVICE_URL}/api/video/initialize-link`,
+      {
+        patientId: appointment.patientId,
+        doctorId: appointment.doctorId,
+        appointmentId: appointment._id,
+        patientEmail: appointment.email || '',
+        doctorEmail: appointment.doctorEmail || '',
+        patientPhone: appointment.phone || '',
+      },
+      {
+        headers: { "x-internal-service-key": INTERNAL_SERVICE_KEY },
+        timeout: 7000,
+      }
+    );
+
+    const session = response.data?.data;
+    if (session?.roomId && session?.roomUrl) {
+      return await Appointment.findByIdAndUpdate(
+        appointment._id,
+        {
+          videoRoomId: session.roomId,
+          videoRoomUrl: session.roomUrl,
+        },
+        { new: true }
+      );
+    }
+  } catch (err) {
+    console.warn("⚠️ Failed to ensure video session:", err.response?.data || err.message || err);
+  }
+
+  return appointment;
 };
 
 const router = express.Router();
@@ -103,6 +146,17 @@ router.get("/patient/:patientId", getAppointments);
 // 👨‍⚕️ GET DOCTOR APPOINTMENTS
 router.get("/doctor/:doctorId", getDoctorAppointments);
 
+// 🕵️ GET APPOINTMENT DETAILS
+router.get("/details/:id", async (req, res) => {
+  try {
+    const appointment = await Appointment.findById(req.params.id);
+    if (!appointment) return res.status(404).json({ error: "Appointment not found" });
+    res.json({ appointment });
+  } catch (error) {
+    console.error("❌ DETAILS ERROR:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // ✏️ UPDATE APPOINTMENT
 router.put("/:id", validateUpdateAppointment, updateAppointment);
@@ -173,6 +227,10 @@ router.put("/doctor/confirm/:id", async (req, res) => {
       });
     } else {
       console.warn("⚠️ Appointment confirmed but no patient email was available to send notification");
+    }
+
+    if (updated.paymentStatus === "PAID" && updated.appointmentType === "ONLINE") {
+      await ensureVideoSession(updated);
     }
 
     res.json({ message: "Appointment confirmed", appointment: updated });
@@ -268,6 +326,11 @@ router.patch("/:id/payment", async (req, res) => {
       { new: true }
     );
     if (!updated) return res.status(404).json({ error: "Appointment not found" });
+
+    if (updated.paymentStatus === "PAID" && updated.status === "CONFIRMED" && updated.appointmentType === "ONLINE") {
+      await ensureVideoSession(updated);
+    }
+
     res.json({ message: "Payment status updated", appointment: updated });
   } catch (error) {
     res.status(500).json({ error: error.message });
