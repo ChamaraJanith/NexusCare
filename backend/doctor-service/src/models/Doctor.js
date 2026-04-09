@@ -16,6 +16,79 @@ const doctorSchema = new mongoose.Schema(
       index: true,
     },
 
+    name: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+
+    email: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      default: null,
+    },
+
+    userId: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+
+    registrationNumber: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+
+    specialty: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+
+    subSpecialty: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+
+    consultationFee: {
+      type: Number,
+      min: 0,
+      default: null,
+    },
+
+    qualifications: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
+
+    verificationDocuments: [
+      {
+        title: String,
+        fileUrl: String,
+        publicId: String,
+        uploadedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+
+    phone: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+
     // Profile image — stores a URL path string (e.g. "/uploads/1234.jpg")
     // Also supports legacy Cloudinary object format { url, publicId }
     profileImage: {

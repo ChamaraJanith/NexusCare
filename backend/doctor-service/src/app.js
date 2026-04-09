@@ -6,6 +6,7 @@ import cors from "cors";
 import doctorRoutes from "./routes/doctor.routes.js";
 import availabilityRoutes from "./routes/availability.routes.js";
 import prescriptionRoutes from "./routes/prescription.routes.js"; // 🔥 ADD THIS
+import { startRabbitMQConsumer } from "./services/rabbitmqConsumer.js";
 
 dotenv.config();
 
@@ -81,6 +82,13 @@ const startServer = async () => {
     });
 
     console.log("✅ MongoDB Connected");
+
+    // Start RabbitMQ consumer for doctor.registered events
+    try {
+      await startRabbitMQConsumer();
+    } catch (consumerError) {
+      console.warn("⚠️ RabbitMQ consumer failed to start:", consumerError.message);
+    }
 
     try {
       const syncResult = await import("./services/videoCatalogSyncService.js");

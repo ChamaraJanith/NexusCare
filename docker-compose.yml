@@ -21,8 +21,10 @@ services:
     command: sh -c "npm install && npm run dev"
     environment:
       - NODE_ENV=development
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
     depends_on:
       - video-session-integration-service
+      - rabbitmq
     networks:
       - nexuscare
 
