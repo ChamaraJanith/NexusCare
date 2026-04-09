@@ -1,4 +1,5 @@
 const DoctorCatalog = require('../models/DoctorCatalog');
+const videoService = require('../services/videoService');
 
 const verifyInternalKey = (req, res, next) => {
   const expectedKey = process.env.INTERNAL_SERVICE_KEY;
@@ -14,12 +15,14 @@ const verifyInternalKey = (req, res, next) => {
   next();
 };
 
-const upsertDoctor = async (req, res) => {
+const upsertDoctor = async (req, res, next) => {
   try {
     const { doctorId } = req.body;
 
     if (!doctorId) {
-      return res.status(400).json({ success: false, message: 'doctorId is required' });
+      const error = new Error('doctorId is required');
+      error.statusCode = 400;
+      throw error;
     }
 
     const payload = {
@@ -42,36 +45,33 @@ const upsertDoctor = async (req, res) => {
 
     return res.status(200).json({ success: true, data: doctor });
   } catch (error) {
-    console.error('[syncController] upsertDoctor failed:', error.message);
-    return res.status(500).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
-const removeDoctor = async (req, res) => {
+const removeDoctor = async (req, res, next) => {
   try {
     const { doctorId } = req.params;
 
     if (!doctorId) {
-      return res.status(400).json({ success: false, message: 'doctorId is required' });
+      const error = new Error('doctorId is required');
+      error.statusCode = 400;
+      throw error;
     }
 
     await DoctorCatalog.deleteOne({ doctorId });
     return res.status(200).json({ success: true, message: 'Doctor removed from local catalog' });
   } catch (error) {
-    console.error('[syncController] removeDoctor failed:', error.message);
-    return res.status(500).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
-const videoService = require('../services/videoService');
-
-const bootstrapDoctorCatalog = async (req, res) => {
+const bootstrapDoctorCatalog = async (req, res, next) => {
   try {
     const doctors = await videoService.bootstrapDoctorCatalog();
     return res.status(200).json({ success: true, data: doctors });
   } catch (error) {
-    console.error('[syncController] bootstrapDoctorCatalog failed:', error.message);
-    return res.status(500).json({ success: false, message: error.message });
+    next(error);
   }
 };
 

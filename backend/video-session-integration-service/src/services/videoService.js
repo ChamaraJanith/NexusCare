@@ -1,13 +1,17 @@
 const { v4: uuidv4 } = require('uuid');
 const doctorClient = require('./doctorClient');
+const DoctorCatalog = require('../models/DoctorCatalog');
 
 let doctorCache = {
   data: [],
   lastUpdated: null,
 };
 
-const generateNeuralLink = async (patientId, doctorId) => {
-  const roomId = `nexus-link-${uuidv4().substring(0, 8)}`;
+const generateNeuralLink = async (patientId, doctorId, appointmentId = null) => {
+  const safeAppointment = appointmentId ? String(appointmentId).replaceAll(/[^A-Za-z0-9_-]/g, '') : null;
+  const roomId = safeAppointment
+    ? `nexus-appointment-${safeAppointment}`
+    : `nexus-link-${uuidv4().substring(0, 8)}`;
   const roomUrl = `https://meet.jit.si/${roomId}`;
 
   return {
@@ -15,6 +19,7 @@ const generateNeuralLink = async (patientId, doctorId) => {
     roomUrl,
     patientId,
     doctorId,
+    appointmentId: safeAppointment,
     status: 'ACTIVE',
     timestamp: new Date(),
   };
@@ -67,4 +72,37 @@ const getDoctorCatalogStatus = async () => {
   }
 };
 
-module.exports = { generateNeuralLink, getDoctorsForVideo, getDoctorCatalogStatus };
+const bootstrapDoctorCatalog = async () => {
+  const doctors = await doctorClient.searchDoctors({});
+  const results = await Promise.allSettled(
+    doctors.map((doctor) =>
+      DoctorCatalog.findOneAndUpdate(
+        { doctorId: doctor.doctorId },
+        {
+          doctorId: doctor.doctorId,
+          userId: doctor.userId || null,
+          name: doctor.name || null,
+          email: doctor.email || null,
+          specialization: doctor.specialization || null,
+          hospital: doctor.hospital || null,
+          location: doctor.location || null,
+          profileImage: doctor.profileImage || null,
+          isActive: doctor.isActive !== false,
+        },
+        { new: true, upsert: true, setDefaultsOnInsert: true }
+      )
+    )
+  );
+
+  return results.map((result) => ({
+    status: result.status,
+    value: result.status === 'fulfilled' ? result.value : result.reason?.message,
+  }));
+};
+
+module.exports = {
+  generateNeuralLink,
+  getDoctorsForVideo,
+  getDoctorCatalogStatus,
+  bootstrapDoctorCatalog,
+};

@@ -120,11 +120,13 @@
 
 <script setup>
 import { ref, onMounted, reactive } from 'vue';
+import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import axios from 'axios';
 
 defineProps({ doctor: Object });
 
+const router = useRouter();
 const $q = useQuasar();
 const consultations = ref([]);
 const loading = ref(true);
@@ -178,9 +180,13 @@ onMounted(async () => {
 
 // ── Join video session ────────────────────────────────────────────────────────
 const joinVideo = (apt) => {
-  // Replace with your actual Agora/Jitsi/Twilio room URL pattern
-  const roomUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/room/${apt._id}`;
-  window.open(roomUrl, '_blank');
+  router.push({
+    path: '/doctorVideo',
+    query: {
+      appointmentId: apt._id,
+      doctorId: apt.doctorId,
+    }
+  });
 };
 
 // ── Open prescription dialog ──────────────────────────────────────────────────

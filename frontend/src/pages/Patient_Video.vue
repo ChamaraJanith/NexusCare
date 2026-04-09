@@ -16,6 +16,16 @@
         </div>
       </div>
 
+      <div v-if="appointmentIdValue" class="q-mb-lg">
+        <q-banner class="bg-blue-1 text-blue-9 q-pa-lg">
+          <div class="text-body1 q-mb-xs">Appointment call ready for <strong>{{ appointment?.patientName || patientName }}</strong></div>
+          <div class="text-caption text-grey-6">
+            {{ appointment?.date }} · {{ appointment?.time }} · {{ appointment?.appointmentType }}
+            <span v-if="appointment?.status"> · {{ appointment.status }}</span>
+          </div>
+        </q-banner>
+      </div>
+
       <div class="row q-col-gutter-xl">
         <div class="col-12 col-md-5">
           <div class="glass-card q-pa-xl shadow-glow">
@@ -32,8 +42,32 @@
             </div>
 
             <div class="column q-gutter-y-md">
-              <div class="text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1">Select Specialist</div>
-              <div class="doctor-dropdown-wrap">
+              <div v-if="appointmentIdValue" class="q-mb-md">
+                <div class="text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1">Appointment Ready</div>
+                <div class="q-pa-sm bg-blue-1 text-blue-9 rounded-borders">
+                  <div>{{ appointment?.date }} · {{ appointment?.time }} · {{ appointment?.appointmentType }}</div>
+                  <div class="text-caption text-grey-5 q-mt-xs">{{ appointment?.status }} / {{ appointment?.paymentStatus }}</div>
+                </div>
+                <div class="q-mt-sm">
+                  <q-btn
+                    unelevated
+                    color="green-6"
+                    label="Join Appointment"
+                    icon="video_call"
+                    @click="joinAppointment"
+                    :disable="!appointmentReady"
+                    :loading="isBooking"
+                    class="btn-primary-glow full-width text-weight-bold q-py-sm"
+                  />
+                  <div v-if="!appointmentReady && appointmentTimeError" class="text-caption text-red-5 q-mt-sm">
+                    {{ appointmentTimeError }}
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="!appointmentIdValue">
+                <div class="text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1">Select Specialist</div>
+                <div class="doctor-dropdown-wrap">
                 <button
                   type="button"
                   class="doctor-dropdown-trigger"
@@ -143,6 +177,7 @@
           </div>
         </div>
       </div>
+      </div>
 
     </div>
 
@@ -172,6 +207,10 @@ const showDoctorList = ref(false)
 let jitsiApi = null
 
 // --- User Data (Route එකෙන් හෝ Default අගයන් ලබා ගැනීම) ---
+const appointmentIdValue = ref(route.query.appointmentId || null)
+const appointment = ref(null)
+const appointmentReady = ref(false)
+const appointmentTimeError = ref('')
 const patientId = ref(route.query.patientId || (storedUser && storedUser.roleId) || 'UNKNOWN_ID')
 const patientName = ref(route.query.patientName || (storedUser && storedUser.name) || 'GUEST_USER')
 // 💡 ලොග් වෙලා ඉන්න යූසර්ගේ Email එක මෙතනට එනවා
@@ -277,9 +316,8 @@ const startJitsiCall = (roomName) => {
   }
 
   setTimeout(() => {
-    if (window.JitsiMeetExternalAPI) {
-      jitsiApi = new window.JitsiMeetExternalAPI(domain, options)
-
+      if (globalThis.JitsiMeetExternalAPI) {
+        jitsiApi = new globalThis.JitsiMeetExternalAPI(domain, options)
       jitsiApi.addEventListeners({
         videoConferenceLeft: async () => {
           try {
@@ -341,9 +379,71 @@ const processBooking = async () => {
   }
 }
 
+const fetchAppointmentDetails = async () => {
+  if (!appointmentIdValue.value) return;
+  try {
+    const response = await axios.get(
+      `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/appointments/details/${appointmentIdValue.value}`,
+      { headers: { Authorization: `Bearer ${localStorage.getItem('token') || localStorage.getItem('nexus_token')}` } }
+    );
+    appointment.value = response.data?.appointment || null;
+    if (appointment.value) {
+      const appointmentDate = new Date(`${appointment.value.date} ${appointment.value.time}`);
+      const now = new Date();
+      const diffMinutes = (appointmentDate - now) / 60000;
+      if (appointment.value.appointmentType === 'ONLINE' && appointment.value.status === 'CONFIRMED' && appointment.value.paymentStatus === 'PAID') {
+        if (diffMinutes <= 30) {
+          appointmentReady.value = true;
+        } else {
+          appointmentTimeError.value = `This appointment can be joined within 30 minutes of the scheduled time.`;
+          appointmentReady.value = false;
+        }
+      } else {
+        appointmentReady.value = false;
+        appointmentTimeError.value = 'Appointment must be confirmed, fully paid, and online to join the video call.';
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load appointment details:', err);
+    appointment.value = null;
+    appointmentReady.value = false;
+    appointmentTimeError.value = 'Could not load appointment details.';
+  }
+}
+
+const joinAppointment = async () => {
+  if (!appointment.value || !appointmentReady.value) {
+    $q.notify({ color: 'negative', message: appointmentTimeError.value || 'Not ready to join yet.' });
+    return;
+  }
+
+  try {
+    const response = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/video/initialize-link`, {
+      patientId: appointment.value.patientId,
+      doctorId: appointment.value.doctorId,
+      appointmentId: appointment.value._id,
+      patientEmail: appointment.value.email || patientEmail.value,
+      patientPhone: appointment.value.phone || '+94767691846',
+      doctorEmail: appointment.value.doctorEmail || '',
+    });
+
+    if (response.data.success) {
+      startJitsiCall(response.data.data.roomId);
+    } else {
+      throw new Error(response.data.message || 'Unable to initialize session');
+    }
+  } catch (err) {
+    console.error('Appointment join failed:', err);
+    $q.notify({ color: 'negative', message: 'Unable to connect to your appointment room.' });
+  }
+}
+
 onMounted(() => {
   fetchDoctors()
   fetchSessions()
+  if (appointmentIdValue.value) {
+    fetchAppointmentDetails()
+  }
 })
 
 watch(

@@ -15,11 +15,24 @@ app.use(cors({
       .map((origin) => origin.trim())
       .filter(Boolean);
 
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('CORS policy violation'));
+    const devFallbackOrigins = [
+      'http://localhost:9000',
+      'http://127.0.0.1:9000',
+      'http://host.docker.internal:9000',
+      'http://localhost:8080',
+      'http://127.0.0.1:8080',
+    ];
+
+    if (!origin) {
+      return callback(null, true);
     }
+
+    if (allowedOrigins.includes(origin) || devFallbackOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    console.warn('CORS origin blocked:', origin);
+    return callback(new Error('CORS policy violation'));
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-internal-service-key'],
@@ -35,7 +48,7 @@ mongoose.connect(config.MONGO_URI)
     process.exit(1);
   });
 
-app.use('/api/video', verifyInternalKey, videoRoutes);
+app.use('/api/video', videoRoutes);
 
 app.get('/health', (req, res) => {
   res.status(200).json({

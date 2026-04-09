@@ -17,5 +17,7 @@ module.exports = {
   MONGO_URI: process.env.MONGO_URI,
   DOCTOR_SERVICE_URL: process.env.DOCTOR_SERVICE_URL,
   INTERNAL_SERVICE_KEY: process.env.INTERNAL_SERVICE_KEY,
-  ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS || 'http://localhost:9000',
+  ALLOWED_ORIGINS:
+    process.env.ALLOWED_ORIGINS ||
+    'http://localhost:9000,http://127.0.0.1:9000,http://host.docker.internal:9000',
 };
