@@ -2,12 +2,19 @@
 const express = require('express');
 const router = express.Router();
 const videoController = require('../controllers/videoController');
+const validate = require('../middleware/validate');
+const {
+  initializeSessionSchema,
+  endSessionSchema,
+  syncDoctorSchema,
+  syncDoctorIdSchema,
+} = require('../validators/videoValidator');
 
 let activeSessions = [];
 
-router.post('/initialize-link', videoController.initializeSession);
-router.post('/sync/doctor', videoController.syncDoctor);
-router.delete('/sync/doctor/:doctorId', videoController.removeDoctor);
+router.post('/initialize-link', validate(initializeSessionSchema), videoController.initializeSession);
+router.post('/sync/doctor', validate(syncDoctorSchema), videoController.syncDoctor);
+router.delete('/sync/doctor/:doctorId', validate(syncDoctorIdSchema, 'params'), videoController.removeDoctor);
 router.get('/doctors', videoController.getDoctors);
 router.get('/health', videoController.healthCheck);
 router.get('/sessions', videoController.getSessions);
