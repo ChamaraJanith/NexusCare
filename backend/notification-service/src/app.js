@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const mongoose = require('mongoose');
 const config = require('./config/config');
 const connectDB = require('./config/db');
 const notificationRoutes = require('./routes/notificationRoutes');
@@ -24,6 +25,14 @@ app.use(cors({
 }));
 app.use(express.json());
 
+const requireInternalServiceKey = (req, res, next) => {
+  const internalKey = req.headers['x-internal-service-key'];
+  if (!internalKey || internalKey !== config.INTERNAL_SERVICE_KEY) {
+    return res.status(403).json({ success: false, message: 'Unauthorized' });
+  }
+  next();
+};
+
 app.get('/health', (req, res) => {
   res.status(200).json({
     success: true,
@@ -33,20 +42,27 @@ app.get('/health', (req, res) => {
   });
 });
 
-app.get('/ready', async (req, res) => {
-  try {
-    await connectDB(config.MONGO_URI);
-    res.status(200).json({ success: true, ready: true });
-  } catch (error) {
-    res.status(503).json({ success: false, ready: false, error: error.message });
+app.get('/ready', (req, res) => {
+  const isConnected = mongoose.connection.readyState === 1;
+  if (isConnected) {
+    return res.status(200).json({ success: true, ready: true });
   }
+  return res.status(503).json({ success: false, ready: false, error: 'MongoDB not connected' });
 });
 
-app.use('/api/notifications', notificationRoutes);
+app.use('/api/notifications', requireInternalServiceKey, notificationRoutes);
 
 connectDB(config.MONGO_URI).catch((err) => {
   console.error('❌ Notification DB connection failed:', err.message);
   process.exit(1);
+});
+
+app.use((err, req, res, next) => {
+  console.error('🚨 Notification Service error:', err);
+  res.status(err.statusCode || 500).json({
+    success: false,
+    message: err.message || 'Internal Server Error',
+  });
 });
 
 const PORT = config.PORT;

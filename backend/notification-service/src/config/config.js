@@ -3,13 +3,12 @@ require('dotenv').config();
 const requiredEnv = [
   'MONGO_URI',
   'INTERNAL_SERVICE_KEY',
-  'SMS_PROVIDER',
 ];
 
 const missing = requiredEnv.filter((key) => !process.env[key]);
 
 if (missing.length > 0) {
-  console.warn(`Warning: missing environment variables for notification-service: ${missing.join(', ')}`);
+  throw new Error(`Missing required environment variables for notification-service: ${missing.join(', ')}`);
 }
 
 module.exports = {
