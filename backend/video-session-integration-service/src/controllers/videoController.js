@@ -7,15 +7,17 @@ const initializeSession = async (req, res, next) => {
     const { patientId, doctorId, patientEmail, doctorEmail, patientPhone, appointmentId } = req.body;
     const safeAppointmentId = appointmentId ? String(appointmentId).replaceAll(/[^A-Za-z0-9_-]/g, '') : null;
 
-    const existingActiveSession = safeAppointmentId
-      ? await VideoSession.findOne({ appointmentId: safeAppointmentId, status: 'ACTIVE' })
+    const existingSession = safeAppointmentId
+      ? await VideoSession.findOne({ appointmentId: safeAppointmentId })
       : await VideoSession.findOne({ patientId, doctorId, status: 'ACTIVE' });
 
-    if (existingActiveSession) {
+    if (existingSession) {
       return res.status(200).json({
         success: true,
-        data: existingActiveSession,
-        message: 'Active session already exists',
+        data: existingSession,
+        message: safeAppointmentId
+          ? 'Existing appointment session retrieved'
+          : 'Active session already exists',
       });
     }
 

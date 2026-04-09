@@ -16,12 +16,20 @@
         </div>
       </div>
 
-      <div v-if="appointmentIdValue" class="q-mb-lg">
+      <div v-if="appointmentIdValue && appointment" class="q-mb-lg">
         <q-banner class="bg-blue-1 text-blue-9 q-pa-lg">
-          <div class="text-body1 q-mb-xs">Appointment call ready for <strong>{{ appointment?.patientName || patientName }}</strong></div>
+          <div class="text-body1 q-mb-xs">Appointment call ready for <strong>{{ appointment.patientName || patientName }}</strong></div>
           <div class="text-caption text-grey-6">
-            {{ appointment?.date }} · {{ appointment?.time }} · {{ appointment?.appointmentType }}
-            <span v-if="appointment?.status"> · {{ appointment.status }}</span>
+            {{ appointment.date }} · {{ appointment.time }} · {{ appointment.appointmentType }}
+            <span v-if="appointment.status"> · {{ appointment.status }}</span>
+          </div>
+        </q-banner>
+      </div>
+      <div v-else-if="appointmentIdValue && !appointment" class="q-mb-lg">
+        <q-banner class="bg-red-1 text-red-9 q-pa-lg">
+          <div class="text-body1 q-mb-xs">Unable to resolve appointment</div>
+          <div class="text-caption text-grey-6">
+            {{ appointmentTimeError || 'Appointment details could not be loaded.' }}
           </div>
         </q-banner>
       </div>
@@ -42,11 +50,11 @@
             </div>
 
             <div class="column q-gutter-y-md">
-              <div v-if="appointmentIdValue" class="q-mb-md">
+              <div v-if="appointmentIdValue && appointment" class="q-mb-md">
                 <div class="text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1">Appointment Ready</div>
                 <div class="q-pa-sm bg-blue-1 text-blue-9 rounded-borders">
-                  <div>{{ appointment?.date }} · {{ appointment?.time }} · {{ appointment?.appointmentType }}</div>
-                  <div class="text-caption text-grey-5 q-mt-xs">{{ appointment?.status }} / {{ appointment?.paymentStatus }}</div>
+                  <div>{{ appointment.date }} · {{ appointment.time }} · {{ appointment.appointmentType }}</div>
+                  <div class="text-caption text-grey-5 q-mt-xs">{{ appointment.status }} / {{ appointment.paymentStatus }}</div>
                 </div>
                 <div class="q-mt-sm">
                   <q-btn
@@ -62,6 +70,12 @@
                   <div v-if="!appointmentReady && appointmentTimeError" class="text-caption text-red-5 q-mt-sm">
                     {{ appointmentTimeError }}
                   </div>
+                </div>
+              </div>
+              <div v-else-if="appointmentIdValue && !appointment" class="q-mb-md">
+                <div class="text-caption text-weight-bold text-grey-5 uppercase letter-spacing-1">Appointment data unavailable</div>
+                <div class="q-pa-sm bg-red-1 text-red-9 rounded-borders">
+                  <div class="text-caption">{{ appointmentTimeError || 'Unable to load appointment details from the server.' }}</div>
                 </div>
               </div>
 
@@ -316,8 +330,8 @@ const startJitsiCall = (roomName) => {
   }
 
   setTimeout(() => {
-      if (globalThis.JitsiMeetExternalAPI) {
-        jitsiApi = new globalThis.JitsiMeetExternalAPI(domain, options)
+    if (globalThis.JitsiMeetExternalAPI) {
+      jitsiApi = new globalThis.JitsiMeetExternalAPI(domain, options)
       jitsiApi.addEventListeners({
         videoConferenceLeft: async () => {
           try {
@@ -379,35 +393,80 @@ const processBooking = async () => {
   }
 }
 
+const evaluateAppointmentReadiness = () => {
+  if (!appointment.value) {
+    appointmentReady.value = false;
+    return;
+  }
+
+  const appointmentDate = new Date(`${appointment.value.date} ${appointment.value.time}`);
+  const now = new Date();
+  const diffMinutes = (appointmentDate - now) / 60000;
+
+  if (appointment.value.appointmentType === 'ONLINE' && appointment.value.status === 'CONFIRMED' && appointment.value.paymentStatus === 'PAID') {
+    if (diffMinutes <= 30) {
+      appointmentReady.value = true;
+      appointmentTimeError.value = '';
+    } else {
+      appointmentReady.value = false;
+      appointmentTimeError.value = 'This appointment can be joined within 30 minutes of the scheduled time.';
+    }
+  } else {
+    appointmentReady.value = false;
+    appointmentTimeError.value = 'Appointment must be confirmed, fully paid, and online to join the video call.';
+  }
+}
+
 const fetchAppointmentDetails = async () => {
   if (!appointmentIdValue.value) return;
+
+  const authHeader = { Authorization: `Bearer ${localStorage.getItem('token') || localStorage.getItem('nexus_token')}` };
+
   try {
     const response = await axios.get(
       `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/appointments/details/${appointmentIdValue.value}`,
-      { headers: { Authorization: `Bearer ${localStorage.getItem('token') || localStorage.getItem('nexus_token')}` } }
+      { headers: authHeader }
     );
+
     appointment.value = response.data?.appointment || null;
-    if (appointment.value) {
-      const appointmentDate = new Date(`${appointment.value.date} ${appointment.value.time}`);
-      const now = new Date();
-      const diffMinutes = (appointmentDate - now) / 60000;
-      if (appointment.value.appointmentType === 'ONLINE' && appointment.value.status === 'CONFIRMED' && appointment.value.paymentStatus === 'PAID') {
-        if (diffMinutes <= 30) {
-          appointmentReady.value = true;
-        } else {
-          appointmentTimeError.value = `This appointment can be joined within 30 minutes of the scheduled time.`;
-          appointmentReady.value = false;
-        }
-      } else {
-        appointmentReady.value = false;
-        appointmentTimeError.value = 'Appointment must be confirmed, fully paid, and online to join the video call.';
-      }
+    if (!appointment.value) {
+      throw new Error('Appointment not found');
     }
+
+    evaluateAppointmentReadiness();
   } catch (err) {
     console.error('Failed to load appointment details:', err);
+
+    if (err.response?.status === 404 && route.query.patientId && route.query.doctorId) {
+      try {
+        const fallbackRes = await axios.get(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/appointments/patient/${route.query.patientId}`,
+          { headers: authHeader }
+        );
+
+        const allAppointments = Array.isArray(fallbackRes.data)
+          ? fallbackRes.data
+          : fallbackRes.data?.data || [];
+
+        const candidate = allAppointments
+          .filter(a => String(a.doctorId) === String(route.query.doctorId))
+          .filter(a => a.appointmentType === 'ONLINE' && a.status === 'CONFIRMED' && a.paymentStatus === 'PAID')
+          .sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`))[0];
+
+        if (candidate) {
+          appointment.value = candidate;
+          appointmentIdValue.value = candidate._id || candidate.appointmentId || appointmentIdValue.value;
+          evaluateAppointmentReadiness();
+          return;
+        }
+      } catch (fallbackErr) {
+        console.error('Fallback appointment search failed:', fallbackErr);
+      }
+    }
+
     appointment.value = null;
     appointmentReady.value = false;
-    appointmentTimeError.value = 'Could not load appointment details.';
+    appointmentTimeError.value = err.response?.data?.error || err.response?.statusText || 'Could not load appointment details.';
   }
 }
 
