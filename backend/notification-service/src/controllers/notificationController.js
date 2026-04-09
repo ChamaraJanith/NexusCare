@@ -165,21 +165,17 @@ const normalizePhoneNumber = (number) => {
     return null;
 };
 
-const sendSMS = async (req, res) => {
-    const { phoneNumber, message } = req.body;
-
-    if (!phoneNumber || !message) {
-        return res.status(400).json({ success: false, error: 'phoneNumber and message are required' });
-    }
-
-    const normalized = normalizePhoneNumber(phoneNumber);
-    if (!normalized) {
-        return res.status(400).json({ success: false, error: 'Invalid phone number format. Use +947xxxxxxx or 07xxxxxxx.' });
-    }
-
+const sendSMS = async (req, res, next) => {
     try {
-        let result;
+        const { phoneNumber, message } = req.body;
+        const normalized = normalizePhoneNumber(phoneNumber);
+        if (!normalized) {
+            const error = new Error('Invalid phone number format. Use +947xxxxxxx or 07xxxxxxx.');
+            error.statusCode = 400;
+            throw error;
+        }
 
+        let result;
         if (SMS_PROVIDER === 'notifylk') {
             result = await sendSMSViaNotifyLK(normalized, message);
             console.log(`✅ notify.lk SMS sent to ${normalized}`, result);
@@ -190,8 +186,8 @@ const sendSMS = async (req, res) => {
 
         return res.status(200).json({ success: true, provider: SMS_PROVIDER, result });
     } catch (error) {
-        console.error('❌ SMS Error:', error);
-        return res.status(500).json({ success: false, error: error.message || 'SMS send failed' });
+        error.statusCode = error.statusCode || 500;
+        next(error);
     }
 };
 
@@ -200,31 +196,29 @@ const saveNotificationRecord = async (data) => {
     return notification.save();
 };
 
-const logNotification = async (req, res) => {
-    const internalKey = req.headers['x-internal-service-key'];
-    if (internalKey !== config.INTERNAL_SERVICE_KEY) {
-        return res.status(403).json({ success: false, message: 'Unauthorized' });
-    }
-
-    const {
-        type,
-        event,
-        status,
-        appointmentId,
-        paymentId,
-        doctorId,
-        patientId,
-        email,
-        phoneNumber,
-        message,
-        payload = {},
-    } = req.body;
-
-    if (!type || !event || !status) {
-        return res.status(400).json({ success: false, message: 'type, event, and status are required' });
-    }
-
+const logNotification = async (req, res, next) => {
     try {
+        const internalKey = req.headers['x-internal-service-key'];
+        if (internalKey !== config.INTERNAL_SERVICE_KEY) {
+            const error = new Error('Unauthorized');
+            error.statusCode = 403;
+            throw error;
+        }
+
+        const {
+            type,
+            event,
+            status,
+            appointmentId,
+            paymentId,
+            doctorId,
+            patientId,
+            email,
+            phoneNumber,
+            message,
+            payload = {},
+        } = req.body;
+
         const saved = await saveNotificationRecord({
             type,
             event,
@@ -241,8 +235,8 @@ const logNotification = async (req, res) => {
 
         return res.status(201).json({ success: true, data: saved });
     } catch (error) {
-        console.error('❌ Notification log error:', error.message);
-        return res.status(500).json({ success: false, message: error.message });
+        error.statusCode = error.statusCode || 500;
+        next(error);
     }
 };
 
@@ -271,71 +265,57 @@ const getEmailTransporter = () => {
 /**
  * 2. Send Email Function
  */
-const sendEmail = async (req, res) => {
-    const { email, subject, message } = req.body;
-    
-    if (!email || !subject || !message) {
-        return res.status(400).json({ success: false, error: 'email, subject, and message are required' });
-    }
-
-    const transporter = getEmailTransporter();
-
-    console.log(`📩 Notification-service will send email to: ${email}`);
-
+const sendEmail = async (req, res, next) => {
     try {
+        const { email, subject, message } = req.body;
+        const transporter = getEmailTransporter();
+
+        console.log(`📩 Notification-service will send email to: ${email}`);
         const info = await transporter.sendMail({
             from: `"NexusCare" <${config.GMAIL_USER}>`,
             to: email,
-            subject: subject,
+            subject,
             text: message,
         });
 
         console.log(`✅ Email sent successfully to: ${email}`, info);
-        res.status(200).json({ 
-            success: true, 
+        res.status(200).json({
+            success: true,
             message: `Email sent to ${email}`,
             info,
         });
     } catch (error) {
-        console.error("❌ Email Error:", error);
-        res.status(500).json({ success: false, error: error.message || 'Email send failed', details: error });
+        error.statusCode = error.statusCode || 500;
+        next(error);
     }
 };
 
 /**
  * 3. Send registration email (doctor or patient)
  */
-const sendRegistrationEmail = async (req, res) => {
-    const { email, name, role } = req.body;
-
-    if (!email || !name || !role) {
-        return res.status(400).json({
-            success: false,
-            message: 'email, name and role are required.'
-        });
-    }
-
-    const displayRole = role === 'doctor' ? 'Doctor' : 'Patient';
-    const subject = `Welcome to NexusCare, ${displayRole}!`;
-    const message = `Hello ${name},\n\n` +
-        `Your ${displayRole.toLowerCase()} account has been created successfully on NexusCare.\n` +
-        `You can now login and use the platform.\n\n` +
-        `Best regards,\nNexusCare Team`;
-
+const sendRegistrationEmail = async (req, res, next) => {
     try {
+        const { email, name, role } = req.body;
+        const displayRole = role === 'doctor' ? 'Doctor' : 'Patient';
+        const subject = `Welcome to NexusCare, ${displayRole}!`;
+        const message = `Hello ${name},\n\n` +
+            `Your ${displayRole.toLowerCase()} account has been created successfully on NexusCare.\n` +
+            `You can now login and use the platform.\n\n` +
+            `Best regards,\nNexusCare Team`;
+
         const transporter = getEmailTransporter();
         await transporter.sendMail({
             from: `"NexusCare" <${config.GMAIL_USER}>`,
             to: email,
             subject,
-            text: message
+            text: message,
         });
 
         console.log(`✅ Registration Email sent to: ${email}`);
         res.status(200).json({ success: true, message: `Registration email sent to ${email}` });
     } catch (error) {
-        console.error('❌ Registration Email Error:', error.message, error.response || error);
-        res.status(500).json({ success: false, error: error.message });
+        error.statusCode = error.statusCode || 500;
+        next(error);
     }
 };
 
