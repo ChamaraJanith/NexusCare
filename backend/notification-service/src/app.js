@@ -52,11 +52,6 @@ app.get('/ready', (req, res) => {
 
 app.use('/api/notifications', requireInternalServiceKey, notificationRoutes);
 
-connectDB(config.MONGO_URI).catch((err) => {
-  console.error('❌ Notification DB connection failed:', err.message);
-  process.exit(1);
-});
-
 app.use((err, req, res, next) => {
   console.error('🚨 Notification Service error:', err);
   res.status(err.statusCode || 500).json({
@@ -65,7 +60,18 @@ app.use((err, req, res, next) => {
   });
 });
 
-const PORT = config.PORT;
-app.listen(PORT, () => {
-  console.log(`🔔 Notification Service Active on Port ${PORT}`);
-});
+module.exports = app;
+
+if (require.main === module) {
+  connectDB(config.MONGO_URI)
+    .then(() => {
+      const PORT = config.PORT;
+      app.listen(PORT, () => {
+        console.log(`🔔 Notification Service Active on Port ${PORT}`);
+      });
+    })
+    .catch((err) => {
+      console.error('❌ Notification DB connection failed:', err.message);
+      process.exit(1);
+    });
+}
