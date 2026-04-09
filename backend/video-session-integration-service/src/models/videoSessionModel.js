@@ -62,9 +62,4 @@ const videoSessionSchema = new mongoose.Schema(
   }
 );
 
-videoSessionSchema.pre('save', function (next) {
-  this.updatedAt = new Date();
-  next();
-});
-
 module.exports = mongoose.model('VideoSession', videoSessionSchema);

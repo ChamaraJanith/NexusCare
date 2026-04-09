@@ -1,4 +1,5 @@
 import express from "express";
+import mongoose from "mongoose";
 import axios from "axios";
 import {
   bookAppointment,
@@ -149,7 +150,12 @@ router.get("/doctor/:doctorId", getDoctorAppointments);
 // 🕵️ GET APPOINTMENT DETAILS
 router.get("/details/:id", async (req, res) => {
   try {
-    const appointment = await Appointment.findById(req.params.id);
+    const id = req.params.id;
+    const query = mongoose.isValidObjectId(id)
+      ? { _id: id }
+      : { appointmentId: id };
+
+    const appointment = await Appointment.findOne(query);
     if (!appointment) return res.status(404).json({ error: "Appointment not found" });
     res.json({ appointment });
   } catch (error) {
