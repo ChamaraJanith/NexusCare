@@ -6,6 +6,8 @@ const videoController = require('../controllers/videoController');
 let activeSessions = [];
 
 router.post('/initialize-link', videoController.initializeSession);
+router.post('/sync/doctor', videoController.syncDoctor);
+router.delete('/sync/doctor/:doctorId', videoController.removeDoctor);
 router.get('/doctors', videoController.getDoctors);
 router.get('/health', videoController.healthCheck);
 router.get('/sessions', videoController.getSessions);

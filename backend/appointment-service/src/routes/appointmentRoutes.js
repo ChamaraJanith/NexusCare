@@ -18,7 +18,7 @@ import { verifyUser } from "../services/authService.js";
 import Appointment from "../models/Appointment.js";
 import { getNextQueue } from "../controllers/appointmentController.js";
 
-const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || "http://localhost:5006";
+const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || "http://notification-service:5006";
 const INTERNAL_SERVICE_KEY = process.env.INTERNAL_SERVICE_KEY;
 
 const sendNotificationEmail = async ({ email, subject, message }) => {
