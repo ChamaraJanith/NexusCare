@@ -281,55 +281,89 @@ export const syncDoctorCatalog = async (req, res) => {
 // ─── GET /api/doctors/search ──────────────────────────────────────────────────
 export const searchDoctors = async (req, res) => {
   try {
-    const { name, specialty, specialization, hospital, date } = req.query;
+      const { name, search, specialty, specialization, hospital, date } = req.query;
+      const searchTerm = name || search || "";
 
-    const inputSpecialty = specialty || specialization;
-    const matchStage = {};
+      const inputSpecialty = specialty || specialization;
+      const matchStage = {};
 
-    if (inputSpecialty) {
-      const normalized = inputSpecialty.toLowerCase();
-      let keyword = inputSpecialty;
+      if (inputSpecialty) {
+        const normalized = inputSpecialty.toLowerCase();
+        let keyword = inputSpecialty;
 
-      if (normalized === "cardiology") keyword = "cardio";
-      if (normalized === "dermatology") keyword = "dermato";
+        if (normalized === "cardiology") keyword = "cardio";
+        if (normalized === "dermatology") keyword = "dermato";
 
-      matchStage.specialty = {
-        $regex: keyword,
-        $options: "i"
-      };
-    }
+        matchStage.specialty = {
+          $regex: keyword,
+          $options: "i"
+        };
+      }
 
-    const pipeline = [
-      { $match: matchStage },
-      {
-        $lookup: {
-          from: "users",
-          localField: "doctorId",
-          foreignField: "roleId",
-          as: "user"
-        }
-      },
-      {
-        $lookup: {
-          from: "availabilityslots",
-          localField: "doctorId",
-          foreignField: "doctorId",
-          as: "slots"
-        }
-      },
-      { $unwind: "$user" }
-    ];
-
-    if (name) {
-      pipeline.push({
-        $match: {
-          "user.name": {
-            $regex: name,
-            $options: "i"
+      const pipeline = [
+        { $match: matchStage },
+        {
+          $lookup: {
+            from: "users",
+            localField: "doctorId",
+            foreignField: "roleId",
+            as: "user"
+          }
+        },
+        {
+          $lookup: {
+            from: "availabilityslots",
+            localField: "doctorId",
+            foreignField: "doctorId",
+            as: "slots"
+          }
+        },
+        {
+          $unwind: {
+            path: "$user",
+            preserveNullAndEmptyArrays: true
           }
         }
-      });
-    }
+      ];
+
+      if (searchTerm) {
+        pipeline.push({
+          $match: {
+            $or: [
+              {
+                "user.name": {
+                  $regex: searchTerm,
+                  $options: "i"
+                }
+              },
+              {
+                name: {
+                  $regex: searchTerm,
+                  $options: "i"
+                }
+              },
+              {
+                doctorId: {
+                  $regex: searchTerm,
+                  $options: "i"
+                }
+              },
+              {
+                "user.email": {
+                  $regex: searchTerm,
+                  $options: "i"
+                }
+              },
+              {
+                email: {
+                  $regex: searchTerm,
+                  $options: "i"
+                }
+              }
+            ]
+          }
+        });
+      }
 
     if (hospital) {
       pipeline.push({
@@ -358,10 +392,15 @@ export const searchDoctors = async (req, res) => {
         experience: 1,
         consultationFee: 1,
         name: "$user.name",
+        email: "$user.email",
+        isActive: "$user.isActive",
+        isVerified: "$user.isVerified",
+        createdAt: "$user.createdAt",
         profileImage: {
           $ifNull: ["$profileImage", "$user.profileImage"]
         },
-        slots: 1
+        slots: 1,
+        role: { $literal: "doctor" }
       }
     });
 
