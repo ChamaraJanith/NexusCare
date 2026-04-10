@@ -368,10 +368,20 @@ export const searchDoctors = async (req, res) => {
     if (hospital) {
       pipeline.push({
         $match: {
-          "slots.hospital": {
-            $regex: hospital,
-            $options: "i"
-          }
+          $or: [
+            {
+              hospital: {
+                $regex: hospital,
+                $options: "i"
+              }
+            },
+            {
+              "slots.hospital": {
+                $regex: hospital,
+                $options: "i"
+              }
+            }
+          ]
         }
       });
     }
