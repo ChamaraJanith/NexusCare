@@ -46,7 +46,7 @@ const getAllUsers = async (req, res, next) => {
 };
 
 // ─── GET SINGLE USER ──────────────────────────────────────────────────────────
-// GET /api/admin/users/:userId
+// GET /api/admino/:userId
 // Admin only
 const getUserById = async (req, res, next) => {
   try {

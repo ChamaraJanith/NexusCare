@@ -163,8 +163,7 @@ import { ref, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAppointmentStore } from '../../stores/appointmentStore';
 import { useAuthStore } from '../../stores/authStore';
-import { getDoctorSlots } from '../../services/appointmentService';
-import { getDoctorSlotsNext30Days } from '../../services/appointmentService';
+import { getDoctorSlots, getDoctorSlotsNext30Days, getDoctorDetails } from '../../services/appointmentService';
 
 const store = useAppointmentStore();
 const authStore = useAuthStore();
@@ -185,19 +184,22 @@ const getImageUrl = (img) => {
   return img;
 };
 
-const selectedDateStr = ref(route.query.date || null);
+const today = new Date().toISOString().split('T')[0];
+const selectedDateStr = ref('');
 
-const loadingSlots = ref(true);
+const loadingSlots = ref(false);
 const physicalSlots = ref([]);
 const onlineSlots = ref([]);
 
-onMounted(() => {
-  if (!doctor.value && (route.query.doctorName || route.params.doctorId)) {
+onMounted(async () => {
+  const doctorId = route.params.doctorId || route.query.doctorId;
+
+  if (!doctor.value && doctorId) {
     doctor.value = {
-      doctorId: route.params.doctorId,
+      doctorId,
       name: route.query.doctorName || null,
       specialization: route.query.specialization || null,
-      hospital: route.query.hospital || null
+      hospital: route.query.hospital || null,
     };
   }
 
@@ -208,6 +210,37 @@ onMounted(() => {
 
   if (!doctor.value.name && route.query.doctorName) {
     doctor.value.name = route.query.doctorName;
+  }
+
+  if (doctorId && (!doctor.value?.doctorId || doctor.value.doctorId !== doctorId)) {
+    doctor.value.doctorId = doctorId;
+  }
+
+  if (doctorId && (!doctor.value.name || !doctor.value.specialization || !doctor.value.hospital)) {
+    doctor.value = {
+      ...doctor.value,
+      name: doctor.value.name || route.query.doctorName || doctor.value.doctorId,
+      specialization: doctor.value.specialization || route.query.specialty || doctor.value.specialty || null,
+      hospital: doctor.value.hospital || route.query.hospital || null,
+      experience: doctor.value.experience || route.query.experience || null,
+      consultationFee: doctor.value.consultationFee || route.query.consultationFee || doctor.value.fee || null,
+      profileImage: doctor.value.profileImage || route.query.profileImage || null,
+    };
+
+    if (!doctor.value.specialization || !doctor.value.hospital || !doctor.value.profileImage) {
+      const details = await getDoctorDetails(doctorId);
+      if (details) {
+        doctor.value = {
+          ...doctor.value,
+          name: doctor.value.name || details.name || details.profile?.name || doctor.value.doctorId,
+          specialization: doctor.value.specialization || details.profile?.specialty || details.profile?.specialization || null,
+          hospital: doctor.value.hospital || details.profile?.hospital || null,
+          experience: doctor.value.experience || details.profile?.experience || null,
+          consultationFee: doctor.value.consultationFee || details.profile?.consultationFee || details.profile?.fee || null,
+          profileImage: doctor.value.profileImage || details.profile?.profileImage || null,
+        };
+      }
+    }
   }
 
   if (!store.selectedDoctor && doctor.value) {
@@ -225,17 +258,15 @@ const fetchSlots = async () => {
   loadingSlots.value = true;
   store.selectedDate = selectedDateStr.value;
   store.selectedSlot = null;
+
   try {
     console.log("SELECTED DOCTOR:", doctor.value);
     const doctorId = doctor.value.doctorId || doctor.value._id || doctor.value.id;
 
     let data;
-
     if (selectedDateStr.value) {
-      // 🔥 date selected → normal behavior
       data = await getDoctorSlots(doctorId, selectedDateStr.value);
     } else {
-      // 🔥 NO DATE → fetch next 30 days
       data = await getDoctorSlotsNext30Days(doctorId);
     }
 
@@ -247,12 +278,14 @@ const fetchSlots = async () => {
     console.error(error);
     physicalSlots.value = [];
     onlineSlots.value = [];
-  } finally { loadingSlots.value = false; }
-
-  watch(selectedDateStr, () => {
-    fetchSlots();
-  });
+  } finally {
+    loadingSlots.value = false;
+  }
 };
+
+watch(selectedDateStr, () => {
+  fetchSlots();
+});
 
 const handleSlotBooking = (slot, type) => {
   // Always save the selection first so it survives any redirect
