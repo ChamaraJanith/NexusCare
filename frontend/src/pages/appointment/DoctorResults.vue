@@ -67,13 +67,17 @@ const handleBook = (doctor) => {
   // 🧠 store doctor
   store.selectDoctor(doctor);
 
-  // 🔥 PASS DATE + DOCTOR NAME TO SLOT SELECTION
+  // 🔥 PASS DOCTOR DETAILS TO SLOT SELECTION
   router.push({
     name: 'SlotSelection',
     params: { doctorId: doctor.doctorId },
     query: {
-      date: store.searchFilters.date || null,
-      doctorName: doctor.name || doctor.doctorId || ''
+      doctorName: doctor.name || doctor.doctorId || '',
+      specialty: doctor.specialty || doctor.specialization || '',
+      hospital: doctor.hospital || '',
+      experience: doctor.experience || '',
+      consultationFee: doctor.consultationFee || doctor.fee || '',
+      profileImage: doctor.profileImage || doctor.image || ''
     },
     state: { doctor }
   });

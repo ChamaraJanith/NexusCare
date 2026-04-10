@@ -18,10 +18,107 @@ export const createSlot = async (req, res) => {
   }
 };
 
+const resolveSlotsForDate = async (doctorId, date) => {
+  const selectedDate = new Date(date);
+  selectedDate.setHours(0, 0, 0, 0);
+  const nextDate = new Date(selectedDate);
+  nextDate.setDate(nextDate.getDate() + 1);
+
+  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const dayOfWeek = dayNames[selectedDate.getDay()];
+
+  const oneTimeSlots = await AvailabilitySlot.find({
+    doctorId,
+    date: { $gte: selectedDate, $lt: nextDate },
+    isDeleted: false,
+    parentSlotId: null,
+    isRecurring: false,
+    $expr: { $lt: ["$bookedCount", "$slotCount"] }
+  });
+
+  const recurringTemplates = await AvailabilitySlot.find({
+    doctorId,
+    isRecurring: true,
+    dayOfWeek,
+    isDeleted: false,
+    parentSlotId: null
+  });
+
+  const recurringInstances = await Promise.all(
+    recurringTemplates.map((template) =>
+      getOrCreateSlotInstance(doctorId, selectedDate, template)
+    )
+  );
+
+  const existingInstances = await AvailabilitySlot.find({
+    doctorId,
+    date: { $gte: selectedDate, $lt: nextDate },
+    isDeleted: false,
+    parentSlotId: { $ne: null },
+    $expr: { $lt: ["$bookedCount", "$slotCount"] }
+  });
+
+  const slots = [
+    ...oneTimeSlots,
+    ...recurringInstances,
+    ...existingInstances
+  ];
+
+  const seen = new Map();
+  slots.forEach((slot) => {
+    seen.set(slot._id.toString(), slot);
+  });
+
+  const now = new Date();
+  const validSlots = [...seen.values()].filter((slot) => {
+    const slotDateTime = new Date(slot.date);
+    const [h, m] = slot.startTime.split(":");
+    slotDateTime.setHours(Number.parseInt(h, 10), Number.parseInt(m, 10), 0, 0);
+    return slotDateTime >= now;
+  });
+
+  return {
+    physical: validSlots.filter((s) => s.slotType === "PHYSICAL"),
+    online: validSlots.filter((s) => s.slotType === "ONLINE")
+  };
+};
+
+const resolveSlotsForNextDays = async (doctorId, dayCount = 30) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  let physical = [];
+  let online = [];
+
+  for (let i = 0; i < dayCount; i++) {
+    const date = new Date(today);
+    date.setDate(today.getDate() + i);
+    const result = await resolveSlotsForDate(doctorId, date);
+    physical = physical.concat(result.physical);
+    online = online.concat(result.online);
+  }
+
+  physical.sort((a, b) => new Date(a.date) - new Date(b.date));
+  online.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  return { physical, online };
+};
+
 // GET /api/availability/:doctorId
 export const getSlots = async (req, res) => {
   try {
     const slots = await availabilityService.getSlotsByDoctor(req.params.doctorId);
+    res.json({ success: true, data: slots });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// GET /api/availability/:doctorId/next
+export const getSlotsNextDays = async (req, res) => {
+  try {
+    const days = Number(req.query.days) || 30;
+    const slots = await resolveSlotsForNextDays(req.params.doctorId, days);
     res.json({ success: true, data: slots });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

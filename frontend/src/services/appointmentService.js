@@ -2,10 +2,21 @@ import axios from "axios";
 
 const API = `${import.meta.env.VITE_API_URL}/api/appointments`;
 const DOCTOR_API = `${import.meta.env.VITE_API_URL}/api/doctors`;
+const AVAILABILITY_API = `${import.meta.env.VITE_API_URL}/api/availability`;
 
 // ── Token helper ──────────────────────────────────────────────────
 const getToken = () =>
   localStorage.getItem('nexus_token') || localStorage.getItem('token');
+
+export const getDoctorDetails = async (doctorId) => {
+  try {
+    const res = await axios.get(`${DOCTOR_API}/internal/${doctorId}`);
+    return res.data?.data || null;
+  } catch (error) {
+    console.warn('⚠️ Failed to fetch doctor details:', error.message);
+    return null;
+  }
+};
 
 // ── Search doctors via doctor-service directly ───────────────────────
 export const searchDoctors = async (filters) => {
@@ -16,9 +27,9 @@ export const searchDoctors = async (filters) => {
   return res.data?.data || [];
 };
 
-// ── Get doctor slots by date ──────────────────────────────────────
+// ── Get doctor slots by date ───────────────────────────────────────
 export const getDoctorSlots = async (doctorId, date) => {
-  const res = await axios.get(`${API}/doctor/${doctorId}/slots`, {
+  const res = await axios.get(`${AVAILABILITY_API}/${doctorId}/by-date`, {
     params: { date }
   });
   return res.data;
@@ -56,41 +67,19 @@ export const cancelAppointment = async (id) => {
   return res.data;
 };
 
-// ── Get slots for next 30 days ────────────────────────────────────
+// ── Get all availability for a doctor ─────────────────────────────
 export const getDoctorSlotsNext30Days = async (doctorId) => {
   try {
-    const today = new Date();
-    const requests = [];
+    const res = await axios.get(`${AVAILABILITY_API}/${doctorId}/next`);
+    const payload = res.data;
+    const data = payload?.data ?? payload;
 
-    for (let i = 0; i < 30; i++) {
-      const date = new Date();
-      date.setDate(today.getDate() + i);
-      const dateStr = date.toISOString().split("T")[0];
-
-      requests.push(
-        axios.get(`${API}/doctor/${doctorId}/slots`, {
-          params: { date: dateStr }
-        }).catch(() => ({ data: { physical: [], online: [] } }))
-      );
-    }
-
-    const responses = await Promise.all(requests);
-
-    const physical = [];
-    const online   = [];
-
-    responses.forEach(res => {
-      if (res.data?.physical) physical.push(...res.data.physical);
-      if (res.data?.online)   online.push(...res.data.online);
-    });
-
-    physical.sort((a, b) => new Date(a.date) - new Date(b.date));
-    online.sort((a, b)   => new Date(a.date) - new Date(b.date));
-
-    return { physical, online };
-
+    return {
+      physical: Array.isArray(data.physical) ? data.physical : [],
+      online: Array.isArray(data.online) ? data.online : []
+    };
   } catch (error) {
-    console.error("❌ ERROR fetching 30-day slots:", error.message);
+    console.error("❌ ERROR fetching doctor availability:", error.message);
     throw error;
   }
 };

@@ -48,8 +48,25 @@ const PORT = process.env.PORT || 5003;
 const MONGO_URI = process.env.MONGO_URI;
 
 const startServer = async () => {
-  await mongoose.connect(MONGO_URI);
-  console.log("✅ MongoDB Connected");
+  if (!MONGO_URI) {
+    console.error("❌ Missing MONGO_URI environment variable");
+    process.exit(1);
+  }
+
+  const mongoOptions = {
+    serverSelectionTimeoutMS: 15000,
+    tls: true,
+    tlsAllowInvalidCertificates: process.env.NODE_ENV !== 'production',
+  };
+
+  try {
+    await mongoose.connect(MONGO_URI, mongoOptions);
+    console.log("✅ MongoDB Connected");
+  } catch (err) {
+    console.error("❌ MongoDB connection failed:", err.message);
+    console.error(err);
+    process.exit(1);
+  }
 
   server.listen(PORT, () => {
     console.log(`🚀 Server running on ${PORT}`);

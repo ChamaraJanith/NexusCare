@@ -2,6 +2,7 @@ import express from "express";
 import {
   createSlot,
   getSlots,
+  getSlotsNextDays,
   updateSlot,
   deleteSlot,
   getSlotsByDoctorAndDate,
@@ -19,8 +20,11 @@ router.put("/book", bookSlot);
 // CREATE slot
 router.post("/", verifyToken, allowRoles("doctor"), createSlot);
 
-// GET slots by doctor
-router.get("/:doctorId", verifyToken, getSlots);
+// GET slots by doctor (public)
+router.get("/:doctorId", getSlots);
+
+// GET upcoming slots for the next N days (public)
+router.get("/:doctorId/next", getSlotsNextDays);
 
 // GET slots by date (public)
 router.get("/:doctorId/by-date", getSlotsByDoctorAndDate);
