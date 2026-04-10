@@ -3,6 +3,7 @@ import axios from "axios"; // 🔥 IMPORTANT (missing in your code)
 import { io } from "../app.js";
 
 const FEE_SERVICE_URL = process.env.FEE_SERVICE_URL || "http://fee-management-service:5007";
+const DOCTOR_SERVICE_URL = process.env.DOCTOR_SERVICE_URL || "http://doctor-service:5002";
 const INTERNAL_SERVICE_KEY = process.env.INTERNAL_SERVICE_KEY;
 
 
@@ -60,37 +61,31 @@ export const createAppointment = async (data) => {
   const { doctorId, date, time } = data;
   const appointmentType = (data.appointmentType || data.type || "").toString().trim().toUpperCase();
 
-  // ❌ check duplicate slot
-  const existing = await Appointment.findOne({
-    doctorId,
-    date,
-    time,
-    status: { $ne: "CANCELLED" }
-  });
-
-  if (existing) {
-    throw new Error("Slot already booked");
-  }
-
-  // 🔥 LOCK SLOT — try/catch so booking doesn't fail if slot lock fails
+  // 🔒 LOCK SLOT via doctor-service — this is the authoritative capacity check.
+  // bookSlot increments bookedCount atomically and returns the queue number.
+  // It returns 400 "Slot full" when bookedCount >= slotCount.
+  let queueNumber;
   try {
-    await axios.put(
+    const slotRes = await axios.put(
       `${DOCTOR_SERVICE_URL}/api/availability/book`,
       { doctorId, date, time }
     );
+    queueNumber = slotRes.data.queueNumber;
   } catch (slotErr) {
-    console.warn("⚠️ Slot lock failed (non-critical):", slotErr.response?.data || slotErr.message);
-    // Continue — don't throw, appointment can still be saved
+    const msg = slotErr.response?.data?.message || slotErr.message;
+    // Surface capacity / not-found errors directly to the caller
+    if (slotErr.response?.status === 400 || slotErr.response?.status === 404) {
+      throw new Error(msg);
+    }
+    // Doctor-service unreachable — fall back to local count so booking still works
+    console.warn("⚠️ Slot lock failed, falling back to local queue count:", msg);
+    const count = await Appointment.countDocuments({
+      doctorId,
+      date,
+      status: { $ne: "CANCELLED" }
+    });
+    queueNumber = count + 1;
   }
-
-  // 🔢 QUEUE NUMBER
-  const count = await Appointment.countDocuments({
-    doctorId,
-    date,
-    status: { $ne: "CANCELLED" }
-  });
-
-  const queueNumber = count + 1;
 
   // 💰 USE PROVIDED CHARGES WHEN AVAILABLE, OR FALL BACK TO SERVICE CALCULATION
   let charges = null;
@@ -226,6 +221,16 @@ export const cancelAppointment = async (id, patientId) => {
   appointment.status = "CANCELLED";
 
   const cancelled = await appointment.save();
+
+  // 🔓 Release the slot capacity back in doctor-service
+  try {
+    await axios.put(
+      `${DOCTOR_SERVICE_URL}/api/availability/release`,
+      { doctorId: appointment.doctorId, date: appointment.date, time: appointment.time }
+    );
+  } catch (err) {
+    console.warn("⚠️ Slot release failed (non-critical):", err.response?.data || err.message);
+  }
 
   // ⚡ REAL-TIME EMIT
   io.emit("appointmentCancelled", cancelled);
