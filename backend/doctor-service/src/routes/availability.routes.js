@@ -6,7 +6,8 @@ import {
   updateSlot,
   deleteSlot,
   getSlotsByDoctorAndDate,
-  bookSlot
+  bookSlot,
+  releaseSlot
 } from "../controllers/availabilityController.js";
 
 import { verifyToken } from "../middleware/authMiddleware.js";
@@ -16,6 +17,9 @@ const router = express.Router();
 
 // 🔥 BOOK SLOT — must be BEFORE /:slotId
 router.put("/book", bookSlot);
+
+// 🔓 RELEASE SLOT (on cancellation)
+router.put("/release", releaseSlot);
 
 // CREATE slot
 router.post("/", verifyToken, allowRoles("doctor"), createSlot);

@@ -281,11 +281,53 @@ export const bookSlot = async (req, res) => {
 
     if (slot.slotType === "ONLINE") {
       slot.isBooked = true;
+    } else if (slot.bookedCount >= slot.slotCount) {
+      // Mark physical slot as fully booked when capacity is reached
+      slot.isBooked = true;
     }
 
     await slot.save();
 
     res.json({ message: "Booked successfully", queueNumber });
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// 🔓 Release slot capacity (called on appointment cancellation)
+export const releaseSlot = async (req, res) => {
+  try {
+    const { doctorId, date, time } = req.body;
+
+    const selectedDate = new Date(date);
+    selectedDate.setHours(0, 0, 0, 0);
+    const nextDate = new Date(selectedDate);
+    nextDate.setDate(nextDate.getDate() + 1);
+
+    const slot = await AvailabilitySlot.findOne({
+      doctorId,
+      date: { $gte: selectedDate, $lt: nextDate },
+      startTime: time,
+      isDeleted: false
+    });
+
+    if (!slot) {
+      return res.status(404).json({ message: "Slot not found" });
+    }
+
+    if (slot.bookedCount > 0) {
+      slot.bookedCount -= 1;
+    }
+
+    // Re-open the slot if it was marked full
+    if (slot.bookedCount < slot.slotCount) {
+      slot.isBooked = false;
+    }
+
+    await slot.save();
+
+    res.json({ message: "Slot released successfully", bookedCount: slot.bookedCount });
 
   } catch (err) {
     res.status(500).json({ message: err.message });

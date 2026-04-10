@@ -72,6 +72,7 @@
                 <th class="text-grey-4 text-weight-bold">TIME</th>
                 <th class="text-grey-4 text-weight-bold">HOSPITAL</th>
                 <th class="text-grey-4 text-weight-bold">ACTIVE APPOINTMENTS</th>
+                <th class="text-grey-4 text-weight-bold">AVAILABLE SLOTS</th>
                 <th class="text-grey-4 text-weight-bold">ACTION</th>
                 <th class="text-grey-4 text-weight-bold">STATUS</th>
               </tr>
@@ -82,6 +83,11 @@
                 <td class="text-blue-4 text-weight-medium">{{ slot.startTime }} - {{ slot.endTime }}</td>
                 <td class="text-white">{{ slot.hospital }}</td>
                 <td class="text-white text-center">{{ slot.bookedCount }}</td>
+                <td class="text-center">
+                  <span :class="(slot.slotCount - slot.bookedCount) > 0 ? 'text-green-4' : 'text-red-4'" class="text-weight-bold">
+                    {{ Math.max((slot.slotCount || 1) - (slot.bookedCount || 0), 0) }}
+                  </span>
+                </td>
                 <td>
                   <q-btn
                     unelevated
@@ -100,7 +106,7 @@
                 </td>
               </tr>
               <tr v-if="!physicalSlots || physicalSlots.length === 0">
-                <td colspan="6" class="text-center text-grey-5 q-py-md">No physical slots available.</td>
+                <td colspan="7" class="text-center text-grey-5 q-py-md">No physical slots available.</td>
               </tr>
             </tbody>
           </q-markup-table>
@@ -120,6 +126,7 @@
                 <th class="text-grey-4 text-weight-bold">TIME</th>
                 <th class="text-grey-4 text-weight-bold">PLATFORM</th>
                 <th class="text-grey-4 text-weight-bold">ACTIVE APPOINTMENTS</th>
+                <th class="text-grey-4 text-weight-bold">AVAILABLE SLOTS</th>
                 <th class="text-grey-4 text-weight-bold">ACTION</th>
                 <th class="text-grey-4 text-weight-bold">STATUS</th>
               </tr>
@@ -130,6 +137,11 @@
                 <td class="text-blue-4 text-weight-medium">{{ slot.startTime }} - {{ slot.endTime }}</td>
                 <td class="text-white">{{ slot.platform || "Zoom" }}</td>
                 <td class="text-white text-center">{{ slot.bookedCount }}</td>
+                <td class="text-center">
+                  <span :class="(slot.slotCount - slot.bookedCount) > 0 ? 'text-green-4' : 'text-red-4'" class="text-weight-bold">
+                    {{ Math.max((slot.slotCount || 1) - (slot.bookedCount || 0), 0) }}
+                  </span>
+                </td>
                 <td>
                   <q-btn
                     unelevated
@@ -148,7 +160,7 @@
                 </td>
               </tr>
               <tr v-if="!onlineSlots || onlineSlots.length === 0">
-                <td colspan="6" class="text-center text-grey-5 q-py-md">No online slots available.</td>
+                <td colspan="7" class="text-center text-grey-5 q-py-md">No online slots available.</td>
               </tr>
             </tbody>
           </q-markup-table>
