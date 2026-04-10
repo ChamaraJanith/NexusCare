@@ -1,7 +1,7 @@
 <template>
   <q-page class="search-page-bg text-white font-jakarta flex column items-center q-pt-xl">
     <div class="max-width-1000 w-full q-px-md">
-      
+
       <div class="flex items-center justify-between q-mb-lg">
         <div class="flex items-center cursor-pointer text-grey-4 back-link" @click="router.push('/appointment/results')">
           <q-icon name="arrow_back" size="sm" class="q-mr-sm" />
@@ -64,7 +64,7 @@
             <q-icon name="store" size="sm" color="blue-4" class="q-mr-sm"/>
             <span class="text-subtitle1 text-weight-bolder tracking-wide uppercase text-white">Physical Consultation</span>
           </div>
-          
+
           <q-markup-table dark class="bg-dark-glass text-left">
             <thead>
               <tr>
@@ -83,9 +83,9 @@
                 <td class="text-white">{{ slot.hospital }}</td>
                 <td class="text-white text-center">{{ slot.bookedCount }}</td>
                 <td>
-                  <q-btn 
-                    unelevated 
-                    rounded 
+                  <q-btn
+                    unelevated
+                    rounded
                     :color="slot.isBooked ? 'grey-8' : 'primary'"
                     :disable="slot.isBooked"
                     class="action-btn text-weight-bold q-px-md text-caption"
@@ -112,7 +112,7 @@
             <q-icon name="videocam" size="sm" color="blue-4" class="q-mr-sm"/>
             <span class="text-subtitle1 text-weight-bolder tracking-wide uppercase text-white">Online Consultation</span>
           </div>
-          
+
            <q-markup-table dark class="bg-dark-glass text-left">
             <thead>
               <tr>
@@ -131,9 +131,9 @@
                 <td class="text-white">{{ slot.platform || "Zoom" }}</td>
                 <td class="text-white text-center">{{ slot.bookedCount }}</td>
                 <td>
-                  <q-btn 
-                    unelevated 
-                    rounded 
+                  <q-btn
+                    unelevated
+                    rounded
                     :color="slot.isBooked ? 'grey-8' : 'primary'"
                     :disable="slot.isBooked"
                     class="action-btn text-weight-bold q-px-md text-caption"
@@ -171,7 +171,7 @@ const authStore = useAuthStore();
 const router = useRouter();
 const route = useRoute();
 
-const doctor = ref(history.state.doctor || store.selectedDoctor || null);
+const doctor = ref(history.state?.doctor || store.selectedDoctor || null);
 
 const getImageUrl = (img) => {
   if (!img) return "https://cdn-icons-png.flaticon.com/512/3774/3774299.png";
@@ -192,10 +192,28 @@ const physicalSlots = ref([]);
 const onlineSlots = ref([]);
 
 onMounted(() => {
-  if (!doctor.value) { router.push('/search'); return; }
+  if (!doctor.value && (route.query.doctorName || route.params.doctorId)) {
+    doctor.value = {
+      doctorId: route.params.doctorId,
+      name: route.query.doctorName || null,
+      specialization: route.query.specialization || null,
+      hospital: route.query.hospital || null
+    };
+  }
+
+  if (!doctor.value) {
+    router.push('/search');
+    return;
+  }
+
+  if (!doctor.value.name && route.query.doctorName) {
+    doctor.value.name = route.query.doctorName;
+  }
+
   if (!store.selectedDoctor && doctor.value) {
     store.selectDoctor(doctor.value);
   }
+
   fetchSlots();
 });
 
@@ -206,11 +224,11 @@ function formatDate(date) {
 const fetchSlots = async () => {
   loadingSlots.value = true;
   store.selectedDate = selectedDateStr.value;
-  store.selectedSlot = null; 
+  store.selectedSlot = null;
   try {
     console.log("SELECTED DOCTOR:", doctor.value);
     const doctorId = doctor.value.doctorId || doctor.value._id || doctor.value.id;
-    
+
     let data;
 
     if (selectedDateStr.value) {
@@ -225,8 +243,8 @@ const fetchSlots = async () => {
     physicalSlots.value = data.physical || [];
     onlineSlots.value = data.online || [];
     await store.fetchQueueNumber();
-  } catch (error) { 
-    console.error(error); 
+  } catch (error) {
+    console.error(error);
     physicalSlots.value = [];
     onlineSlots.value = [];
   } finally { loadingSlots.value = false; }

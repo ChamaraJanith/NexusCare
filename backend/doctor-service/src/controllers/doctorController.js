@@ -401,8 +401,12 @@ export const searchDoctors = async (req, res) => {
         hospital: 1,
         experience: 1,
         consultationFee: 1,
-        name: "$user.name",
-        email: "$user.email",
+        name: {
+          $ifNull: ["$user.name", "$name"]
+        },
+        email: {
+          $ifNull: ["$user.email", "$email"]
+        },
         isActive: "$user.isActive",
         isVerified: "$user.isVerified",
         createdAt: "$user.createdAt",
