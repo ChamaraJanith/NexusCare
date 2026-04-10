@@ -58,10 +58,10 @@ onMounted(() => {
 const handleBook = (doctor) => {
   // 🔒 AUTH CHECK — unregistered users cannot book
   if (!authStore.isLoggedIn) {
-    const doctorId = doctor.doctorId || doctor._id || doctor.id
-    const redirectPath = `/appointment/book/${doctorId}`
-    router.push({ path: '/login', query: { redirect: redirectPath } })
-    return
+    const doctorId = doctor.doctorId || doctor._id || doctor.id;
+    const redirectPath = `/appointment/book/${doctorId}`;
+    router.push({ path: '/login', query: { redirect: redirectPath } });
+    return;
   }
 
   // 🧠 store doctor
@@ -70,7 +70,7 @@ const handleBook = (doctor) => {
   // 🔥 PASS DOCTOR DETAILS TO SLOT SELECTION
   router.push({
     name: 'SlotSelection',
-    params: { doctorId: doctor.doctorId },
+    params: { doctorId: doctor.doctorId || doctor._id || doctor.id },
     query: {
       doctorName: doctor.name || doctor.doctorId || '',
       specialty: doctor.specialty || doctor.specialization || '',

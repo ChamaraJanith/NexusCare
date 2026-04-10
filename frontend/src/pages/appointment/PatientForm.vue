@@ -1,13 +1,13 @@
 <template>
   <q-page class="search-page-bg text-white font-jakarta flex column items-center q-pt-xl">
     <div class="max-width-800 w-full q-px-md">
-      
+
       <div class="flex items-center justify-between q-mb-xl">
-        <div class="flex items-center cursor-pointer text-grey-4 back-link" @click="router.push(`/appointment/book/${store.selectedDoctor?.id}`)">
+        <div class="flex items-center cursor-pointer text-grey-4 back-link" @click="goBackToSlots()">
           <q-icon name="arrow_back" size="sm" class="q-mr-sm" />
           <span class="text-weight-bold">Back to Slots</span>
         </div>
-        
+
         <div class="timer-badge flex items-center text-red-4 text-weight-bold q-px-md q-py-sm rounded-borders" v-if="store.timeLeft > 0">
           <q-icon name="timer" class="q-mr-sm" size="xs" /> Session expires in: {{ store.formattedTimeLeft }}
         </div>
@@ -18,7 +18,7 @@
       <q-card class="nexus-search-card shadow-none">
         <q-card-section class="q-pa-xl">
           <q-form @submit.prevent="proceedToSummary" class="q-gutter-y-lg">
-            
+
             <div class="row q-col-gutter-lg">
               <!-- Title -->
               <div class="col-12 col-md-3">
@@ -177,6 +177,19 @@ onMounted(async () => {
     store.startTimer();
   }
 });
+
+const getDoctorId = () => {
+  return store.selectedDoctor?.doctorId || store.selectedDoctor?._id || store.selectedDoctor?.id || null;
+};
+
+const goBackToSlots = () => {
+  const doctorId = getDoctorId();
+  if (!doctorId) {
+    router.push('/search');
+    return;
+  }
+  router.push(`/appointment/book/${doctorId}`);
+};
 
 const proceedToSummary = () => {
   if (store.timeLeft <= 0) return;
