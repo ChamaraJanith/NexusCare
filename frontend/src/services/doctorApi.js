@@ -115,10 +115,10 @@ export const fetchAvailability = async (doctorId) => {
 export const fetchAvailabilityByDate = async (doctorId, date) => {
   try {
     const res = await doctorApi.get(`/api/availability/${doctorId}/by-date`, { params: { date } });
-    
+
     // Support either { data: [...] } or { data: { physical: [...], online: [...] } }
     let data = res.data?.data || res.data || [];
-    
+
     if (!Array.isArray(data)) {
         // if the API returns { physical: [], online: [] } instead of flat array
         const physical = Array.isArray(data.physical) ? data.physical : [];
@@ -175,4 +175,17 @@ export const fetchPrescriptions = async (doctorId) => {
 export const fetchHospitals = async () => {
   const res = await axios.get(`${DOCTOR_SERVICE_URL}/api/hospitals`);
   return res.data.data;
+};
+
+export const searchDoctorProfiles = async (params = {}) => {
+  try {
+    const res = await axios.get(`${DOCTOR_SERVICE_URL}/api/doctors/search`, { params });
+
+    if (Array.isArray(res.data)) return res.data;
+    if (Array.isArray(res.data?.data)) return res.data.data;
+    return res.data || [];
+  } catch (err) {
+    console.warn('[doctorApi] searchDoctorProfiles failed:', err.message);
+    return [];
+  }
 };

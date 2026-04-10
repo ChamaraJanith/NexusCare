@@ -3,8 +3,8 @@
     <!-- Page Header -->
     <div class="page-header">
       <div>
-        <h2 class="page-title">User Management</h2>
-        <p class="page-subtitle">Manage all platform users — patients, doctors, admins</p>
+        <h2 class="page-title">{{ isDoctorPage ? 'Doctor Management' : 'User Management' }}</h2>
+        <p class="page-subtitle">{{ isDoctorPage ? 'Browse the doctor profile catalog, not generic user profiles.' : 'Manage all platform users — patients, doctors, admins' }}</p>
       </div>
     </div>
 
@@ -13,7 +13,7 @@
       <q-card-section class="filter-row">
         <q-input
           v-model="search"
-          placeholder="Search by name, email or ID..."
+          :placeholder="isDoctorPage ? 'Search doctor profiles by name, email or ID...' : 'Search by name, email or ID...'"
           outlined dense
           class="search-input"
           @update:model-value="debouncedSearch"
@@ -24,25 +24,27 @@
           </template>
         </q-input>
 
-        <q-select
-          v-model="roleFilter"
-          :options="roleOptions"
-          outlined dense
-          label="Role"
-          class="filter-select"
-          emit-value map-options clearable
-          @update:model-value="loadUsers"
-        />
+        <template v-if="!isDoctorPage">
+          <q-select
+            v-model="roleFilter"
+            :options="roleOptions"
+            outlined dense
+            label="Role"
+            class="filter-select"
+            emit-value map-options clearable
+            @update:model-value="loadUsers"
+          />
 
-        <q-select
-          v-model="statusFilter"
-          :options="statusOptions"
-          outlined dense
-          label="Status"
-          class="filter-select"
-          emit-value map-options clearable
-          @update:model-value="loadUsers"
-        />
+          <q-select
+            v-model="statusFilter"
+            :options="statusOptions"
+            outlined dense
+            label="Status"
+            class="filter-select"
+            emit-value map-options clearable
+            @update:model-value="loadUsers"
+          />
+        </template>
 
         <q-btn unelevated no-caps color="green-6" icon="refresh" label="Refresh" @click="loadUsers" class="refresh-btn" />
       </q-card-section>
@@ -149,14 +151,14 @@
         <template #no-data>
           <div class="no-data-row">
             <q-icon name="search_off" size="40px" color="grey-4" />
-            <p>No users found</p>
+            <p>{{ isDoctorPage ? 'No doctors found' : 'No users found' }}</p>
           </div>
         </template>
       </q-table>
 
       <!-- Pagination -->
       <div class="table-footer">
-        <span class="total-text">Total: {{ totalUsers }} users</span>
+        <span class="total-text">Total: {{ totalUsers }} {{ isDoctorPage ? 'doctors' : 'users' }}</span>
         <q-pagination
           v-model="currentPage"
           :max="totalPages"
@@ -190,10 +192,14 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { adminApi } from '../../services/adminApi'
+import { searchDoctorProfiles } from '../../services/doctorApi'
 
 const $q = useQuasar()
+const route = useRoute()
+const isDoctorPage = computed(() => route.name === 'AdminDoctors')
 
 // State
 const users        = ref([])
@@ -244,15 +250,39 @@ const debouncedSearch = () => { clearTimeout(searchTimer); searchTimer = setTime
 async function loadUsers() {
   loading.value = true
   try {
-    const params = { page: currentPage.value, limit: perPage.value }
-    if (search.value)       params.search = search.value
-    if (roleFilter.value)   params.role   = roleFilter.value
+    if (isDoctorPage.value) {
+      const params = {}
+      if (search.value) params.search = search.value
 
-    const { data } = await adminApi.getUsers(params)
-    users.value      = data.data  || []
-    totalUsers.value = data.total || 0
-  } catch { users.value = [] }
-  finally { loading.value = false }
+      const doctors = await searchDoctorProfiles(params)
+      users.value = Array.isArray(doctors)
+        ? doctors.map(doc => ({
+            userId: doc.doctorId || doc._id || doc.id,
+            name: doc.name || '',
+            email: doc.email || '',
+            role: 'doctor',
+            isActive: doc.isActive !== undefined ? doc.isActive : true,
+            isVerified: doc.isVerified !== undefined ? doc.isVerified : false,
+            createdAt: doc.createdAt || null,
+          }))
+        : []
+      totalUsers.value = users.value.length
+    } else {
+      const params = { page: currentPage.value, limit: perPage.value }
+      if (search.value)       params.search = search.value
+      if (roleFilter.value)   params.role   = roleFilter.value
+      if (statusFilter.value) params.isActive = statusFilter.value
+
+      const { data } = await adminApi.getUsers(params)
+      users.value      = data.data  || []
+      totalUsers.value = data.total || 0
+    }
+  } catch {
+    users.value = []
+    totalUsers.value = 0
+  } finally {
+    loading.value = false
+  }
 }
 
 function onRequest(props) {

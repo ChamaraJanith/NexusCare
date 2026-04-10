@@ -1,17 +1,19 @@
 import axios from "axios";
 
 const API = `${import.meta.env.VITE_API_URL}/api/appointments`;
+const DOCTOR_API = `${import.meta.env.VITE_API_URL}/api/doctors`;
 
 // ── Token helper ──────────────────────────────────────────────────
 const getToken = () =>
   localStorage.getItem('nexus_token') || localStorage.getItem('token');
 
-// ── Search doctors ────────────────────────────────────────────────
+// ── Search doctors via doctor-service directly ───────────────────────
 export const searchDoctors = async (filters) => {
   console.log("FILTERS:", filters);
-  const res = await axios.get(`${API}/search`, { params: filters });
-  console.log("DOCTORS FROM API:", res.data);
-  return res.data;
+  const res = await axios.get(`${DOCTOR_API}/search`, { params: filters });
+  console.log("DOCTORS FROM DOCTOR SERVICE:", res.data);
+  if (Array.isArray(res.data)) return res.data;
+  return res.data?.data || [];
 };
 
 // ── Get doctor slots by date ──────────────────────────────────────
