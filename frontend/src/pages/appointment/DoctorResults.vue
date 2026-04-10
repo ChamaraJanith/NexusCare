@@ -1,7 +1,7 @@
 <template>
   <q-page class="search-page-bg text-white font-jakarta flex column items-center q-pt-xl">
     <div class="max-width-1000 w-full q-px-md">
-      
+
       <div class="flex items-center q-mb-xl cursor-pointer text-grey-4 back-link" @click="router.push('/search')">
         <q-icon name="arrow_back" size="sm" class="q-mr-sm" />
         <span class="text-weight-bold">Back to Search</span>
@@ -24,7 +24,7 @@
         <div v-for="doc in store.doctors" :key="doc._id || doc.id" class="col-12 col-md-6">
           <DoctorCard :doctor="doc" @book="handleBook"/>
         </div>
-        
+
         <div v-if="store.doctors.length === 0" class="col-12 q-mt-lg">
           <div class="text-center q-py-xl glass-card q-px-md rounded-borders full-width">
             <q-icon name="search_off" size="64px" color="grey-7" class="q-mb-md" />
@@ -63,17 +63,19 @@ const handleBook = (doctor) => {
     router.push({ path: '/login', query: { redirect: redirectPath } })
     return
   }
-  
+
   // 🧠 store doctor
   store.selectDoctor(doctor);
 
-  // 🔥 PASS DATE IF AVAILABLE
+  // 🔥 PASS DATE + DOCTOR NAME TO SLOT SELECTION
   router.push({
     name: 'SlotSelection',
     params: { doctorId: doctor.doctorId },
     query: {
-      date: store.searchFilters.date || null
-    }
+      date: store.searchFilters.date || null,
+      doctorName: doctor.name || doctor.doctorId || ''
+    },
+    state: { doctor }
   });
 };
 
