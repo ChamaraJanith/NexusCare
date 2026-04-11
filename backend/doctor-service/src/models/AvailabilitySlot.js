@@ -65,6 +65,12 @@ const slotSchema = new mongoose.Schema(
       default: 0
     },
 
+    // Denormalized global platform service fee at slot creation time
+    serviceFee: {
+      type: Number,
+      default: 0
+    },
+
     location: {
       type: String,
       trim: true,

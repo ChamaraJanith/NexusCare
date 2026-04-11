@@ -17,9 +17,33 @@ const fetchHospitalFee = async (hospitalId, hospitalName) => {
   }
 };
 
+const fetchServiceFee = async () => {
+  try {
+    const { data } = await axios.get(`${FEE_SERVICE_URL}/api/service-fee`, { timeout: 5000 });
+    const amount = data?.data?.amount ?? 0;
+    console.log(`  [service-fee-lookup] global service fee → ${amount}`);
+    return amount;
+  } catch (err) {
+    console.warn(`  [service-fee-lookup] FAILED:`, err.message);
+    return null;
+  }
+};
+
 export const migrateHospitalFees = async () => {
   try {
-    // Re-migrate ALL physical slots every startup to fix any wrong values
+    // ── 1. Backfill serviceFee on ALL slots (global fee, same for every slot) ──
+    const serviceFee = await fetchServiceFee();
+    if (serviceFee === null) {
+      console.warn("⚠️ Service fee migration skipped — fee-service unreachable, will retry on next startup");
+    } else {
+      const sfResult = await AvailabilitySlot.updateMany(
+        { isDeleted: false, $or: [{ serviceFee: { $exists: false } }, { serviceFee: { $ne: serviceFee } }] },
+        { $set: { serviceFee } }
+      );
+      console.log(`✅ Service fee migration: ${sfResult.modifiedCount} slot(s) updated to serviceFee=${serviceFee}`);
+    }
+
+    // ── 2. Backfill hospitalFee on PHYSICAL slots ──
     const slots = await AvailabilitySlot.find({
       slotType: "PHYSICAL",
       isDeleted: false
@@ -37,8 +61,8 @@ export const migrateHospitalFees = async () => {
       const fee = await fetchHospitalFee(slot.hospitalId || "", slot.hospital || "");
 
       if (fee === null) {
-        console.warn("⚠️ Fee service unreachable — will retry on next startup");
-        break;
+        console.warn(`⚠️ Fee service unreachable for slot ${slot._id} — skipping, will retry on next startup`);
+        continue;
       }
 
       // Only update if fee differs from what's stored
