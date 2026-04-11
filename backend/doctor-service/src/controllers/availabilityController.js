@@ -86,22 +86,108 @@ const resolveSlotsForDate = async (doctorId, date) => {
 const resolveSlotsForNextDays = async (doctorId, dayCount = 30) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  const endDate = new Date(today);
+  endDate.setDate(today.getDate() + dayCount);
 
-  let physical = [];
-  let online = [];
+  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const now = new Date();
+
+  // ── 1. Single bulk fetch: all one-time slots in the date range ──
+  const [oneTimeSlots, recurringTemplates, existingInstances] = await Promise.all([
+    AvailabilitySlot.find({
+      doctorId,
+      date: { $gte: today, $lt: endDate },
+      isDeleted: false,
+      isRecurring: false,
+      parentSlotId: null
+    }).lean(),
+
+    AvailabilitySlot.find({
+      doctorId,
+      isRecurring: true,
+      isDeleted: false,
+      parentSlotId: null
+    }).lean(),
+
+    AvailabilitySlot.find({
+      doctorId,
+      date: { $gte: today, $lt: endDate },
+      isDeleted: false,
+      parentSlotId: { $ne: null }
+    }).lean()
+  ]);
+
+  // ── 2. Build a lookup of already-existing instances keyed by "parentId_dateStr" ──
+  const instanceMap = new Map();
+  for (const inst of existingInstances) {
+    const key = `${inst.parentSlotId}_${new Date(inst.date).toISOString().split("T")[0]}`;
+    instanceMap.set(key, inst);
+  }
+
+  // ── 3. For each day, resolve recurring templates — create missing instances in bulk ──
+  const toCreate = [];
+  const resolvedInstances = [];
 
   for (let i = 0; i < dayCount; i++) {
     const date = new Date(today);
     date.setDate(today.getDate() + i);
-    const result = await resolveSlotsForDate(doctorId, date);
-    physical = physical.concat(result.physical);
-    online = online.concat(result.online);
+    const dateStr = date.toISOString().split("T")[0];
+    const dow = dayNames[date.getDay()];
+
+    for (const template of recurringTemplates) {
+      if (template.dayOfWeek !== dow) continue;
+      const key = `${template._id}_${dateStr}`;
+      if (instanceMap.has(key)) {
+        resolvedInstances.push(instanceMap.get(key));
+      } else {
+        toCreate.push({
+          doctorId,
+          date: new Date(date),
+          startTime:   template.startTime,
+          endTime:     template.endTime,
+          slotType:    template.slotType,
+          hospital:    template.hospital  || "",
+          hospitalId:  template.hospitalId || "",
+          location:    template.location  || "",
+          platform:    template.platform  || "",
+          slotCount:   template.slotCount,
+          bookedCount: 0,
+          isBooked:    false,
+          isRecurring: false,
+          dayOfWeek:   null,
+          parentSlotId: template._id,
+          isDeleted:   false
+        });
+      }
+    }
   }
 
-  physical.sort((a, b) => new Date(a.date) - new Date(b.date));
-  online.sort((a, b) => new Date(a.date) - new Date(b.date));
+  // ── 4. Bulk-insert all missing instances in one shot ──
+  let newInstances = [];
+  if (toCreate.length > 0) {
+    newInstances = await AvailabilitySlot.insertMany(toCreate, { lean: true });
+  }
 
-  return { physical, online };
+  // ── 5. Merge + deduplicate + filter ──
+  const seen = new Map();
+  for (const s of [...oneTimeSlots, ...resolvedInstances, ...existingInstances, ...newInstances]) {
+    seen.set(s._id.toString(), s);
+  }
+
+  const validSlots = [...seen.values()].filter((slot) => {
+    if (slot.bookedCount >= slot.slotCount) return false;
+    const slotDateTime = new Date(slot.date);
+    const [h, m] = slot.startTime.split(":");
+    slotDateTime.setHours(Number.parseInt(h, 10), Number.parseInt(m, 10), 0, 0);
+    return slotDateTime >= now;
+  });
+
+  validSlots.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  return {
+    physical: validSlots.filter((s) => s.slotType === "PHYSICAL"),
+    online:   validSlots.filter((s) => s.slotType === "ONLINE")
+  };
 };
 
 // GET /api/availability/:doctorId
@@ -179,7 +265,7 @@ export const getSlotsByDoctorAndDate = async (req, res) => {
       parentSlotId: null,          // exclude already-created instances (avoid duplication)
       isRecurring: false,
       $expr: { $lt: ["$bookedCount", "$slotCount"] }
-    });
+    }).lean();
 
     // --- Fetch 2: Recurring templates that match this day of week
     const recurringTemplates = await AvailabilitySlot.find({
@@ -188,7 +274,7 @@ export const getSlotsByDoctorAndDate = async (req, res) => {
       dayOfWeek,
       isDeleted: false,
       parentSlotId: null
-    });
+    }).lean();
 
     // --- Resolve each recurring template into a date-specific instance (lazy creation)
     const instancePromises = recurringTemplates.map(template =>
@@ -203,7 +289,7 @@ export const getSlotsByDoctorAndDate = async (req, res) => {
       isDeleted: false,
       parentSlotId: { $ne: null },
       $expr: { $lt: ["$bookedCount", "$slotCount"] }
-    });
+    }).lean();
 
     // Deduplicate: use a Map keyed by _id string
     const seen = new Map();

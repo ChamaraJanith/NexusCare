@@ -64,22 +64,13 @@ const handleBook = (doctor) => {
     return;
   }
 
-  // 🧠 store doctor
+  // 🧠 Save to store — SlotSelection reads from here
   store.selectDoctor(doctor);
 
-  // 🔥 PASS DOCTOR DETAILS TO SLOT SELECTION
+  // Clean URL, doctor data lives in the store
   router.push({
     name: 'SlotSelection',
-    params: { doctorId: doctor.doctorId || doctor._id || doctor.id },
-    query: {
-      doctorName: doctor.name || doctor.doctorId || '',
-      specialty: doctor.specialty || doctor.specialization || '',
-      hospital: doctor.hospital || '',
-      experience: doctor.experience || '',
-      consultationFee: doctor.consultationFee || doctor.fee || '',
-      profileImage: doctor.profileImage || doctor.image || ''
-    },
-    state: { doctor }
+    params: { doctorId: doctor.doctorId || doctor._id || doctor.id }
   });
 };
 
