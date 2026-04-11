@@ -1,4 +1,21 @@
 import AvailabilitySlot from "../models/AvailabilitySlot.js";
+import axios from "axios";
+
+const FEE_SERVICE_URL = process.env.FEE_SERVICE_URL || "http://fee-management-service:5007";
+
+// Fetch hospital fee from fee-service — returns 0 if service is down (non-critical)
+const fetchHospitalFee = async (hospitalId, hospitalName) => {
+  try {
+    const params = hospitalId ? { hospitalId } : {};
+    const { data } = await axios.get(`${FEE_SERVICE_URL}/api/hospitals/fee`, {
+      params: { hospitalId, hospitalName },
+      timeout: 3000
+    });
+    return data?.hospitalFee ?? 0;
+  } catch {
+    return 0; // fee-service down — default to 0, slot still gets created
+  }
+};
 
 // ─── CREATE SLOT ────────────────────────────────────────────────
 export const addSlot = async (body, doctorId) => {
@@ -8,12 +25,19 @@ export const addSlot = async (body, doctorId) => {
   if (startTime >= endTime) throw new Error("startTime must be before endTime");
   if (!slotType) throw new Error("slotType required (ONLINE / PHYSICAL)");
 
-  let slotData = { 
-    doctorId, 
-    startTime, 
-    endTime, 
-    hospital: hospital || location || "", // preserve backwards compatibility if hospital is explicitly passed
+  // Denormalize hospital fee at creation time
+  let hospitalFee = 0;
+  if (slotType === "PHYSICAL" && (hospitalId || hospital)) {
+    hospitalFee = await fetchHospitalFee(hospitalId || "", hospital || "");
+  }
+
+  let slotData = {
+    doctorId,
+    startTime,
+    endTime,
+    hospital: hospital || location || "",
     hospitalId: hospitalId || "",
+    hospitalFee,
     location: location || hospital || "",
     platform: platform || "",
     slotType,

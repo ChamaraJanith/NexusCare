@@ -7,6 +7,7 @@ import doctorRoutes from "./routes/doctor.routes.js";
 import availabilityRoutes from "./routes/availability.routes.js";
 import prescriptionRoutes from "./routes/prescription.routes.js"; // 🔥 ADD THIS
 import { startRabbitMQConsumer } from "./services/rabbitmqConsumer.js";
+import { migrateHospitalFees } from "./services/migrateHospitalFees.js";
 
 dotenv.config();
 
@@ -97,6 +98,11 @@ const startServer = async () => {
     } catch (syncError) {
       console.warn("⚠️ Full doctor catalog sync failed at startup:", syncError.message);
     }
+
+    // Backfill hospitalFee on existing slots (runs once, skips already-migrated slots)
+    migrateHospitalFees().catch(err =>
+      console.warn("⚠️ Hospital fee migration error:", err.message)
+    );
 
     app.listen(PORT, () => {
       console.log(`🚀 Doctor Service running on port ${PORT}`);
