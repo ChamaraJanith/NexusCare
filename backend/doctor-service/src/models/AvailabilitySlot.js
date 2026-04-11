@@ -58,6 +58,13 @@ const slotSchema = new mongoose.Schema(
       index: true
     },
 
+    // Denormalized from fee-service at slot creation time
+    // Ensures fee display works even when fee-service is down
+    hospitalFee: {
+      type: Number,
+      default: 0
+    },
+
     location: {
       type: String,
       trim: true,

@@ -70,15 +70,21 @@ export const cancelAppointment = async (id) => {
 // ── Calculate fees for a slot (doctor + hospital + service) ──────
 export const calculateSlotFee = async (doctorId, hospitalId, appointmentType, hospitalName = '') => {
   try {
-    const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/service-fee/calculate/public`, {
-      doctorId,
-      hospitalId: hospitalId || '',
-      hospitalName,
-      appointmentType
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 4000); // 4s timeout
+    const res = await axios.post(
+      `${import.meta.env.VITE_API_URL}/api/service-fee/calculate/public`,
+      { doctorId, hospitalId: hospitalId || '', hospitalName, appointmentType },
+      { signal: controller.signal }
+    );
+    clearTimeout(timeout);
     return res.data?.data || null;
   } catch (error) {
-    console.warn('⚠️ Fee calculation failed:', error.message);
+    if (error.name === 'CanceledError') {
+      console.warn('⚠️ Fee service timeout — showing doctor fee only');
+    } else {
+      console.warn('⚠️ Fee calculation failed:', error.message);
+    }
     return null;
   }
 };

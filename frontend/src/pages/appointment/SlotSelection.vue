@@ -124,18 +124,10 @@
 
                 <!-- Fee (physical) -->
                 <div class="col-auto text-right q-mx-md">
-                  <template v-if="getSlotFee(slot)">
-                    <div class="text-green-4 text-weight-bold" style="font-size:13px">
-                      Rs {{ (getSlotFee(slot).doctorFee + getSlotFee(slot).hospitalFee).toLocaleString() }}
-                    </div>
-                    <div class="text-caption text-grey-6">+ Booking Fee</div>
-                  </template>
-                  <template v-else>
-                    <div class="text-green-4 text-weight-bold" style="font-size:13px">
-                      Rs {{ doctor.consultationFee || '—' }}
-                    </div>
-                    <div class="text-caption text-grey-6">+ Booking Fee</div>
-                  </template>
+                  <div class="text-green-4 text-weight-bold" style="font-size:13px">
+                    Rs {{ ((Number(doctor.consultationFee) || 0) + getHospitalFee(slot)).toLocaleString() }}
+                  </div>
+                  <div class="text-caption text-grey-6">+ Booking Fee</div>
                 </div>
 
                 <!-- Action -->
@@ -205,18 +197,10 @@
 
                 <!-- Fee (online) -->
                 <div class="col-auto text-right q-mx-md">
-                  <template v-if="getSlotFee(slot)">
-                    <div class="text-green-4 text-weight-bold" style="font-size:13px">
-                      Rs {{ (getSlotFee(slot).doctorFee + getSlotFee(slot).hospitalFee).toLocaleString() }}
-                    </div>
-                    <div class="text-caption text-grey-6">+ Booking Fee</div>
-                  </template>
-                  <template v-else>
-                    <div class="text-green-4 text-weight-bold" style="font-size:13px">
-                      Rs {{ doctor.consultationFee || '—' }}
-                    </div>
-                    <div class="text-caption text-grey-6">+ Booking Fee</div>
-                  </template>
+                  <div class="text-green-4 text-weight-bold" style="font-size:13px">
+                    Rs {{ (Number(doctor.consultationFee) || 0).toLocaleString() }}
+                  </div>
+                  <div class="text-caption text-grey-6">+ Booking Fee</div>
                 </div>
 
                 <div class="col-auto q-ml-md">
@@ -268,13 +252,19 @@ const selectedDateStr = ref('');
 const loadingSlots = ref(false);
 const physicalSlots = ref([]);
 const onlineSlots = ref([]);
-const slotFees = ref({});  // keyed by slot._id
+const slotFees = ref({});
 
-const getSlotFee = (slot) => slotFees.value[slot._id] || null;
+// Returns hospitalFee from slot (denormalized) or from fetched fee data
+const getHospitalFee = (slot) => {
+  if (slot.hospitalFee != null && slot.hospitalFee > 0) return slot.hospitalFee;
+  return slotFees.value[slot._id]?.hospitalFee || 0;
+};
 
 const fetchFeesForSlots = async (slots, type) => {
   const doctorId = doctor.value?.doctorId || doctor.value?._id || doctor.value?.id;
-  await Promise.all(slots.map(async (slot) => {
+  // Only fetch from fee-service for slots that don't have hospitalFee stored
+  const needsFetch = slots.filter(s => !s.hospitalFee || s.hospitalFee === 0);
+  await Promise.all(needsFetch.map(async (slot) => {
     if (slotFees.value[slot._id]) return;
     const fee = await calculateSlotFee(doctorId, slot.hospitalId || '', type, slot.hospital || '');
     if (fee) slotFees.value[slot._id] = fee;
@@ -363,9 +353,9 @@ const fetchSlots = async () => {
     physicalSlots.value = data.physical || [];
     onlineSlots.value   = data.online   || [];
     await store.fetchQueueNumber();
-    // Fetch fees in background — non-blocking
-    fetchFeesForSlots(physicalSlots.value, 'PHYSICAL');
-    fetchFeesForSlots(onlineSlots.value, 'ONLINE');
+    // Fetch fees for legacy slots that don't have hospitalFee stored yet
+    fetchFeesForSlots(physicalSlots.value, 'PHYSICAL').catch(() => {});
+    fetchFeesForSlots(onlineSlots.value, 'ONLINE').catch(() => {});
   } catch (e) {
     console.error(e);
     physicalSlots.value = [];
