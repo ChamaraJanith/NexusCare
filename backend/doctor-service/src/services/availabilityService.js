@@ -36,8 +36,8 @@ export const addSlot = async (body, doctorId) => {
 
   // Denormalize hospital fee and service fee at creation time
   let hospitalFee = 0;
-  if (slotType === "PHYSICAL" && (hospitalId || hospital)) {
-    hospitalFee = await fetchHospitalFee(hospitalId || "", hospital || "");
+  if (slotType === "PHYSICAL" && (hospitalId || hospital || location)) {
+    hospitalFee = await fetchHospitalFee(hospitalId || "", hospital || location || "");
   }
   const serviceFee = await fetchServiceFee();
 

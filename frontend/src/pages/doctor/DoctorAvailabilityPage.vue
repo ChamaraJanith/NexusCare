@@ -810,6 +810,7 @@ const submitSlot = async () => {
       slotType: form.value.slotType,
       slotCount: form.value.slotType === 'ONLINE' ? 1 : Number(form.value.slotCount),
       location: form.value.slotType === 'PHYSICAL' ? form.value.location : null,
+      hospital: form.value.slotType === 'PHYSICAL' ? form.value.location : null,
       platform: form.value.slotType === 'ONLINE' ? form.value.platform : null,
       ...(form.value.type === 'single'
         ? { date: form.value.date.replace(/\//g, '-') }
