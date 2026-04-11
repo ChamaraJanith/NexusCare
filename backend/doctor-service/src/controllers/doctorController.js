@@ -1,4 +1,5 @@
 import Doctor from "../models/Doctor.js";
+import mongoose from "mongoose";
 import * as doctorService from "../services/doctorService.js";
 import * as videoSyncClient from "../services/videoSyncClient.js";
 import * as videoCatalogSyncService from "../services/videoCatalogSyncService.js";
