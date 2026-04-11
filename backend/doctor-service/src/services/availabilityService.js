@@ -6,12 +6,21 @@ const FEE_SERVICE_URL = process.env.FEE_SERVICE_URL || "http://fee-management-se
 // Fetch hospital fee from fee-service — returns 0 if service is down (non-critical)
 const fetchHospitalFee = async (hospitalId, hospitalName) => {
   try {
-    const params = hospitalId ? { hospitalId } : {};
     const { data } = await axios.get(`${FEE_SERVICE_URL}/api/hospitals/fee`, {
       params: { hospitalId, hospitalName },
       timeout: 3000
     });
     return data?.hospitalFee ?? 0;
+  } catch {
+    return 0; // fee-service down — default to 0, slot still gets created
+  }
+};
+
+// Fetch global platform service fee — returns 0 if service is down (non-critical)
+const fetchServiceFee = async () => {
+  try {
+    const { data } = await axios.get(`${FEE_SERVICE_URL}/api/service-fee`, { timeout: 3000 });
+    return data?.data?.amount ?? 0;
   } catch {
     return 0; // fee-service down — default to 0, slot still gets created
   }
@@ -25,11 +34,12 @@ export const addSlot = async (body, doctorId) => {
   if (startTime >= endTime) throw new Error("startTime must be before endTime");
   if (!slotType) throw new Error("slotType required (ONLINE / PHYSICAL)");
 
-  // Denormalize hospital fee at creation time
+  // Denormalize hospital fee and service fee at creation time
   let hospitalFee = 0;
   if (slotType === "PHYSICAL" && (hospitalId || hospital)) {
     hospitalFee = await fetchHospitalFee(hospitalId || "", hospital || "");
   }
+  const serviceFee = await fetchServiceFee();
 
   let slotData = {
     doctorId,
@@ -38,6 +48,7 @@ export const addSlot = async (body, doctorId) => {
     hospital: hospital || location || "",
     hospitalId: hospitalId || "",
     hospitalFee,
+    serviceFee,
     location: location || hospital || "",
     platform: platform || "",
     slotType,
@@ -113,6 +124,8 @@ export const getOrCreateSlotInstance = async (doctorId, date, parentSlot) => {
     slotType:     parentSlot.slotType,
     hospital:     parentSlot.hospital  || "",
     hospitalId:   parentSlot.hospitalId || "",
+    hospitalFee:  parentSlot.hospitalFee || 0,
+    serviceFee:   parentSlot.serviceFee  || 0,
     location:     parentSlot.location  || "",
     platform:     parentSlot.platform  || "",
     slotCount:    parentSlot.slotCount,

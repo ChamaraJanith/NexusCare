@@ -256,14 +256,14 @@ const slotFees = ref({});
 
 // Returns hospitalFee from slot (denormalized) or from fetched fee data
 const getHospitalFee = (slot) => {
-  if (slot.hospitalFee != null && slot.hospitalFee > 0) return slot.hospitalFee;
+  if (slot.hospitalFee != null) return slot.hospitalFee;
   return slotFees.value[slot._id]?.hospitalFee || 0;
 };
 
 const fetchFeesForSlots = async (slots, type) => {
   const doctorId = doctor.value?.doctorId || doctor.value?._id || doctor.value?.id;
   // Only fetch from fee-service for slots that don't have hospitalFee stored
-  const needsFetch = slots.filter(s => !s.hospitalFee || s.hospitalFee === 0);
+  const needsFetch = slots.filter(s => s.hospitalFee == null);
   await Promise.all(needsFetch.map(async (slot) => {
     if (slotFees.value[slot._id]) return;
     const fee = await calculateSlotFee(doctorId, slot.hospitalId || '', type, slot.hospital || '');

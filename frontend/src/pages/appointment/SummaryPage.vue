@@ -172,38 +172,48 @@ onMounted(async () => {
 
   loadingFees.value = true;
   try {
-    // Service fee
-    try {
-      const resSf = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/service-fee`);
-      store.fees.bookingFee = resSf.data?.data?.amount || 0;
-    } catch { store.fees.bookingFee = 0; }
-
-    // Hospital fee
-    let hospitalId = store.selectedSlot?.hospitalId;
-    if (!hospitalId && store.consultationType === 'Physical') {
-      try {
-        const resH = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/hospitals`);
-        const matched = (resH.data?.data || []).find(
-          h => h.name === store.selectedSlot.hospital || h.name === store.selectedSlot.location
-        );
-        if (matched) hospitalId = matched.hospitalId || matched._id;
-      } catch { /* fallback */ }
-    }
-
-    resolvedHospitalId.value = hospitalId || null;
-    if (resolvedHospitalId.value) {
-      store.selectedSlot = {
-        ...store.selectedSlot,
-        hospitalId: resolvedHospitalId.value,
-      };
-    }
-    if (resolvedHospitalId.value && store.consultationType === 'Physical') {
-      try {
-        const resHf = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/hospitals/${resolvedHospitalId.value}`);
-        store.fees.hospitalFee = resHf.data?.data?.hospitalFee || 0;
-      } catch { store.fees.hospitalFee = 0; }
+    // Hospital fee — use denormalized value stored on the slot (resilient to fee-service being down)
+    if (store.consultationType === 'Physical') {
+      const slotHospitalFee = store.selectedSlot?.hospitalFee;
+      if (slotHospitalFee != null) {
+        store.fees.hospitalFee = slotHospitalFee;
+      } else {
+        // Legacy slot without stored fee — try live lookup as fallback
+        let hospitalId = store.selectedSlot?.hospitalId;
+        if (!hospitalId) {
+          try {
+            const resH = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/hospitals`);
+            const matched = (resH.data?.data || []).find(
+              h => h.name === store.selectedSlot.hospital || h.name === store.selectedSlot.location
+            );
+            if (matched) hospitalId = matched.hospitalId || matched._id;
+          } catch { /* fallback */ }
+        }
+        resolvedHospitalId.value = hospitalId || null;
+        if (resolvedHospitalId.value) {
+          store.selectedSlot = { ...store.selectedSlot, hospitalId: resolvedHospitalId.value };
+          try {
+            const resHf = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/hospitals/${resolvedHospitalId.value}`);
+            store.fees.hospitalFee = resHf.data?.data?.hospitalFee || 0;
+          } catch { store.fees.hospitalFee = 0; }
+        } else {
+          store.fees.hospitalFee = 0;
+        }
+      }
     } else {
       store.fees.hospitalFee = 0;
+    }
+
+    // Service/booking fee — use denormalized value stored on the slot (same pattern as hospitalFee)
+    const slotServiceFee = store.selectedSlot?.serviceFee;
+    if (slotServiceFee != null) {
+      store.fees.bookingFee = slotServiceFee;
+    } else {
+      // Legacy slot without stored serviceFee — try live lookup as fallback
+      try {
+        const resSf = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/service-fee`);
+        store.fees.bookingFee = resSf.data?.data?.amount ?? 0;
+      } catch { store.fees.bookingFee = 0; }
     }
   } finally {
     loadingFees.value = false;
