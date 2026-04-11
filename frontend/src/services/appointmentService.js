@@ -67,7 +67,21 @@ export const cancelAppointment = async (id) => {
   return res.data;
 };
 
-// ── Get all availability for a doctor ─────────────────────────────
+// ── Calculate fees for a slot (doctor + hospital + service) ──────
+export const calculateSlotFee = async (doctorId, hospitalId, appointmentType, hospitalName = '') => {
+  try {
+    const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/service-fee/calculate/public`, {
+      doctorId,
+      hospitalId: hospitalId || '',
+      hospitalName,
+      appointmentType
+    });
+    return res.data?.data || null;
+  } catch (error) {
+    console.warn('⚠️ Fee calculation failed:', error.message);
+    return null;
+  }
+};
 export const getDoctorSlotsNext30Days = async (doctorId) => {
   try {
     const res = await axios.get(`${AVAILABILITY_API}/${doctorId}/next`);

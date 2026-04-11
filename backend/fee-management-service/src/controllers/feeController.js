@@ -91,8 +91,22 @@ const calculateFee = async (req, res, next) => {
 
     // 3. Hospital fee — only for PHYSICAL appointments
     let hospitalFee = 0;
-    if (appointmentType === "PHYSICAL" && hospitalId) {
-      const hospitalDoc = await Hospital.findOne({ hospitalId, isActive: true });
+    if (appointmentType === "PHYSICAL") {
+      const { hospitalName } = req.body;
+      let hospitalDoc = null;
+
+      if (hospitalId) {
+        hospitalDoc = await Hospital.findOne({ hospitalId, isActive: true });
+      }
+
+      // Fallback: look up by name if hospitalId missing or not found
+      if (!hospitalDoc && hospitalName) {
+        hospitalDoc = await Hospital.findOne({
+          name: { $regex: new RegExp(hospitalName.trim(), 'i') },
+          isActive: true
+        });
+      }
+
       hospitalFee = hospitalDoc?.hospitalFee ?? 0;
     }
 
