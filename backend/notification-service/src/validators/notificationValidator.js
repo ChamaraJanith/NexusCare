@@ -42,7 +42,7 @@ const sendRegistrationEmailSchema = Joi.object({
 });
 
 const logNotificationSchema = Joi.object({
-  type: Joi.string().valid('payment', 'appointment', 'registration', 'system', 'other').required(),
+  type: Joi.string().valid('payment', 'appointment', 'registration', 'video', 'system', 'other').required(),
   event: Joi.string().trim().min(1).required(),
   status: Joi.string().valid('success', 'failed', 'pending', 'confirmed', 'rejected', 'cancelled').required(),
   appointmentId: Joi.string().optional(),

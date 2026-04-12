@@ -4,7 +4,7 @@ const notificationSchema = new mongoose.Schema({
   type: {
     type: String,
     required: true,
-    enum: ['payment', 'appointment', 'registration', 'system', 'other'],
+    enum: ['payment', 'appointment', 'registration', 'video', 'system', 'other'],
     default: 'other',
   },
   event: {

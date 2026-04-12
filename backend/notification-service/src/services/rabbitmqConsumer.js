@@ -112,7 +112,29 @@ const startRabbitMQConsumer = async () => {
     { noAck: false }
   );
 
-   channel.consume(
+  channel.consume(
+    VIDEO_QUEUE,
+    async (msg) => {
+      if (!msg) return;
+
+      try {
+        const payload = JSON.parse(msg.content.toString());
+        const routingKey = msg.fields.routingKey;
+        console.log(`📩 Received ${routingKey} event`, payload);
+
+        await processVideoNotificationEvent(payload, routingKey);
+
+        channel.ack(msg);
+      } catch (error) {
+        console.error('❌ Failed to process video event', error);
+        const redelivered = msg.fields.redelivered;
+        channel.nack(msg, false, !redelivered);
+      }
+    },
+    { noAck: false }
+  );
+
+  channel.consume(
     PAYMENTS_QUEUE,
     async (msg) => {
       if (!msg) return;
