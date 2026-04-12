@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import cors from "cors";
 import appointmentRoutes from "./routes/appointmentRoutes.js";
 import doctorSearchRoutes from "./routes/doctorSearchRoutes.js";
+import availabilityRoutes from "./routes/availabilityRoutes.js";
 import http from "node:http";
 import { Server } from "socket.io";
 
@@ -41,6 +42,7 @@ export { io };
 
 app.use("/api/appointments", appointmentRoutes);
 app.use("/api/doctors", doctorSearchRoutes);
+app.use("/api/availability", availabilityRoutes);
 
 app.get("/", (req, res) => {
   res.send("Appointment Service running 🚀");

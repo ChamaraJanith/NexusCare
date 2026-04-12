@@ -11,7 +11,7 @@ const getToken = () =>
 export const getDoctorDetails = async (doctorId) => {
   try {
     const res = await axios.get(`${DOCTOR_API}/internal/${doctorId}`);
-    return res.data?.data || null;
+    return res.data?.data || res.data || null;
   } catch (error) {
     console.warn('⚠️ Failed to fetch doctor details:', error.message);
     return null;
