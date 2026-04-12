@@ -1,7 +1,7 @@
 <template>
   <q-page class="search-page-bg text-white font-jakarta flex column items-center q-pt-xl">
     <div class="max-width-1000 w-full q-px-md">
-      
+
       <!-- Top Tag -->
       <div class="q-mb-lg flex items-center">
         <div class="nexus-tag border-blue text-blue-2 q-px-md q-py-xs rounded-borders text-caption text-weight-bold flex items-center">
@@ -23,7 +23,7 @@
       <q-card class="nexus-search-card bg-transparent shadow-none q-mb-xl">
         <q-card-section class="q-pa-xl">
           <form @submit.prevent="handleSearch" class="q-gutter-y-lg">
-            
+
             <div class="row q-col-gutter-lg">
               <!-- Name -->
               <div class="col-12 col-md-3">
@@ -41,7 +41,7 @@
                   </template>
                 </q-input>
               </div>
-              
+
               <!-- Specialization -->
               <div class="col-12 col-md-3">
                 <div class="text-caption text-uppercase text-weight-bold text-grey-5 tracking-wider q-mb-sm custom-label">SPECIALIZATION</div>
@@ -122,10 +122,15 @@
 
               <q-btn flat dense label="Clear" color="white" class="text-weight-bold text-caption clear-btn" @click="clearFilters" />
             </div>
-            
+
           </form>
         </q-card-section>
       </q-card>
+
+      <q-banner v-if="store.errorMessage" class="bg-red-1 text-negative q-mb-xl" rounded>
+        <q-icon name="warning" class="q-mr-sm" />
+        {{ store.errorMessage }}
+      </q-banner>
 
       <!-- Stats Features row based exactly on screenshot 1 -->
       <div class="row q-col-gutter-lg justify-start">
@@ -217,9 +222,11 @@ const handleSearch = async () => {
   if (filters.specialization) activeFilters.specialization = filters.specialization;
   if (filters.hospital) activeFilters.hospital = filters.hospital;
   if (filters.date) activeFilters.date = filters.date;
-  
-  await store.fetchDoctors(activeFilters);
-  router.push('/appointment/results');
+
+  const success = await store.fetchDoctors(activeFilters);
+  if (success) {
+    router.push('/appointment/results');
+  }
 };
 
 const clearFilters = () => {

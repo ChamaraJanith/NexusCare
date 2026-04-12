@@ -11,6 +11,8 @@ export const useAppointmentStore = defineStore('appointment', {
     },
     doctors: [],
     loading: false,
+    staleSearch: false,
+    errorMessage: '',
 
     selectedDoctor: null,
     selectedDate: '',
@@ -57,11 +59,21 @@ export const useAppointmentStore = defineStore('appointment', {
   actions: {
     async fetchDoctors(filters) {
       this.loading = true;
+      this.errorMessage = '';
+      this.staleSearch = false;
       try {
-        const data = await searchDoctors(filters);
-        this.doctors = data; // MUST use data, not data.data
+        const response = await searchDoctors(filters);
+        this.doctors = response.doctors || [];
+        this.staleSearch = response.stale || false;
+        if (response.message) {
+          this.errorMessage = response.message;
+        }
+        return true;
       } catch (e) {
         console.error(e);
+        this.doctors = [];
+        this.errorMessage = e.message || 'Unable to search doctors at this time.';
+        return false;
       } finally {
         this.loading = false;
       }
@@ -87,7 +99,7 @@ export const useAppointmentStore = defineStore('appointment', {
       this.selectedSlot = slot;
       this.consultationType = type;
     },
-    
+
     async fetchQueueNumber() {
       if (this.selectedDoctor && this.selectedDate) {
         try {

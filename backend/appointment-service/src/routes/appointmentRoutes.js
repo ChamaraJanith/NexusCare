@@ -94,7 +94,7 @@ router.get("/search", async (req, res) => {
   try {
     const { name, specialization, hospital, location, date } = req.query;
 
-    const doctors = await doctorService.searchDoctors({
+    const result = await doctorService.searchDoctors({
       name,
       specialization,
       hospital,
@@ -102,11 +102,17 @@ router.get("/search", async (req, res) => {
       date
     });
 
-    res.json(doctors);
+    if (result.stale) {
+      res.set("X-Cache", "STALE");
+      res.set("X-Cache-Warning", "Doctor service unavailable — showing cached results");
+    }
+
+    res.json(result);
 
   } catch (error) {
     console.error("❌ ERROR:", error.message);
-    res.status(500).json({ error: "Failed to fetch doctors" });
+    const status = error.statusCode || 500;
+    res.status(status).json({ error: error.message });
   }
 });
 

@@ -3,6 +3,7 @@ import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import appointmentRoutes from "./routes/appointmentRoutes.js";
+import doctorSearchRoutes from "./routes/doctorSearchRoutes.js";
 import http from "node:http";
 import { Server } from "socket.io";
 
@@ -39,6 +40,7 @@ io.on("connection", (socket) => {
 export { io };
 
 app.use("/api/appointments", appointmentRoutes);
+app.use("/api/doctors", doctorSearchRoutes);
 
 app.get("/", (req, res) => {
   res.send("Appointment Service running 🚀");
