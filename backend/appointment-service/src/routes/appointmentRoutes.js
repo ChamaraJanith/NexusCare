@@ -1,6 +1,5 @@
 import express from "express";
 import mongoose from "mongoose";
-import axios from "axios";
 import {
   bookAppointment,
   getAppointments,
@@ -17,74 +16,28 @@ import {
 
 import * as doctorService from "../services/doctorService.js";
 import { verifyUser } from "../services/authService.js";
+import { publishEvent } from "../services/eventPublisher.js";
 import Appointment from "../models/Appointment.js";
 
-const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || "http://notification-service:5006";
-const VIDEO_SERVICE_URL = process.env.VIDEO_SERVICE_URL || "http://video-session-integration-service:5012";
 const INTERNAL_SERVICE_KEY = process.env.INTERNAL_SERVICE_KEY;
 
-const sendNotificationEmail = async ({ email, subject, message }) => {
-  if (!email) return false;
-
-  try {
-    const response = await axios.post(
-      `${NOTIFICATION_SERVICE_URL}/api/notifications/send`,
-      { email, subject, message },
-      {
-        headers: { "x-internal-service-key": INTERNAL_SERVICE_KEY },
-        timeout: 5000,
-      }
-    );
-
-    console.log(`📩 Appointment-service email send response for ${email}:`, response.data);
-    return response.data?.success === true;
-  } catch (err) {
-    console.error("❌ Appointment-service failed to send notification email:", err.response?.data || err.message || err);
-    return false;
-  }
-};
-
-const ensureVideoSession = async (appointment) => {
-  if (!appointment) return null;
-  if (appointment.appointmentType !== "ONLINE") return appointment;
-  if (appointment.status !== "CONFIRMED") return appointment;
-  if (appointment.paymentStatus !== "PAID") return appointment;
-  if (appointment.videoRoomId && appointment.videoRoomUrl) return appointment;
-
-  try {
-    const response = await axios.post(
-      `${VIDEO_SERVICE_URL}/api/video/initialize-link`,
-      {
-        patientId: appointment.patientId,
-        doctorId: appointment.doctorId,
-        appointmentId: appointment._id,
-        patientEmail: appointment.email || '',
-        doctorEmail: appointment.doctorEmail || '',
-        patientPhone: appointment.phone || '',
-      },
-      {
-        headers: { "x-internal-service-key": INTERNAL_SERVICE_KEY },
-        timeout: 7000,
-      }
-    );
-
-    const session = response.data?.data;
-    if (session?.roomId && session?.roomUrl) {
-      return await Appointment.findByIdAndUpdate(
-        appointment._id,
-        {
-          videoRoomId: session.roomId,
-          videoRoomUrl: session.roomUrl,
-        },
-        { new: true }
-      );
-    }
-  } catch (err) {
-    console.warn("⚠️ Failed to ensure video session:", err.response?.data || err.message || err);
-  }
-
-  return appointment;
-};
+const buildAppointmentEventPayload = (appointment) => ({
+  appointmentId: appointment.appointmentId,
+  id: appointment._id?.toString(),
+  patientId: appointment.patientId,
+  doctorId: appointment.doctorId,
+  appointmentType: appointment.appointmentType,
+  status: appointment.status,
+  paymentStatus: appointment.paymentStatus,
+  date: appointment.date,
+  time: appointment.time,
+  email: appointment.email,
+  phone: appointment.phone,
+  queueNumber: appointment.queueNumber,
+  doctorName: appointment.doctorName,
+  patientName: appointment.patientName,
+  rejectionReason: appointment.rejectionReason,
+});
 
 const router = express.Router();
 
@@ -231,18 +184,18 @@ router.put("/doctor/confirm/:id", async (req, res) => {
     const { io } = await import("../app.js");
     io.emit("appointmentConfirmed", updated);
 
-    if (updated?.email) {
-      await sendNotificationEmail({
-        email: updated.email,
-        subject: "NexusCare Appointment Confirmed",
-        message: `Hello ${updated.patientName || 'Patient'},\n\nYour appointment scheduled on ${updated.date} at ${updated.time} has been confirmed by Dr. ${updated.doctorId}.\n\nThank you for using NexusCare.`,
-      });
-    } else {
-      console.warn("⚠️ Appointment confirmed but no patient email was available to send notification");
+    try {
+      await publishEvent("appointments", "appointment.confirmed", buildAppointmentEventPayload(updated));
+    } catch (err) {
+      console.warn("⚠️ Failed to publish appointment.confirmed event:", err.message || err);
     }
 
     if (updated.paymentStatus === "PAID" && updated.appointmentType === "ONLINE") {
-      await ensureVideoSession(updated);
+      try {
+        await publishEvent("appointments", "appointment.online_confirmed", buildAppointmentEventPayload(updated));
+      } catch (err) {
+        console.warn("⚠️ Failed to publish appointment.online_confirmed event:", err.message || err);
+      }
     }
 
     res.json({ message: "Appointment confirmed", appointment: updated });
@@ -274,14 +227,10 @@ router.put("/doctor/reject/:id", async (req, res) => {
     const { io } = await import("../app.js");
     io.emit("appointmentRejected", updated);
 
-    if (updated?.email) {
-      await sendNotificationEmail({
-        email: updated.email,
-        subject: "NexusCare Appointment Rejected",
-        message: `Hello ${updated.patientName || 'Patient'},\n\nYour appointment scheduled on ${updated.date} at ${updated.time} has been rejected by the doctor.\n\nReason: ${reason || 'Rejected by doctor'}\n\nPlease book another appointment or contact NexusCare support.`,
-      });
-    } else {
-      console.warn("⚠️ Appointment rejected but no patient email was available to send notification");
+    try {
+      await publishEvent("appointments", "appointment.rejected", buildAppointmentEventPayload(updated));
+    } catch (err) {
+      console.warn("⚠️ Failed to publish appointment.rejected event:", err.message || err);
     }
 
     res.json({ message: "Appointment rejected", appointment: updated });
@@ -340,7 +289,11 @@ router.patch("/:id/payment", async (req, res) => {
     if (!updated) return res.status(404).json({ error: "Appointment not found" });
 
     if (updated.paymentStatus === "PAID" && updated.status === "CONFIRMED" && updated.appointmentType === "ONLINE") {
-      await ensureVideoSession(updated);
+      try {
+        await publishEvent("appointments", "appointment.online_confirmed", buildAppointmentEventPayload(updated));
+      } catch (err) {
+        console.warn("⚠️ Failed to publish appointment.online_confirmed event:", err.message || err);
+      }
     }
 
     res.json({ message: "Payment status updated", appointment: updated });
