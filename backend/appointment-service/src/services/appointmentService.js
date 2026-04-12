@@ -1,6 +1,7 @@
 import Appointment from "../models/Appointment.js";
 import axios from "axios"; // 🔥 IMPORTANT (missing in your code)
 import { io } from "../app.js";
+import { publishEvent } from "./eventPublisher.js";
 
 const FEE_SERVICE_URL = process.env.FEE_SERVICE_URL || "http://fee-management-service:5007";
 const DOCTOR_SERVICE_URL = process.env.DOCTOR_SERVICE_URL || "http://doctor-service:5002";
@@ -144,6 +145,27 @@ export const createAppointment = async (data) => {
   });
 
   const saved = await appointment.save();
+
+  try {
+    await publishEvent("appointments", "appointment.created", {
+      appointmentId: saved.appointmentId,
+      id: saved._id?.toString(),
+      patientId: saved.patientId,
+      doctorId: saved.doctorId,
+      appointmentType: saved.appointmentType,
+      status: saved.status,
+      paymentStatus: saved.paymentStatus,
+      date: saved.date,
+      time: saved.time,
+      email: saved.email,
+      phone: saved.phone,
+      queueNumber: saved.queueNumber,
+      doctorName: saved.doctorName,
+      patientName: saved.patientName,
+    });
+  } catch (err) {
+    console.warn("⚠️ Failed to publish appointment.created event:", err.message || err);
+  }
 
   io.emit("appointmentBooked", saved);
 
