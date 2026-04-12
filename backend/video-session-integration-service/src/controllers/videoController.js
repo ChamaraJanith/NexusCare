@@ -1,6 +1,6 @@
 const VideoSession = require('../models/videoSessionModel');
 const videoService = require('../services/videoService');
-const notificationClient = require('../services/notificationClient');
+const { publishEvent } = require('../services/eventPublisher');
 
 const initializeSession = async (req, res, next) => {
   try {
@@ -38,23 +38,24 @@ const initializeSession = async (req, res, next) => {
 
     await newSession.save();
 
-    const startMessage = `Your NexusCare session (Room: ${sessionData.roomId}) has started.`;
-    const uniqueRecipients = [...new Set([newSession.patientEmail, newSession.doctorEmail].filter(Boolean))];
-
-    const emailTasks = uniqueRecipients.map(async (toEmail) => {
-      try {
-        await notificationClient.sendEmail({
-          email: toEmail,
-          subject: 'NexusCare Consultation Started',
-          message: startMessage,
-        });
-        console.log(`✅ Email sent to ${toEmail}`);
-      } catch (sendErr) {
-        console.warn(`⚠️ Email failed to ${toEmail}:`, sendErr.message);
-      }
-    });
-
-    await Promise.allSettled(emailTasks);
+    try {
+      await publishEvent('video', 'video.session.created', {
+        appointmentId: newSession.appointmentId,
+        roomId: newSession.roomId,
+        roomUrl: newSession.roomUrl,
+        patientId: newSession.patientId,
+        doctorId: newSession.doctorId,
+        patientEmail: newSession.patientEmail,
+        doctorEmail: newSession.doctorEmail,
+        patientPhone: newSession.patientPhone,
+        doctorPhone: newSession.doctorPhone || '',
+        appointmentType: newSession.appointmentType,
+        status: newSession.status,
+        startedAt: newSession.startedAt,
+      });
+    } catch (publishError) {
+      console.warn('⚠️ Failed to publish video.session.created event:', publishError.message || publishError);
+    }
 
     return res.status(200).json({ success: true, data: newSession });
   } catch (error) {
@@ -77,40 +78,24 @@ const endSession = async (req, res, next) => {
     session.endedAt = new Date();
     await session.save();
 
-    const emailPayload = {
-      subject: 'Consultation Summary - NexusCare',
-      message: `Your medical session (Room: ${roomId}) has ended successfully. Thank you for using NexusCare.`,
-    };
-
-    const uniqueRecipients = [...new Set([session.patientEmail, session.doctorEmail].filter(Boolean))];
-    const emailTasks = uniqueRecipients.map(async (toEmail) => {
-      try {
-        await notificationClient.sendEmail({
-          email: toEmail,
-          subject: emailPayload.subject,
-          message: emailPayload.message,
-        });
-        console.log(`✅ Email sent to: ${toEmail}`);
-      } catch (sendErr) {
-        console.warn(`⚠️ Failed Email to: ${toEmail}`, sendErr.message);
-      }
-    });
-
-    await Promise.allSettled(emailTasks);
-
-    if (session.patientPhone) {
-      try {
-        await notificationClient.sendSms({
-          phoneNumber: session.patientPhone,
-          message: `NexusCare: Your session (Room: ${roomId}) is complete.`,
-        });
-        console.log('✅ SMS Request successfully sent');
-      } catch (e) {
-        console.log('❌ SMS Request Failed:', e.response ? e.response.data : e.message);
-      }
+    try {
+      await publishEvent('video', 'video.session.ended', {
+        appointmentId: session.appointmentId,
+        roomId: session.roomId,
+        patientId: session.patientId,
+        doctorId: session.doctorId,
+        patientEmail: session.patientEmail,
+        doctorEmail: session.doctorEmail,
+        patientPhone: session.patientPhone,
+        doctorPhone: session.doctorPhone || '',
+        endedAt: session.endedAt,
+        status: session.status,
+      });
+    } catch (publishError) {
+      console.warn('⚠️ Failed to publish video.session.ended event:', publishError.message || publishError);
     }
 
-    return res.status(200).json({ success: true, message: 'Notifications Dispatched', data: session });
+    return res.status(200).json({ success: true, message: 'Video session ended', data: session });
   } catch (error) {
     next(error);
   }

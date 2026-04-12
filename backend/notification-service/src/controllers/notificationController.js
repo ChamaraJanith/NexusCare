@@ -285,6 +285,83 @@ const processAppointmentNotificationEvent = async (payload, routingKey) => {
     });
 };
 
+const buildVideoNotificationMessages = (payload, routingKey) => {
+    const roomUrl = payload.roomUrl || payload.roomId || 'your session room';
+    const displayDate = payload.date || 'your scheduled date';
+    const displayTime = payload.time || 'your scheduled time';
+
+    switch (routingKey) {
+        case 'video.session.created':
+            return {
+                subject: 'NexusCare Video Session Ready',
+                message: `Hello,
+
+Your NexusCare video consultation is ready. Join using this link: ${roomUrl}${payload.roomUrl ? '' : ` (Room ID: ${payload.roomId})`}.
+
+Your appointment is scheduled for ${displayDate} at ${displayTime}.
+
+Thank you,
+NexusCare Team`,
+                sms: `Your NexusCare video session is ready. Join here: ${roomUrl}`,
+            };
+        case 'video.session.ended':
+            return {
+                subject: 'Your NexusCare Video Session Completed',
+                message: `Hello,
+
+Your NexusCare video consultation has ended successfully. Thank you for using NexusCare.
+
+If you need follow-up care, please return to the app.
+
+Best regards,
+NexusCare Team`,
+                sms: `Your NexusCare video session has ended. Thank you for using NexusCare.`,
+            };
+        default:
+            return null;
+    }
+};
+
+const processVideoNotificationEvent = async (payload, routingKey) => {
+    const notification = buildVideoNotificationMessages(payload, routingKey);
+    if (!notification) {
+        throw new Error(`Unsupported routing key: ${routingKey}`);
+    }
+
+    const promises = [];
+    if (payload.patientEmail) {
+        promises.push(sendEmailPayload({ email: payload.patientEmail, subject: notification.subject, message: notification.message }));
+    }
+    if (payload.doctorEmail) {
+        promises.push(sendEmailPayload({ email: payload.doctorEmail, subject: notification.subject, message: notification.message }));
+    }
+    if (payload.patientPhone) {
+        promises.push(sendSMSPayload({ phoneNumber: payload.patientPhone, message: notification.sms }));
+    }
+    if (payload.doctorPhone) {
+        promises.push(sendSMSPayload({ phoneNumber: payload.doctorPhone, message: notification.sms }));
+    }
+
+    const results = await Promise.allSettled(promises);
+    const errors = results.filter((result) => result.status === 'rejected').map((result) => result.reason);
+    if (errors.length) {
+        throw new Error(`Video session notification failed: ${errors.map((err) => err.message || err).join('; ')}`);
+    }
+
+    await saveNotificationRecord({
+        type: 'video',
+        event: routingKey,
+        status: 'sent',
+        appointmentId: payload.appointmentId,
+        doctorId: payload.doctorId,
+        patientId: payload.patientId,
+        email: payload.patientEmail || payload.doctorEmail,
+        phoneNumber: payload.patientPhone || payload.doctorPhone,
+        message: notification.message,
+        payload,
+    });
+};
+
 const saveNotificationRecord = async (data) => {
     const notification = new Notification(data);
     return notification.save();
@@ -401,4 +478,14 @@ const sendRegistrationEmail = async (req, res, next) => {
 };
 
 
-module.exports = { sendEmail, sendSMS, sendRegistrationEmail, sendRegistrationEmailPayload, sendSMSPayload, logNotification, sendEmailPayload, processAppointmentNotificationEvent };
+module.exports = {
+  sendEmail,
+  sendSMS,
+  sendRegistrationEmail,
+  sendRegistrationEmailPayload,
+  sendSMSPayload,
+  logNotification,
+  sendEmailPayload,
+  processAppointmentNotificationEvent,
+  processVideoNotificationEvent,
+};
