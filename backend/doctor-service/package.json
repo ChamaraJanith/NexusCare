@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test ./src/__tests__/retryHelper.test.js ./src/__tests__/doctorSyncPayload.test.js",
     "start": "node src/app.js",
     "dev": "nodemon src/app.js"
   },
