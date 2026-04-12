@@ -203,7 +203,7 @@
 <script setup>
 import { ref, onMounted, computed, onBeforeUnmount, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import axios from 'axios'
+import { api } from 'src/boot/axios'
 import { useQuasar } from 'quasar'
 
 const route = useRoute()
@@ -264,7 +264,7 @@ const completedSessions = computed(() => {
 // --- Methods ---
 const fetchSessions = async () => {
   try {
-    const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/video/sessions`)
+    const res = await api.get('/api/video/sessions')
     if (res.data.success) {
       sessions.value = res.data.data
     }
@@ -275,7 +275,7 @@ const fetchSessions = async () => {
 
 const fetchDoctors = async () => {
   try {
-    const videoRes = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/video/doctors`)
+    const videoRes = await api.get('/api/video/doctors')
 
     if (videoRes.data.success) {
       doctors.value = Array.isArray(videoRes.data.data) ? videoRes.data.data : []
@@ -336,7 +336,7 @@ const startJitsiCall = (roomName) => {
         videoConferenceLeft: async () => {
           try {
 
-            await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/video/end-session`, { roomId: roomName });
+            await api.post('/api/video/end-session', { roomId: roomName });
 
             await fetchSessions();
 
@@ -368,14 +368,12 @@ const processBooking = async () => {
   try {
     const activeDoctorEmail = (booking.value.doctorEmail || doctorEmail.value).trim();
 
-    const response = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/video/initialize-link`, {
+    const response = await api.post('/api/video/initialize-link', {
       patientId: String(patientId.value).trim(),
       doctorId: String(booking.value.doctorId).trim(),
       patientEmail: patientEmail.value,
       patientPhone: "+94767691846",
       doctorEmail: activeDoctorEmail || '',
-      doctorName: selectedDoctor.value?.name || '',
-      doctorSpecialization: selectedDoctor.value?.specialization || ''
     });
 
     if (response.data.success) {
@@ -420,12 +418,9 @@ const evaluateAppointmentReadiness = () => {
 const fetchAppointmentDetails = async () => {
   if (!appointmentIdValue.value) return;
 
-  const authHeader = { Authorization: `Bearer ${localStorage.getItem('token') || localStorage.getItem('nexus_token')}` };
-
   try {
-    const response = await axios.get(
-      `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/appointments/details/${appointmentIdValue.value}`,
-      { headers: authHeader }
+    const response = await api.get(
+      `/api/appointments/details/${appointmentIdValue.value}`
     );
 
     appointment.value = response.data?.appointment || null;
@@ -439,9 +434,8 @@ const fetchAppointmentDetails = async () => {
 
     if (err.response?.status === 404 && route.query.patientId && route.query.doctorId) {
       try {
-        const fallbackRes = await axios.get(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/appointments/patient/${route.query.patientId}`,
-          { headers: authHeader }
+        const fallbackRes = await api.get(
+          `/api/appointments/patient/${route.query.patientId}`
         );
 
         const allAppointments = Array.isArray(fallbackRes.data)
@@ -477,7 +471,7 @@ const joinAppointment = async () => {
   }
 
   try {
-    const response = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/video/initialize-link`, {
+    const response = await api.post('/api/video/initialize-link', {
       patientId: appointment.value.patientId,
       doctorId: appointment.value.doctorId,
       appointmentId: appointment.value._id,

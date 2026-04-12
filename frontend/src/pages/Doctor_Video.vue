@@ -97,7 +97,7 @@
 <script setup>
 import { ref, onMounted, computed, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
-import axios from 'axios'
+import { api } from 'src/boot/axios'
 import { useQuasar } from 'quasar'
 
 const route = useRoute()
@@ -132,7 +132,7 @@ const completedSessions = computed(() => {
 // Database එකෙන් සෙෂන් දත්ත ලබා ගැනීම
 const fetchSessions = async () => {
   try {
-    const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/video/sessions`)
+    const response = await api.get('/api/video/sessions')
     if (response.data.success) {
       sessions.value = response.data.data
     }
@@ -163,8 +163,8 @@ const joinCall = (roomId) => {
         videoConferenceLeft: async () => {
           try {
             // Backend එක update කිරීම
-            await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/video/end-session`, { roomId: roomId })
-            // UI එකට අලුත් දත්ත ලබා ගැනීම
+            await api.post('/api/video/end-session', { roomId: roomId })
+        
             await fetchSessions()
           } catch (err) {
             console.error("End session error:", err)
