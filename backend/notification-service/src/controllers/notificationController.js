@@ -210,6 +210,81 @@ const sendRegistrationEmailPayload = async ({ email, name, role }) => {
     });
 };
 
+const sendEmailPayload = async ({ email, subject, message }) => {
+    const transporter = getEmailTransporter();
+    return transporter.sendMail({
+        from: `"NexusCare" <${config.GMAIL_USER}>`,
+        to: email,
+        subject,
+        text: message,
+    });
+};
+
+const buildAppointmentNotificationMessages = (payload, routingKey) => {
+    const appointmentLabel = payload.appointmentType === 'ONLINE' ? 'online appointment' : 'appointment';
+    const displayDate = payload.date || 'your scheduled date';
+    const displayTime = payload.time || 'your scheduled time';
+    const patientName = payload.patientName || 'Patient';
+    const doctorName = payload.doctorName || 'Doctor';
+
+    switch (routingKey) {
+        case 'appointment.created':
+            return {
+                subject: `Appointment Booked with ${doctorName}`,
+                message: `Hello ${patientName},\n\nYour ${appointmentLabel} with Dr. ${doctorName} has been created for ${displayDate} at ${displayTime}.\n\nWe will notify you when it is confirmed.\n\nThank you,\nNexusCare Team`,
+                sms: `Your appointment with Dr. ${doctorName} is booked for ${displayDate} at ${displayTime}.`,
+            };
+        case 'appointment.confirmed':
+            return {
+                subject: `Appointment Confirmed with ${doctorName}`,
+                message: `Hello ${patientName},\n\nYour ${appointmentLabel} with Dr. ${doctorName} has been confirmed for ${displayDate} at ${displayTime}.\n\nThank you,\nNexusCare Team`,
+                sms: `Your appointment with Dr. ${doctorName} is confirmed for ${displayDate} at ${displayTime}.`,
+            };
+        case 'appointment.rejected':
+            return {
+                subject: `Appointment Rejected`,
+                message: `Hello ${patientName},\n\nYour ${appointmentLabel} scheduled for ${displayDate} at ${displayTime} has been rejected.\n\nPlease book another appointment or contact NexusCare support.\n\nThank you,\nNexusCare Team`,
+                sms: `Your appointment scheduled for ${displayDate} at ${displayTime} has been rejected. Please reschedule.`,
+            };
+        default:
+            return null;
+    }
+};
+
+const processAppointmentNotificationEvent = async (payload, routingKey) => {
+    const notification = buildAppointmentNotificationMessages(payload, routingKey);
+    if (!notification) {
+        throw new Error(`Unsupported routing key: ${routingKey}`);
+    }
+
+    const promises = [];
+    if (payload.email) {
+        promises.push(sendEmailPayload({ email: payload.email, subject: notification.subject, message: notification.message }));
+    }
+    if (payload.phone) {
+        promises.push(sendSMSPayload({ phoneNumber: payload.phone, message: notification.sms }));
+    }
+
+    const results = await Promise.allSettled(promises);
+    const errors = results.filter((result) => result.status === 'rejected').map((result) => result.reason);
+    if (errors.length) {
+        throw new Error(`Appointment notification failed: ${errors.map((err) => err.message || err).join('; ')}`);
+    }
+
+    await saveNotificationRecord({
+        type: 'appointment',
+        event: routingKey,
+        status: 'sent',
+        appointmentId: payload.appointmentId,
+        doctorId: payload.doctorId,
+        patientId: payload.patientId,
+        email: payload.email,
+        phoneNumber: payload.phone,
+        message: notification.message,
+        payload,
+    });
+};
+
 const saveNotificationRecord = async (data) => {
     const notification = new Notification(data);
     return notification.save();
@@ -326,4 +401,4 @@ const sendRegistrationEmail = async (req, res, next) => {
 };
 
 
-module.exports = { sendEmail, sendSMS, sendRegistrationEmail, sendRegistrationEmailPayload, sendSMSPayload, logNotification };
+module.exports = { sendEmail, sendSMS, sendRegistrationEmail, sendRegistrationEmailPayload, sendSMSPayload, logNotification, sendEmailPayload, processAppointmentNotificationEvent };

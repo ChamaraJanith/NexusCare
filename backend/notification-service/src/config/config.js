@@ -50,6 +50,7 @@ module.exports = {
   GMAIL_USER: process.env.GMAIL_USER,
   GMAIL_PASS: process.env.GMAIL_PASS ? process.env.GMAIL_PASS.replace(/\s+/g, '') : undefined,
   INTERNAL_SERVICE_KEY: process.env.INTERNAL_SERVICE_KEY,
+  RABBITMQ_URL: process.env.RABBITMQ_URL || 'amqp://guest:guest@rabbitmq:5672',
   ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS || 'http://localhost:8080',
   EMAIL_ENABLED: emailEnabled,
 };
