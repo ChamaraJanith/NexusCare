@@ -108,8 +108,33 @@ export const createAppointment = async (data) => {
 
   const appointmentId = await generateAppointmentId();
 
+  const extractDoctorSnapshot = (data) => ({
+  doctorName: data.doctorName || data.doctor?.name || data.selectedDoctor?.name || "",
+  doctorSpecialization:
+    data.doctorSpecialization ||
+    data.doctor?.specialization ||
+    data.doctor?.specialty ||
+    "",
+  doctorHospital: data.doctorHospital || data.hospital || data.doctor?.hospital || "",
+  doctorProfileImage:
+    data.doctorProfileImage ||
+    data.doctor?.profileImage ||
+    data.doctor?.image ||
+    data.doctor?.profilePicture ||
+    "",
+  doctorConsultationFee: Number(
+    data.doctorConsultationFee ||
+    data.doctor?.consultationFee ||
+    data.doctor?.fee ||
+    0
+  )
+});
+
+  const doctorSnapshot = extractDoctorSnapshot(data);
+
   const appointment = new Appointment({
     ...data,
+    ...doctorSnapshot,
     appointmentType,
     appointmentId,
     queueNumber,

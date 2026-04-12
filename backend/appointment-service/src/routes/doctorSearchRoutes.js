@@ -29,4 +29,25 @@ router.get("/search", async (req, res) => {
   }
 });
 
+router.get("/internal/:doctorId", async (req, res) => {
+  try {
+    const { doctorId } = req.params;
+    const result = await doctorService.getDoctorById(doctorId);
+
+    if (!result.data) {
+      return res.status(404).json({ error: "Doctor not found" });
+    }
+
+    if (result.stale) {
+      res.set("X-Cache", "STALE");
+    }
+
+    res.json(result);
+  } catch (error) {
+    console.error("❌ Doctor details error:", error.message);
+    const status = error.statusCode || 500;
+    res.status(status).json({ error: error.message });
+  }
+});
+
 export default router;

@@ -18,6 +18,31 @@ const appointmentSchema = new mongoose.Schema({
     required: true
   },
 
+  doctorName: {
+    type: String,
+    default: null
+  },
+
+  doctorSpecialization: {
+    type: String,
+    default: null
+  },
+
+  doctorHospital: {
+    type: String,
+    default: null
+  },
+
+  doctorProfileImage: {
+    type: String,
+    default: null
+  },
+
+  doctorConsultationFee: {
+    type: Number,
+    default: 0
+  },
+
   date: {
     type: String,
     required: true

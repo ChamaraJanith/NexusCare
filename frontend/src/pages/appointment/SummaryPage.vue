@@ -255,6 +255,11 @@ const proceedToRequest = async () => {
 
     const payload = {
       doctorId: doctor.doctorId,
+      doctorName: doctor.name,
+      doctorSpecialization: doctor.specialization || doctor.specialty,
+      doctorHospital: doctor.hospital,
+      doctorProfileImage: doctor.profileImage || doctor.image || doctor.profilePicture || '',
+      doctorConsultationFee: Number(store.fees.doctorFee) || 0,
       date: slot.date
         ? new Date(slot.date).toISOString().split('T')[0]
         : store.selectedDate,
