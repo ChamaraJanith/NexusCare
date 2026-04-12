@@ -1,10 +1,48 @@
 const { v4: uuidv4 } = require('uuid');
+const jwt = require('jsonwebtoken');
 const doctorClient = require('./doctorClient');
 const DoctorCatalog = require('../models/DoctorCatalog');
 
 let doctorCache = {
   data: [],
   lastUpdated: null,
+};
+
+/**
+ * Generates a short-lived Jitsi JWT for a specific user and room.
+ * The frontend appends this as ?jwt=<token> to the Jitsi room URL.
+ * Jitsi validates it before granting access.
+ *
+ * Requires JITSI_APP_ID and JITSI_APP_SECRET in .env.
+ * Falls back gracefully if not configured (open rooms).
+ */
+const generateJitsiToken = (userId, displayName, roomId, role = 'participant') => {
+  const appId = process.env.JITSI_APP_ID;
+  const appSecret = process.env.JITSI_APP_SECRET;
+
+  if (!appId || !appSecret) {
+    // Not configured — return null, room stays open (dev mode)
+    return null;
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  const payload = {
+    iss: appId,
+    sub: 'meet.jit.si',
+    aud: appId,
+    room: roomId,
+    iat: now,
+    exp: now + 60 * 60, // 1 hour
+    context: {
+      user: {
+        id: String(userId),
+        name: displayName || String(userId),
+        moderator: role === 'moderator',
+      },
+    },
+  };
+
+  return jwt.sign(payload, appSecret);
 };
 
 const generateNeuralLink = async (patientId, doctorId, appointmentId = null) => {
@@ -132,6 +170,7 @@ const removeDoctorFromCatalog = async (doctorId) => {
 
 module.exports = {
   generateNeuralLink,
+  generateJitsiToken,
   getDoctorsForVideo,
   getDoctorCatalogStatus,
   bootstrapDoctorCatalog,
