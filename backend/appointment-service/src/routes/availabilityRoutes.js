@@ -36,4 +36,27 @@ router.get("/:doctorId/next", async (req, res) => {
   }
 });
 
+router.get("/:doctorId", async (req, res) => {
+  try {
+    const { doctorId } = req.params;
+
+    if (!doctorId) {
+      return res.status(400).json({ error: "doctorId is required" });
+    }
+
+    const data = await doctorService.getDoctorSlotsNextDays(doctorId);
+    res.json(data);
+  } catch (error) {
+    console.error("❌ Availability fetch error:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get("/", (req, res) => {
+  res.status(400).json({
+    error: "doctorId is required",
+    message: "Use /api/availability/:doctorId or /api/availability/:doctorId/by-date",
+  });
+});
+
 export default router;

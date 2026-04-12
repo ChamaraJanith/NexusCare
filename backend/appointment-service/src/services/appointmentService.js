@@ -111,6 +111,7 @@ export const createAppointment = async (data) => {
 
   const extractDoctorSnapshot = (data) => ({
   doctorName: data.doctorName || data.doctor?.name || data.selectedDoctor?.name || "",
+  doctorEmail: data.doctorEmail || data.doctor?.email || data.selectedDoctor?.email || null,
   doctorSpecialization:
     data.doctorSpecialization ||
     data.doctor?.specialization ||
@@ -157,8 +158,9 @@ export const createAppointment = async (data) => {
       paymentStatus: saved.paymentStatus,
       date: saved.date,
       time: saved.time,
-      email: saved.email,
-      phone: saved.phone,
+      patientEmail: saved.email,
+      patientPhone: saved.phone,
+      doctorEmail: saved.doctorEmail || null,
       queueNumber: saved.queueNumber,
       doctorName: saved.doctorName,
       patientName: saved.patientName,

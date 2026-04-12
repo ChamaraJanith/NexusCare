@@ -5,6 +5,7 @@ const config = require('./config/config');
 const videoService = require('./services/videoService');
 const verifyInternalKey = require('./middleware/verifyInternalKey');
 const videoRoutes = require('./routes/videoRoutes');
+const { startRabbitMQConsumer } = require('./services/eventConsumer');
 
 const app = express();
 
@@ -40,8 +41,13 @@ app.use(cors({
 app.use(express.json());
 
 mongoose.connect(config.MONGO_URI)
-  .then(() => {
+  .then(async () => {
     console.log('✅ MongoDB Connected Successfully');
+    try {
+      await startRabbitMQConsumer();
+    } catch (err) {
+      console.error('❌ RabbitMQ consumer failed to start:', err);
+    }
   })
   .catch((err) => {
     console.error('❌ MongoDB Connection Error:', err);
