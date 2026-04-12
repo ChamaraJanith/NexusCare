@@ -2,7 +2,7 @@ const amqp = require('amqplib');
 const config = require('../config/config');
 const VideoSession = require('../models/videoSessionModel');
 const videoService = require('./videoService');
-const notificationClient = require('./notificationClient');
+const { publishEvent } = require('./eventPublisher');
 
 const RABBITMQ_URL = process.env.RABBITMQ_URL || config.RABBITMQ_URL;
 const EXCHANGE = 'appointments';
@@ -54,35 +54,25 @@ const buildSession = async (payload) => {
   return videoSession;
 };
 
-const notifyParticipants = async (session, payload) => {
-  const recipients = [...new Set([session.patientEmail, session.doctorEmail].filter(Boolean))];
-  const emailTasks = recipients.map(async (email) => {
-    try {
-      await notificationClient.sendEmail({
-        email,
-        subject: 'NexusCare Video Session Ready',
-        message: `Your online consultation session is ready. Join here: ${session.roomUrl}`,
-      });
-      console.log(`✅ Notification email sent to ${email}`);
-    } catch (err) {
-      console.warn(`⚠️ Failed to send notification email to ${email}:`, err.message || err);
-    }
-  });
-
-  const smsTasks = [];
-  if (session.patientPhone) {
-    smsTasks.push(notificationClient.sendSms({
-      phoneNumber: session.patientPhone,
-      message: `Your NexusCare video session is ready. Join here: ${session.roomUrl}`,
-    }));
-  }
-
-  await Promise.allSettled([...emailTasks, ...smsTasks]);
-};
-
 const processAppointmentOnlineConfirmed = async (payload) => {
   const session = await buildSession(payload);
-  await notifyParticipants(session, payload);
+
+  await publishEvent('video', 'video.session.created', {
+    appointmentId: session.appointmentId,
+    roomId: session.roomId,
+    roomUrl: session.roomUrl,
+    patientId: session.patientId,
+    doctorId: session.doctorId,
+    patientEmail: session.patientEmail,
+    doctorEmail: session.doctorEmail,
+    patientPhone: session.patientPhone,
+    doctorPhone: payload.doctorPhone || '',
+    appointmentType: payload.appointmentType,
+    paymentStatus: payload.paymentStatus,
+    date: payload.date,
+    time: payload.time,
+    status: session.status,
+  });
 };
 
 const startRabbitMQConsumer = async () => {

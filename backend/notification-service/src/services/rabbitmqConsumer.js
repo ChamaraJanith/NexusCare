@@ -4,6 +4,7 @@ const {
   sendRegistrationEmailPayload,
   sendSMSPayload,
   processAppointmentNotificationEvent,
+  processVideoNotificationEvent,
 } = require('../controllers/notificationController');
 
 const RABBITMQ_URL = process.env.RABBITMQ_URL || config.RABBITMQ_URL || 'amqp://guest:guest@rabbitmq:5672';
@@ -14,6 +15,12 @@ const APPOINTMENT_ROUTING_KEYS = [
   'appointment.created',
   'appointment.confirmed',
   'appointment.rejected',
+];
+const VIDEO_EXCHANGE = 'video';
+const VIDEO_QUEUE = 'video.notifications';
+const VIDEO_ROUTING_KEYS = [
+  'video.session.created',
+  'video.session.ended',
 ];
 
 const startRabbitMQConsumer = async () => {
@@ -34,7 +41,14 @@ const startRabbitMQConsumer = async () => {
     await channel.bindQueue(APPOINTMENT_QUEUE, APPOINTMENT_EXCHANGE, routingKey);
   }
 
-  console.log(`📥 RabbitMQ consumer connected, listening for ${USER_QUEUE} and ${APPOINTMENT_QUEUE}`);
+  await channel.assertExchange(VIDEO_EXCHANGE, 'topic', { durable: true });
+  await channel.assertQueue(VIDEO_QUEUE, { durable: true });
+
+  for (const routingKey of VIDEO_ROUTING_KEYS) {
+    await channel.bindQueue(VIDEO_QUEUE, VIDEO_EXCHANGE, routingKey);
+  }
+
+  console.log(`📥 RabbitMQ consumer connected, listening for ${USER_QUEUE}, ${APPOINTMENT_QUEUE}, and ${VIDEO_QUEUE}`);
 
   channel.consume(
     USER_QUEUE,
@@ -80,6 +94,28 @@ const startRabbitMQConsumer = async () => {
         channel.ack(msg);
       } catch (error) {
         console.error('❌ Failed to process appointment event', error);
+        const redelivered = msg.fields.redelivered;
+        channel.nack(msg, false, !redelivered);
+      }
+    },
+    { noAck: false }
+  );
+
+  channel.consume(
+    VIDEO_QUEUE,
+    async (msg) => {
+      if (!msg) return;
+
+      try {
+        const payload = JSON.parse(msg.content.toString());
+        const routingKey = msg.fields.routingKey;
+        console.log(`📩 Received ${routingKey} event`, payload);
+
+        await processVideoNotificationEvent(payload, routingKey);
+
+        channel.ack(msg);
+      } catch (error) {
+        console.error('❌ Failed to process video event', error);
         const redelivered = msg.fields.redelivered;
         channel.nack(msg, false, !redelivered);
       }
