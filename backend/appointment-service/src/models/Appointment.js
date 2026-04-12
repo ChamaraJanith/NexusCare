@@ -23,6 +23,11 @@ const appointmentSchema = new mongoose.Schema({
     default: null
   },
 
+  doctorEmail: {
+    type: String,
+    default: null
+  },
+
   doctorSpecialization: {
     type: String,
     default: null
