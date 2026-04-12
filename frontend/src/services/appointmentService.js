@@ -20,11 +20,24 @@ export const getDoctorDetails = async (doctorId) => {
 
 // ── Search doctors via doctor-service directly ───────────────────────
 export const searchDoctors = async (filters) => {
-  console.log("FILTERS:", filters);
-  const res = await axios.get(`${DOCTOR_API}/search`, { params: filters });
-  console.log("DOCTORS FROM DOCTOR SERVICE:", res.data);
-  if (Array.isArray(res.data)) return res.data;
-  return res.data?.data || [];
+  console.log('FILTERS:', filters);
+  try {
+    const res = await axios.get(`${DOCTOR_API}/search`, { params: filters });
+    const payload = res.data;
+
+    if (Array.isArray(payload)) {
+      return { doctors: payload, stale: false };
+    }
+
+    return {
+      doctors: Array.isArray(payload?.data) ? payload.data : [],
+      stale: Boolean(payload?.stale),
+      message: payload?.message || ''
+    };
+  } catch (error) {
+    const message = error.response?.data?.error || error.response?.data?.message || error.message || 'Doctor search failed';
+    throw new Error(message);
+  }
 };
 
 // ── Get doctor slots by date ───────────────────────────────────────

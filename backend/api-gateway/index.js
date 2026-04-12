@@ -55,7 +55,10 @@ const route = (target) => (req, res) => {
 app.use('/api/auth',          route(process.env.USER_SERVICE_URL))
 app.use('/api/patient',       route(process.env.USER_SERVICE_URL))
 app.use('/api/admin',         route(process.env.USER_SERVICE_URL))
-app.use('/api/doctors',       route(process.env.DOCTOR_SERVICE_URL))
+// Doctor search goes via appointment-service (has cache fallback)
+// All other /api/doctors routes go directly to doctor-service
+app.use('/api/doctors/search', route(process.env.APPOINTMENT_SERVICE_URL))
+app.use('/api/doctors',        route(process.env.DOCTOR_SERVICE_URL))
 app.use('/api/availability',  route(process.env.DOCTOR_SERVICE_URL))
 app.use('/api/prescriptions', route(process.env.DOCTOR_SERVICE_URL))
 app.use('/api/appointments',  route(process.env.APPOINTMENT_SERVICE_URL))

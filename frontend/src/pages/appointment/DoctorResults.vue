@@ -14,6 +14,16 @@
         </div>
       </div>
 
+      <q-banner v-if="store.staleSearch" class="bg-yellow-1 text-yellow-9 q-mb-md" rounded>
+        <q-icon name="warning" class="q-mr-sm" />
+        Doctor service is temporarily unavailable. Showing cached search results.
+      </q-banner>
+
+      <q-banner v-else-if="store.errorMessage" class="bg-red-1 text-negative q-mb-md" rounded>
+        <q-icon name="warning" class="q-mr-sm" />
+        {{ store.errorMessage }}
+      </q-banner>
+
       <div v-if="store.loading" class="flex flex-center q-py-xl column">
         <q-spinner-dots color="blue-5" size="3em" />
         <div class="q-mt-md text-grey-4 text-weight-bold">Loading real-time API data...</div>
