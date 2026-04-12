@@ -362,6 +362,68 @@ const processVideoNotificationEvent = async (payload, routingKey) => {
     });
 };
 
+const buildPaymentNotificationMessages = (payload, routingKey) => {
+    switch (routingKey) {
+        case 'payment.success':
+            return {
+                subject: 'Payment Received - NexusCare',
+                message: `Hello,\n\nYour payment for appointment ${payload.appointmentId || 'N/A'} has been received successfully. Thank you for using NexusCare.\n\nOrder: ${payload.orderId}\nAmount: ${payload.amount}\n\nBest,\nNexusCare Team`,
+                sms: `Payment received for appointment ${payload.appointmentId || 'N/A'}. Thank you for using NexusCare.`,
+            };
+        case 'payment.failed':
+            return {
+                subject: 'Payment Failed - NexusCare',
+                message: `Hello,\n\nThere was a problem processing your payment for appointment ${payload.appointmentId || 'N/A'}. Please try again or contact support.\n\nOrder: ${payload.orderId}\n\nBest,\nNexusCare Team`,
+                sms: `Payment failed for appointment ${payload.appointmentId || 'N/A'}. Please retry.`,
+            };
+        default:
+            return null;
+    }
+};
+
+const processPaymentNotificationEvent = async (payload, routingKey) => {
+    const notification = buildPaymentNotificationMessages(payload, routingKey);
+    if (!notification) {
+        throw new Error(`Unsupported routing key: ${routingKey}`);
+    }
+
+    const promises = [];
+    if (payload.patientEmail) {
+        promises.push(sendEmailPayload({ email: payload.patientEmail, subject: notification.subject, message: notification.message }));
+    }
+    if (payload.patientPhone) {
+        promises.push(sendSMSPayload({ phoneNumber: payload.patientPhone, message: notification.sms }));
+    }
+
+    const results = await Promise.allSettled(promises);
+    const errors = results.filter((result) => result.status === 'rejected').map((result) => result.reason);
+    const successes = results.filter((result) => result.status === 'fulfilled');
+
+    if (errors.length && successes.length === 0) {
+        throw new Error(`Payment notification failed: ${errors.map((err) => err.message || err).join('; ')}`);
+    }
+
+    if (errors.length) {
+        console.warn(
+            `⚠️ Payment notification partially succeeded; continuing despite ${errors.length} error(s)`,
+            errors.map((err) => err.message || err)
+        );
+    }
+
+    await saveNotificationRecord({
+        type: 'payment',
+        event: routingKey,
+        status: 'sent',
+        appointmentId: payload.appointmentId,
+        paymentId: payload.paymentId,
+        patientId: payload.patientId,
+        doctorId: payload.doctorId,
+        email: payload.patientEmail,
+        phoneNumber: payload.patientPhone,
+        payload,
+    });
+};
+
 const saveNotificationRecord = async (data) => {
     const notification = new Notification(data);
     return notification.save();
@@ -488,4 +550,5 @@ module.exports = {
   sendEmailPayload,
   processAppointmentNotificationEvent,
   processVideoNotificationEvent,
+  processPaymentNotificationEvent,
 };

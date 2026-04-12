@@ -59,9 +59,13 @@ const startServer = async () => {
 
   const mongoOptions = {
     serverSelectionTimeoutMS: 15000,
-    tls: true,
-    tlsAllowInvalidCertificates: process.env.NODE_ENV !== 'production',
   };
+
+  const shouldUseTls = MONGO_URI.startsWith('mongodb+srv://') || process.env.MONGO_TLS === 'true';
+  if (shouldUseTls) {
+    mongoOptions.tls = true;
+    mongoOptions.tlsAllowInvalidCertificates = process.env.NODE_ENV !== 'production';
+  }
 
   try {
     await mongoose.connect(MONGO_URI, mongoOptions);
