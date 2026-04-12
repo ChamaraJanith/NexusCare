@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nexuscare-config
+  namespace: nexuscare
+data:
+  ALLOWED_ORIGINS: "http://localhost:9000"
+  RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672"
+  MONGO_URI: "mongodb://mongo:27017/nexuscare"
+  PAYHERE_BASE_URL: "https://www.payhere.lk/pay"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: nexuscare-secrets
+  namespace: nexuscare
+stringData:
+  JWT_SECRET: "placeholder_jwt_secret"
+  INTERNAL_SERVICE_KEY: "placeholder_internal_key"
+  PAYHERE_MERCHANT_ID: "placeholder_merchant_id"
+  PAYHERE_MERCHANT_SECRET: "placeholder_merchant_secret"
+  GMAIL_USER: "placeholder@gmail.com"
+  GMAIL_PASS: "placeholder_password"
+  TWILIO_ACCOUNT_SID: "placeholder_twilio_sid"
+  TWILIO_AUTH_TOKEN: "placeholder_twilio_auth_token"

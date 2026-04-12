@@ -1,0 +1,343 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nexuscare-api-gateway
+  namespace: nexuscare
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+        - name: api-gateway
+          image: nexuscare/api-gateway:latest
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: nexuscare-config
+            - secretRef:
+                name: nexuscare-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway
+  namespace: nexuscare
+spec:
+  type: NodePort
+  selector:
+    app: api-gateway
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-patient-service
+  namespace: nexuscare
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-patient-service
+  template:
+    metadata:
+      labels:
+        app: user-patient-service
+    spec:
+      containers:
+        - name: user-patient-service
+          image: nexuscare/user-patient-service:latest
+          ports:
+            - containerPort: 5001
+          envFrom:
+            - configMapRef:
+                name: nexuscare-config
+            - secretRef:
+                name: nexuscare-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-patient-service
+  namespace: nexuscare
+spec:
+  selector:
+    app: user-patient-service
+  ports:
+    - port: 5001
+      targetPort: 5001
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: doctor-service
+  namespace: nexuscare
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: doctor-service
+  template:
+    metadata:
+      labels:
+        app: doctor-service
+    spec:
+      containers:
+        - name: doctor-service
+          image: nexuscare/doctor-service:latest
+          ports:
+            - containerPort: 5002
+          envFrom:
+            - configMapRef:
+                name: nexuscare-config
+            - secretRef:
+                name: nexuscare-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: doctor-service
+  namespace: nexuscare
+spec:
+  selector:
+    app: doctor-service
+  ports:
+    - port: 5002
+      targetPort: 5002
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: appointment-service
+  namespace: nexuscare
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: appointment-service
+  template:
+    metadata:
+      labels:
+        app: appointment-service
+    spec:
+      containers:
+        - name: appointment-service
+          image: nexuscare/appointment-service:latest
+          ports:
+            - containerPort: 5003
+          envFrom:
+            - configMapRef:
+                name: nexuscare-config
+            - secretRef:
+                name: nexuscare-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: appointment-service
+  namespace: nexuscare
+spec:
+  selector:
+    app: appointment-service
+  ports:
+    - port: 5003
+      targetPort: 5003
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: video-session-integration-service
+  namespace: nexuscare
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: video-session-integration-service
+  template:
+    metadata:
+      labels:
+        app: video-session-integration-service
+    spec:
+      containers:
+        - name: video-session-integration-service
+          image: nexuscare/video-session-integration-service:latest
+          ports:
+            - containerPort: 5005
+          envFrom:
+            - configMapRef:
+                name: nexuscare-config
+            - secretRef:
+                name: nexuscare-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: video-session-integration-service
+  namespace: nexuscare
+spec:
+  selector:
+    app: video-session-integration-service
+  ports:
+    - port: 5005
+      targetPort: 5005
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: nexuscare
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      containers:
+        - name: notification-service
+          image: nexuscare/notification-service:latest
+          ports:
+            - containerPort: 5006
+          envFrom:
+            - configMapRef:
+                name: nexuscare-config
+            - secretRef:
+                name: nexuscare-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  namespace: nexuscare
+spec:
+  selector:
+    app: notification-service
+  ports:
+    - port: 5006
+      targetPort: 5006
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fee-management-service
+  namespace: nexuscare
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fee-management-service
+  template:
+    metadata:
+      labels:
+        app: fee-management-service
+    spec:
+      containers:
+        - name: fee-management-service
+          image: nexuscare/fee-management-service:latest
+          ports:
+            - containerPort: 5007
+          envFrom:
+            - configMapRef:
+                name: nexuscare-config
+            - secretRef:
+                name: nexuscare-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fee-management-service
+  namespace: nexuscare
+spec:
+  selector:
+    app: fee-management-service
+  ports:
+    - port: 5007
+      targetPort: 5007
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+  namespace: nexuscare
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment-service
+  template:
+    metadata:
+      labels:
+        app: payment-service
+    spec:
+      containers:
+        - name: payment-service
+          image: nexuscare/payment-service:latest
+          ports:
+            - containerPort: 5009
+          envFrom:
+            - configMapRef:
+                name: nexuscare-config
+            - secretRef:
+                name: nexuscare-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service
+  namespace: nexuscare
+spec:
+  selector:
+    app: payment-service
+  ports:
+    - port: 5009
+      targetPort: 5009
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-symptom-service
+  namespace: nexuscare
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ai-symptom-service
+  template:
+    metadata:
+      labels:
+        app: ai-symptom-service
+    spec:
+      containers:
+        - name: ai-symptom-service
+          image: nexuscare/ai-symptom-service:latest
+          ports:
+            - containerPort: 5004
+          envFrom:
+            - configMapRef:
+                name: nexuscare-config
+            - secretRef:
+                name: nexuscare-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-symptom-service
+  namespace: nexuscare
+spec:
+  selector:
+    app: ai-symptom-service
+  ports:
+    - port: 5004
+      targetPort: 5004
