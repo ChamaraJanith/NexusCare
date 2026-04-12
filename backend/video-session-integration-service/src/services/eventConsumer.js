@@ -14,15 +14,29 @@ const DOCTOR_QUEUE = 'video.doctor.catalog';
 const DOCTOR_UPDATED_ROUTING_KEY = 'doctor.updated';
 const DOCTOR_REMOVED_ROUTING_KEY = 'doctor.removed';
 
+const { retryAsync } = require('./retryHelper');
+
 const createConnection = async () => {
-  const connection = await amqp.connect(RABBITMQ_URL);
-  connection.on('error', (error) => {
-    console.error('RabbitMQ connection error:', error);
-  });
-  connection.on('close', () => {
-    console.warn('RabbitMQ connection closed');
-  });
-  return connection;
+  return retryAsync(
+    async () => {
+      const connection = await amqp.connect(RABBITMQ_URL);
+      connection.on('error', (error) => {
+        console.error('RabbitMQ connection error:', error);
+      });
+      connection.on('close', () => {
+        console.warn('RabbitMQ connection closed');
+      });
+      return connection;
+    },
+    {
+      retries: 3,
+      initialDelayMs: 250,
+      factor: 2,
+      onRetry: (attempt, delayMs, error) => {
+        console.warn(`Retrying RabbitMQ connect (${attempt}) in ${delayMs}ms after error: ${error.message}`);
+      },
+    }
+  );
 };
 
 const buildSession = async (payload) => {

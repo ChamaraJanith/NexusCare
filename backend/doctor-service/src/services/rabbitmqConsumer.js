@@ -1,24 +1,48 @@
 import amqp from 'amqplib';
 import Doctor from '../models/Doctor.js';
+import { retryAsync } from './retryHelper.js';
 
 const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://guest:guest@rabbitmq:5672';
 const QUEUE = 'doctor.registered';
 const VERIFY_QUEUE = 'doctor.verified';
+
+const connectWithRetry = async () => {
+  return retryAsync(
+    async () => {
+      const connection = await amqp.connect(RABBITMQ_URL);
+      connection.on('error', (error) => {
+        console.error('🚨 RabbitMQ connection error:', error);
+      });
+      connection.on('close', () => {
+        console.warn('⚠️ RabbitMQ connection closed');
+      });
+      return connection;
+    },
+    {
+      retries: 3,
+      initialDelayMs: 250,
+      factor: 2,
+      onRetry: (attempt, delayMs, error) => {
+        console.warn(`Retrying RabbitMQ connect (${attempt}) in ${delayMs}ms after error: ${error.message}`);
+      },
+    }
+  );
+};
 
 export const startRabbitMQConsumer = async () => {
   let connection;
   let channel;
 
   try {
-    connection = await amqp.connect(RABBITMQ_URL);
-    connection.on('error', (error) => {
-      console.error('🚨 RabbitMQ connection error:', error);
+    connection = await connectWithRetry();
+    channel = await connection.createChannel();
+    channel.on('error', (error) => {
+      console.error('🚨 RabbitMQ channel error:', error);
     });
-    connection.on('close', () => {
-      console.warn('⚠️ RabbitMQ connection closed');
+    channel.on('close', () => {
+      console.warn('⚠️ RabbitMQ channel closed');
     });
 
-    channel = await connection.createChannel();
     await channel.assertQueue(QUEUE, { durable: true });
     await channel.assertQueue(VERIFY_QUEUE, { durable: true });
 
@@ -33,7 +57,6 @@ export const startRabbitMQConsumer = async () => {
           const payload = JSON.parse(msg.content.toString());
           console.log('📬 Received doctor.registered event:', payload);
 
-          // Save doctor record to doctor-service MongoDB
           const doctorRecord = await Doctor.findOneAndUpdate(
             { doctorId: payload.doctorId },
             {
@@ -59,7 +82,6 @@ export const startRabbitMQConsumer = async () => {
 
           console.log(`✅ Doctor profile saved in doctor-service DB:`, doctorRecord.doctorId);
           console.log(`   name: ${doctorRecord.name}, email: ${doctorRecord.email}`);
-
           channel.ack(msg);
         } catch (error) {
           console.error('❌ Failed to process doctor.registered event', error);

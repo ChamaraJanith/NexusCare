@@ -4,7 +4,7 @@
   "description": "Nexus Care MS4 - Video Link Node",
   "main": "src/app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test ./src/__tests__/retryHelper.test.js ./src/__tests__/videoService.test.js",
     "start": "node src/app.js",
     "dev": "nodemon src/app.js"
   },
