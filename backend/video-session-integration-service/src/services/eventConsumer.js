@@ -5,9 +5,14 @@ const videoService = require('./videoService');
 const { publishEvent } = require('./eventPublisher');
 
 const RABBITMQ_URL = process.env.RABBITMQ_URL || config.RABBITMQ_URL;
-const EXCHANGE = 'appointments';
-const QUEUE = 'video.session';
-const ROUTING_KEY = 'appointment.online_confirmed';
+const APPOINTMENT_EXCHANGE = 'appointments';
+const APPOINTMENT_QUEUE = 'video.session';
+const APPOINTMENT_ROUTING_KEY = 'appointment.online_confirmed';
+
+const DOCTOR_EXCHANGE = 'doctors';
+const DOCTOR_QUEUE = 'video.doctor.catalog';
+const DOCTOR_UPDATED_ROUTING_KEY = 'doctor.updated';
+const DOCTOR_REMOVED_ROUTING_KEY = 'doctor.removed';
 
 const createConnection = async () => {
   const connection = await amqp.connect(RABBITMQ_URL);
@@ -79,13 +84,18 @@ const startRabbitMQConsumer = async () => {
   const connection = await createConnection();
   const channel = await connection.createChannel();
 
-  await channel.assertExchange(EXCHANGE, 'topic', { durable: true });
-  await channel.assertQueue(QUEUE, { durable: true });
-  await channel.bindQueue(QUEUE, EXCHANGE, ROUTING_KEY);
+  await channel.assertExchange(APPOINTMENT_EXCHANGE, 'topic', { durable: true });
+  await channel.assertQueue(APPOINTMENT_QUEUE, { durable: true });
+  await channel.bindQueue(APPOINTMENT_QUEUE, APPOINTMENT_EXCHANGE, APPOINTMENT_ROUTING_KEY);
 
-  console.log(`📥 Video service RabbitMQ consumer connected, listening for ${ROUTING_KEY}`);
+  await channel.assertExchange(DOCTOR_EXCHANGE, 'topic', { durable: true });
+  await channel.assertQueue(DOCTOR_QUEUE, { durable: true });
+  await channel.bindQueue(DOCTOR_QUEUE, DOCTOR_EXCHANGE, DOCTOR_UPDATED_ROUTING_KEY);
+  await channel.bindQueue(DOCTOR_QUEUE, DOCTOR_EXCHANGE, DOCTOR_REMOVED_ROUTING_KEY);
 
-  await channel.consume(QUEUE, async (msg) => {
+  console.log(`📥 Video service RabbitMQ consumer connected, listening for ${APPOINTMENT_ROUTING_KEY}, ${DOCTOR_UPDATED_ROUTING_KEY}, ${DOCTOR_REMOVED_ROUTING_KEY}`);
+
+  await channel.consume(APPOINTMENT_QUEUE, async (msg) => {
     if (!msg) return;
 
     try {
@@ -95,6 +105,29 @@ const startRabbitMQConsumer = async () => {
       channel.ack(msg);
     } catch (err) {
       console.error('❌ Failed to process appointment.online_confirmed event:', err);
+      const redelivered = msg.fields.redelivered;
+      channel.nack(msg, false, !redelivered);
+    }
+  }, { noAck: false });
+
+  await channel.consume(DOCTOR_QUEUE, async (msg) => {
+    if (!msg) return;
+
+    try {
+      const payload = JSON.parse(msg.content.toString());
+      console.log(`📩 Received ${msg.fields.routingKey} event`, payload);
+
+      if (msg.fields.routingKey === DOCTOR_UPDATED_ROUTING_KEY) {
+        await videoService.upsertDoctorCatalog(payload);
+      } else if (msg.fields.routingKey === DOCTOR_REMOVED_ROUTING_KEY) {
+        await videoService.removeDoctorFromCatalog(payload.doctorId);
+      } else {
+        console.warn('⚠️ Unsupported doctor event routing key:', msg.fields.routingKey);
+      }
+
+      channel.ack(msg);
+    } catch (err) {
+      console.error('❌ Failed to process doctor event:', err);
       const redelivered = msg.fields.redelivered;
       channel.nack(msg, false, !redelivered);
     }

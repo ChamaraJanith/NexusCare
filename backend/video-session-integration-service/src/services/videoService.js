@@ -100,9 +100,41 @@ const bootstrapDoctorCatalog = async () => {
   }));
 };
 
+const upsertDoctorCatalog = async (doctorPayload) => {
+  if (!doctorPayload?.doctorId) {
+    throw new Error('doctorId is required to upsert doctor catalog');
+  }
+
+  return DoctorCatalog.findOneAndUpdate(
+    { doctorId: doctorPayload.doctorId },
+    {
+      doctorId: doctorPayload.doctorId,
+      userId: doctorPayload.userId || null,
+      name: doctorPayload.name || doctorPayload.doctorId || `Doctor ${doctorPayload.doctorId}`,
+      email: doctorPayload.email || null,
+      specialization: doctorPayload.specialization || doctorPayload.specialty || null,
+      hospital: doctorPayload.hospital || null,
+      location: doctorPayload.location || null,
+      profileImage: doctorPayload.profileImage || null,
+      isActive: doctorPayload.isActive !== false,
+    },
+    { new: true, upsert: true, setDefaultsOnInsert: true }
+  );
+};
+
+const removeDoctorFromCatalog = async (doctorId) => {
+  if (!doctorId) {
+    throw new Error('doctorId is required to remove doctor from catalog');
+  }
+
+  return DoctorCatalog.deleteOne({ doctorId });
+};
+
 module.exports = {
   generateNeuralLink,
   getDoctorsForVideo,
   getDoctorCatalogStatus,
   bootstrapDoctorCatalog,
+  upsertDoctorCatalog,
+  removeDoctorFromCatalog,
 };

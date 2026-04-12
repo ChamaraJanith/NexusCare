@@ -1,8 +1,9 @@
 import Doctor from "../models/Doctor.js";
 import mongoose from "mongoose";
 import * as doctorService from "../services/doctorService.js";
-import * as videoSyncClient from "../services/videoSyncClient.js";
+import * as doctorEventPublisher from "../services/doctorEventPublisher.js";
 import * as videoCatalogSyncService from "../services/videoCatalogSyncService.js";
+import { createDoctorSyncPayload } from "../services/doctorSyncPayload.js";
 import cloudinary from "../config/cloudinary.js";
 import streamifier from "streamifier";
 
@@ -17,23 +18,6 @@ const streamUpload = (buffer) => {
     );
     streamifier.createReadStream(buffer).pipe(stream);
   });
-};
-
-const buildDoctorSyncPayload = (doctorRecord, identity = {}) => {
-  if (!doctorRecord?.doctorId) {
-    return null;
-  }
-
-  return {
-    doctorId: doctorRecord.doctorId,
-    name: identity.name || `Doctor ${doctorRecord.doctorId}`,
-    email: identity.email || null,
-    specialization: doctorRecord.specialty || doctorRecord.specialization || identity.specialization || null,
-    hospital: doctorRecord.hospital || identity.hospital || null,
-    location: doctorRecord.location || identity.location || null,
-    profileImage: doctorRecord.profileImage || identity.profileImage || null,
-    isActive: doctorRecord.isActive !== false,
-  };
 };
 
 // ─── GET /api/doctors/me ──────────────────────────────────────────────────────
@@ -105,9 +89,9 @@ export const updateDoctorMe = async (req, res) => {
       return null;
     });
 
-    const syncPayload = buildDoctorSyncPayload(updated, identity || {});
+    const syncPayload = createDoctorSyncPayload(updated, identity || {});
     if (syncPayload) {
-      videoSyncClient.syncDoctor(syncPayload).catch((err) => console.warn("[updateDoctorMe] video sync failed:", err.message));
+      doctorEventPublisher.publishDoctorUpdated(syncPayload).catch((err) => console.warn("[updateDoctorMe] publish doctor event failed:", err.message));
     }
 
     return res.status(200).json({
@@ -190,9 +174,9 @@ export const uploadProfileImage = async (req, res) => {
       return null;
     });
 
-    const syncPayload = buildDoctorSyncPayload(updated, identity || {});
+    const syncPayload = createDoctorSyncPayload(updated, identity || {});
     if (syncPayload) {
-      videoSyncClient.syncDoctor(syncPayload).catch((err) => console.warn("[uploadProfileImage] video sync failed:", err.message));
+      doctorEventPublisher.publishDoctorUpdated(syncPayload).catch((err) => console.warn("[uploadProfileImage] publish doctor event failed:", err.message));
     }
 
     return res.status(200).json({
@@ -446,9 +430,9 @@ export const updateDoctor = async (req, res) => {
 
     const updated = await doctorService.updateDoctorByDoctorId(req.params.id, req.body);
 
-    const syncPayload = buildDoctorSyncPayload(updated, {});
+    const syncPayload = createDoctorSyncPayload(updated, {});
     if (syncPayload) {
-      videoSyncClient.syncDoctor(syncPayload).catch((err) => console.warn("[updateDoctor] video sync failed:", err.message));
+      doctorEventPublisher.publishDoctorUpdated(syncPayload).catch((err) => console.warn("[updateDoctor] publish doctor event failed:", err.message));
     }
 
     return res.status(200).json({
