@@ -14,7 +14,7 @@ const notificationSchema = new mongoose.Schema({
   status: {
     type: String,
     required: true,
-    enum: ['success', 'failed', 'pending', 'confirmed', 'rejected', 'cancelled'],
+    enum: ['success', 'failed', 'pending', 'confirmed', 'rejected', 'cancelled', 'sent'],
     default: 'success',
   },
   appointmentId: String,

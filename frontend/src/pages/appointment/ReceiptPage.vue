@@ -1,7 +1,7 @@
 <template>
   <q-page class="search-page-bg text-white font-jakarta flex flex-center">
     <div class="max-width-700 w-full q-mx-auto q-px-md">
-      
+
       <q-card class="nexus-receipt-card bg-transparent q-pa-lg">
         <q-btn flat icon="close" color="grey-5" class="absolute-top-right q-ma-sm" @click="resetAndGoHome"/>
 
@@ -89,7 +89,7 @@ onMounted(async () => {
 
     const paymentRes = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/payments/${orderId}`, {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem("token")}`
+        Authorization: `Bearer ${localStorage.getItem("nexus_token") || localStorage.getItem("token")}`
       }
     })
 
@@ -149,12 +149,12 @@ const downloadReceipt = () => {
 <style scoped>
 .search-page-bg { background: radial-gradient(circle at top right, #0a1128 0%, #030612 100%); min-height: 100vh; }
 .max-width-700 { max-width: 700px; }
-.nexus-receipt-card { 
-  border: 1px solid rgba(30, 58, 138, 0.4); 
-  border-radius: 16px; 
-  background: rgba(15, 23, 42, 0.6) !important; 
-  position: relative; 
-  overflow: hidden; 
+.nexus-receipt-card {
+  border: 1px solid rgba(30, 58, 138, 0.4);
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.6) !important;
+  position: relative;
+  overflow: hidden;
 }
 .nexus-receipt-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 6px; background: #2563eb; }
 .success-icon-container { width: 70px; height: 70px; border-radius: 50%; background: #2563eb; box-shadow: 0 0 30px rgba(37, 99, 235, 0.4); border: 2px solid #0f172a; }

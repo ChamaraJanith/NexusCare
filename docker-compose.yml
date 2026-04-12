@@ -4,11 +4,12 @@ services:
     working_dir: /app
     volumes:
       - ./backend/user-patient-service:/app
+    env_file:
+      - ./backend/user-patient-service/.env
     command: sh -c "npm install && npm run dev"
     environment:
       - NODE_ENV=development
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
-      - MONGO_URI=mongodb://mongo:27017/nexuscare
     depends_on:
       - rabbitmq
       - mongo
@@ -20,11 +21,12 @@ services:
     working_dir: /app
     volumes:
       - ./backend/doctor-service:/app
+    env_file:
+      - ./backend/doctor-service/.env
     command: sh -c "npm install && npm run dev"
     environment:
       - NODE_ENV=development
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
-      - MONGO_URI=mongodb://mongo:27017/nexuscare
     depends_on:
       - video-session-integration-service
       - rabbitmq
@@ -37,11 +39,12 @@ services:
     working_dir: /app
     volumes:
       - ./backend/appointment-service:/app
+    env_file:
+      - ./backend/appointment-service/.env
     command: sh -c "npm install && npm run dev"
     environment:
       - NODE_ENV=development
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
-      - MONGO_URI=mongodb://mongo:27017/nexuscare
     depends_on:
       - doctor-service
       - rabbitmq
@@ -54,6 +57,8 @@ services:
     working_dir: /app
     volumes:
       - ./backend/ai-symptom-service:/app
+    env_file:
+      - ./backend/ai-symptom-service/.env
     command: sh -c "npm install && npm run dev"
     environment:
       - NODE_ENV=development
@@ -65,11 +70,12 @@ services:
     working_dir: /app
     volumes:
       - ./backend/video-session-integration-service:/app
+    env_file:
+      - ./backend/video-session-integration-service/.env
     command: sh -c "npm install && npm run dev"
     environment:
       - NODE_ENV=development
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
-      - MONGO_URI=mongodb://mongo:27017/nexuscare
     depends_on:
       - rabbitmq
       - mongo
@@ -81,11 +87,12 @@ services:
     working_dir: /app
     volumes:
       - ./backend/notification-service:/app
+    env_file:
+      - ./backend/notification-service/.env
     command: sh -c "npm install && npm start"
     environment:
       - NODE_ENV=development
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
-      - MONGO_URI=mongodb://mongo:27017/nexuscare
     depends_on:
       - rabbitmq
       - mongo
@@ -97,10 +104,11 @@ services:
     working_dir: /app
     volumes:
       - ./backend/fee-management-service:/app
+    env_file:
+      - ./backend/fee-management-service/.env
     command: sh -c "npm install && npm run dev"
     environment:
       - NODE_ENV=development
-      - MONGO_URI=mongodb://mongo:27017/nexuscare
     depends_on:
       - mongo
     networks:
@@ -111,10 +119,11 @@ services:
     working_dir: /app
     volumes:
       - ./backend/payment-service:/app
+    env_file:
+      - ./backend/payment-service/.env
     command: sh -c "npm install && npm run dev"
     environment:
       - NODE_ENV=development
-      - MONGO_URI=mongodb://mongo:27017/nexuscare
     depends_on:
       - mongo
     networks:
@@ -125,6 +134,8 @@ services:
     working_dir: /app
     volumes:
       - ./backend/api-gateway:/app
+    env_file:
+      - ./backend/api-gateway/.env
     ports:
       - '8080:8080'
     command: sh -c "npm install && npm run dev"

@@ -62,6 +62,9 @@ const paymentSchema = new mongoose.Schema(
     payherePaymentId: {
       type: String,
     },
+    patientPhone: {
+      type: String,
+    },  
 
     // Full webhook payload for records
     webhookData: {

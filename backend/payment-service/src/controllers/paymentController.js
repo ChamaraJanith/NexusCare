@@ -2,6 +2,7 @@ const crypto = require("crypto");
 const axios  = require("axios");                          // ✅ ADD THIS if not already there
 const Payment = require("../models/Payment");
 const { generateHash, verifyWebhookHash } = require("../config/payhere");
+const { publishEvent } = require("../services/rabbitmqPublisher");
 
 const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || "http://localhost:5006";
 const DOCTOR_SERVICE_URL = process.env.DOCTOR_SERVICE_URL || "http://localhost:5002";
@@ -16,6 +17,15 @@ const getAppointmentServiceUrls = () => {
     "http://localhost:5003",
     "http://localhost:8080"
   ].filter(Boolean);
+};
+
+const publishPaymentEvent = async (routingKey,payload) => {
+  try{
+    await publishEvent("payments",routingKey, payload);
+    console.log(`✅ Published event to RabbitMQ: payments.${routingKey}`);
+  }catch(err){
+    console.warn(`⚠️ Failed to publish event to RabbitMQ:`, err.message || err);
+  }
 };
 
 const notifyAppointmentService = async (appointmentId, body) => {
@@ -66,11 +76,18 @@ const sendPaymentEmail = async ({ email, subject, message }) => {
 
   try {
     console.log(`📩 Payment-service requesting notification-service email send to ${email}`);
-    const response = await axios.post(`${NOTIFICATION_SERVICE_URL}/api/notifications/send`, {
-      email,
-      subject,
-      message,
-    });
+    const response = await axios.post(
+      `${NOTIFICATION_SERVICE_URL}/api/notifications/send`,
+      {
+        email,
+        subject,
+        message,
+      },
+      {
+        headers: { "x-internal-service-key": INTERNAL_SERVICE_KEY },
+        timeout: 5000,
+      }
+    );
     console.log(`✅ Notification-service responded for ${email}:`, response.data);
     return response.data?.success === true;
   } catch (err) {
@@ -120,8 +137,11 @@ const initiatePayment = async (req, res, next) => {
     const payment = await Payment.create({
       orderId,
       patientId: req.user.roleId,
-      patientName, patientEmail,
-      appointmentId, doctorId,
+      patientName,
+      patientEmail,
+      patientPhone,
+      appointmentId,
+      doctorId,
       doctorName: cleanDoctorName,
       amount,
     });
@@ -202,6 +222,18 @@ const payhereWebhook = async (req, res, next) => {
     });
 
     if (newStatus === 'success') {
+      await publishPaymentEvent('payment.success', {
+        paymentId: payment._id?.toString(),
+        orderId: payment.orderId,
+        appointmentId: payment.appointmentId,
+        patientId: payment.patientId,
+        doctorId: payment.doctorId,
+        status: 'success',
+        amount: payment.amount,
+        patientEmail: payment.patientEmail,
+        patientPhone: payment.patientPhone,
+      });
+
       await sendPaymentEmail({
         email: payment.patientEmail,
         subject: 'NexusCare Payment Received',
@@ -276,16 +308,16 @@ const confirmPayment = async (req, res, next) => {
     ).select("-webhookData -__v");
 
     if (updated) {
-      await logNotificationEvent({
-        type: 'payment',
-        event: 'payment_confirmed',
-        status: 'success',
-        appointmentId: updated.appointmentId,
+      await publishPaymentEvent("payment.success", {
         paymentId: updated._id?.toString(),
+        orderId: updated.orderId,
+        appointmentId: updated.appointmentId,
         patientId: updated.patientId,
-        email: updated.patientEmail,
-        message: `Payment confirmed via return_url for order ${orderId}`,
-        payload: { orderId },
+        doctorId: updated.doctorId,
+        status: "success",
+        amount: updated.amount,
+        patientEmail: updated.patientEmail,
+        patientPhone: updated.patientPhone,
       });
 
       await sendPaymentEmail({

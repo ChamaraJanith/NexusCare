@@ -5,6 +5,7 @@ const {
   sendSMSPayload,
   processAppointmentNotificationEvent,
   processVideoNotificationEvent,
+  processPaymentNotificationEvent,
 } = require('../controllers/notificationController');
 
 const RABBITMQ_URL = process.env.RABBITMQ_URL || config.RABBITMQ_URL || 'amqp://guest:guest@rabbitmq:5672';
@@ -22,6 +23,10 @@ const VIDEO_ROUTING_KEYS = [
   'video.session.created',
   'video.session.ended',
 ];
+
+const PAYMENTS_EXCHANGE = 'payments';
+const PAYMENTS_QUEUE = 'payment.notifications';
+const PAYMENTS_ROUTING_KEYS = ['payment.success', 'payment.failed'];
 
 const startRabbitMQConsumer = async () => {
   const connection = await amqp.connect(RABBITMQ_URL);
@@ -48,8 +53,14 @@ const startRabbitMQConsumer = async () => {
     await channel.bindQueue(VIDEO_QUEUE, VIDEO_EXCHANGE, routingKey);
   }
 
-  console.log(`📥 RabbitMQ consumer connected, listening for ${USER_QUEUE}, ${APPOINTMENT_QUEUE}, and ${VIDEO_QUEUE}`);
+    await channel.assertExchange(PAYMENTS_EXCHANGE, 'topic', { durable: true });
+  await channel.assertQueue(PAYMENTS_QUEUE, { durable: true });
 
+  for (const routingKey of PAYMENTS_ROUTING_KEYS) {
+    await channel.bindQueue(PAYMENTS_QUEUE, PAYMENTS_EXCHANGE, routingKey);
+  }
+
+  console.log(`📥 RabbitMQ consumer connected, listening for ${USER_QUEUE}, ${APPOINTMENT_QUEUE}, ${VIDEO_QUEUE}, and ${PAYMENTS_QUEUE}`);
   channel.consume(
     USER_QUEUE,
     async (msg) => {
@@ -101,8 +112,8 @@ const startRabbitMQConsumer = async () => {
     { noAck: false }
   );
 
-  channel.consume(
-    VIDEO_QUEUE,
+   channel.consume(
+    PAYMENTS_QUEUE,
     async (msg) => {
       if (!msg) return;
 
@@ -111,11 +122,11 @@ const startRabbitMQConsumer = async () => {
         const routingKey = msg.fields.routingKey;
         console.log(`📩 Received ${routingKey} event`, payload);
 
-        await processVideoNotificationEvent(payload, routingKey);
+        await processPaymentNotificationEvent(payload, routingKey);
 
         channel.ack(msg);
       } catch (error) {
-        console.error('❌ Failed to process video event', error);
+        console.error('❌ Failed to process payment event', error);
         const redelivered = msg.fields.redelivered;
         channel.nack(msg, false, !redelivered);
       }
