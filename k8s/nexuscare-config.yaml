@@ -4,13 +4,19 @@ metadata:
   name: nexuscare-config
   namespace: nexuscare
 data:
-  ALLOWED_ORIGINS: "http://localhost:9000"
+  ALLOWED_ORIGINS: "http://localhost:8080,http://localhost:9000"
   RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672"
-  MONGO_URI: "mongodb://mongo:27017/nexuscare"
-  PAYHERE_BASE_URL: "https://www.payhere.lk/pay"
+  PAYHERE_BASE_URL: "https://sandbox.payhere.lk/pay/checkout"
+  USER_SERVICE_URL: "http://user-patient-service:5001"
   DOCTOR_SERVICE_URL: "http://doctor-service:5002"
+  APPOINTMENT_SERVICE_URL: "http://appointment-service:5003"
+  AI_SERVICE_URL: "http://ai-symptom-service:5004"
+  VIDEO_SERVICE_URL: "http://video-session-integration-service:5005"
   NOTIFICATION_SERVICE_URL: "http://notification-service:5006"
+  FEE_SERVICE_URL: "http://fee-management-service:5007"
+  PAYMENT_SERVICE_URL: "http://payment-service:5009"
   JITSI_APP_ID: "nexuscare"
+  GEMINI_MODEL: "gemini-3-flash-preview"
 
 ---
 apiVersion: v1
@@ -19,12 +25,26 @@ metadata:
   name: nexuscare-secrets
   namespace: nexuscare
 stringData:
-  JWT_SECRET: "placeholder_jwt_secret"
-  INTERNAL_SERVICE_KEY: "placeholder_internal_key"
-  JITSI_APP_SECRET: "placeholder_jitsi_secret"
-  PAYHERE_MERCHANT_ID: "placeholder_merchant_id"
-  PAYHERE_MERCHANT_SECRET: "placeholder_merchant_secret"
-  GMAIL_USER: "placeholder@gmail.com"
-  GMAIL_PASS: "placeholder_password"
-  TWILIO_ACCOUNT_SID: "placeholder_twilio_sid"
-  TWILIO_AUTH_TOKEN: "placeholder_twilio_auth_token"
+  JWT_SECRET: "nexuscare_jwt_secret_2026_ms1"
+  INTERNAL_SERVICE_KEY: "nexuscare_internal_key_2026"
+  INTERNAL_SERVICE_KEY_FALLBACK: "supersecret123"
+  JITSI_APP_SECRET: "nexuscare_jitsi_secret_2026"
+  PAYHERE_MERCHANT_ID: "1234781"
+  PAYHERE_MERCHANT_SECRET: "MzExOTIxNTE1MTQ3MzgyNjk3MjI3NTI0ODk5MjMzMDU1MDgyNTg="
+  GMAIL_USER: "chamarasweed44@gmail.com"
+  GMAIL_PASS: "bvrh cwoh djkm cltm"
+  TWILIO_ACCOUNT_SID: "AC521168924dfe8da3c5a10d093a739303"
+  TWILIO_AUTH_TOKEN: "88ea366ef9dd3d93dd71a52bf405cc18"
+  TWILIO_PHONE_NUMBER: "+14784296373"
+  SMS_PROVIDER: "notifylk"
+  NOTIFYLK_USER_ID: "31369"
+  NOTIFYLK_API_KEY: "sFM4c0loEhVTuMppeVWH"
+  NOTIFYLK_SENDER_ID: "NotifyDEMO"
+  GEMINI_API_KEY: "AIzaSyCUKE9nGM3zgI_7snvagxhx_RT7UzNRn1Q"
+  USER_MONGO_URI: "mongodb://user_service_db_user:gayath@ac-qbgxdsy-shard-00-00.qafaszo.mongodb.net:27017,ac-qbgxdsy-shard-00-01.qafaszo.mongodb.net:27017,ac-qbgxdsy-shard-00-02.qafaszo.mongodb.net:27017/?ssl=true&replicaSet=atlas-1r34v9-shard-0&authSource=admin&appName=Cluster0"
+  DOCTOR_MONGO_URI: "mongodb://nexuscare:NexusCare@ac-kkycyx8-shard-00-00.y6q2fwu.mongodb.net:27017,ac-kkycyx8-shard-00-01.y6q2fwu.mongodb.net:27017,ac-kkycyx8-shard-00-02.y6q2fwu.mongodb.net:27017/?ssl=true&replicaSet=atlas-13g90q-shard-0&authSource=admin&appName=Cluster0"
+  APPOINTMENT_MONGO_URI: "mongodb://it23616806_db_user:sewmini@ac-69tg5gy-shard-00-00.0alu1wc.mongodb.net:27017,ac-69tg5gy-shard-00-01.0alu1wc.mongodb.net:27017,ac-69tg5gy-shard-00-02.0alu1wc.mongodb.net:27017/?ssl=true&replicaSet=atlas-8bd6ro-shard-0&authSource=admin&appName=Cluster0"
+  VIDEO_MONGO_URI: "mongodb+srv://sachinikalupahana2002_db_user:sachini2002@cluster0.ihzgzzx.mongodb.net/?appName=Cluster0"
+  NOTIFICATION_MONGO_URI: "mongodb+srv://chamaragithub21_db_user:chamaragithub@cluster0.jejsyys.mongodb.net/?appName=Cluster0"
+  FEE_MONGO_URI: "mongodb://fee_management:gayath@ac-jrgrrxj-shard-00-00.csnrw3b.mongodb.net:27017,ac-jrgrrxj-shard-00-01.csnrw3b.mongodb.net:27017,ac-jrgrrxj-shard-00-02.csnrw3b.mongodb.net:27017/?ssl=true&replicaSet=atlas-gwih40-shard-0&authSource=admin&appName=Cluster0"
+  PAYMENT_MONGO_URI: "mongodb://payment_db_user:gayath@ac-w984696-shard-00-00.u3lzcwe.mongodb.net:27017,ac-w984696-shard-00-01.u3lzcwe.mongodb.net:27017,ac-w984696-shard-00-02.u3lzcwe.mongodb.net:27017/?ssl=true&replicaSet=atlas-5mqh6s-shard-0&authSource=admin&appName=Cluster0"
