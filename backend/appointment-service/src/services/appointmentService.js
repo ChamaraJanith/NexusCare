@@ -2,16 +2,20 @@ import Appointment from "../models/Appointment.js";
 import axios from "axios"; // 🔥 IMPORTANT (missing in your code)
 import { io } from "../app.js";
 import { publishEvent } from "./eventPublisher.js";
+import * as doctorService from "./doctorService.js";
 
-const FEE_SERVICE_URL = process.env.FEE_SERVICE_URL || "http://fee-management-service:5007";
-const DOCTOR_SERVICE_URL = process.env.DOCTOR_SERVICE_URL || "http://doctor-service:5002";
+const FEE_SERVICE_URL =
+  process.env.FEE_SERVICE_URL || "http://fee-management-service:5007";
+const DOCTOR_SERVICE_URL =
+  process.env.DOCTOR_SERVICE_URL || "http://doctor-service:5002";
 const INTERNAL_SERVICE_KEY = process.env.INTERNAL_SERVICE_KEY;
-
-
 
 // 🔥 STEP 3 → ADD THIS AT TOP (charges function)
 const fetchCharges = async (doctorId, hospitalId, appointmentType) => {
-  const internalKeys = [INTERNAL_SERVICE_KEY, process.env.INTERNAL_SERVICE_KEY_FALLBACK].filter(Boolean);
+  const internalKeys = [
+    INTERNAL_SERVICE_KEY,
+    process.env.INTERNAL_SERVICE_KEY_FALLBACK,
+  ].filter(Boolean);
 
   for (const key of internalKeys) {
     try {
@@ -21,22 +25,31 @@ const fetchCharges = async (doctorId, hospitalId, appointmentType) => {
         {
           headers: { "x-internal-service-key": key },
           timeout: 5000,
-        }
+        },
       );
       if (data.success) return data.data;
       console.warn(`⚠️ MS6 returned failure with key ${key}:`, data);
     } catch (err) {
-      console.warn(`⚠️ MS6 unreachable with key ${key}:`, err.response?.status || err.message);
+      console.warn(
+        `⚠️ MS6 unreachable with key ${key}:`,
+        err.response?.status || err.message,
+      );
     }
   }
 
-  console.warn("⚠️ MS6 unreachable with all internal keys, using fallback fees.");
+  console.warn(
+    "⚠️ MS6 unreachable with all internal keys, using fallback fees.",
+  );
   const serviceFee = 500;
   const doctorFee = 2000;
   const hospitalFee = appointmentType === "PHYSICAL" ? 1000 : 0;
-  return { doctorFee, hospitalFee, serviceFee, total: doctorFee + hospitalFee + serviceFee };
+  return {
+    doctorFee,
+    hospitalFee,
+    serviceFee,
+    total: doctorFee + hospitalFee + serviceFee,
+  };
 };
-
 
 // 🔥 Generate Appointment ID
 const generateAppointmentId = async () => {
@@ -50,17 +63,28 @@ export const getNextQueueNumber = async (doctorId, date) => {
   const count = await Appointment.countDocuments({
     doctorId,
     date,
-    status: { $ne: "CANCELLED" }
+    status: { $ne: "CANCELLED" },
   });
 
   return count + 1;
 };
 
-
 // ✅ CREATE APPOINTMENT (FINAL 🔥)
 export const createAppointment = async (data) => {
   const { doctorId, date, time } = data;
-  const appointmentType = (data.appointmentType || data.type || "").toString().trim().toUpperCase();
+  const appointmentType = (data.appointmentType || data.type || "")
+    .toString()
+    .trim()
+    .toUpperCase();
+
+  const doctorResponse = await doctorService.getDoctorById(doctorId);
+  const doctorDetails = doctorResponse.data;
+
+  if (!doctorDetails) {
+    console.warn(
+      "⚠️ Doctor service unavailable; booking with cached or request-provided doctor snapshot.",
+    );
+  }
 
   // 🔒 LOCK SLOT via doctor-service — this is the authoritative capacity check.
   // bookSlot increments bookedCount atomically and returns the queue number.
@@ -69,7 +93,7 @@ export const createAppointment = async (data) => {
   try {
     const slotRes = await axios.put(
       `${DOCTOR_SERVICE_URL}/api/availability/book`,
-      { doctorId, date, time }
+      { doctorId, date, time },
     );
     queueNumber = slotRes.data.queueNumber;
   } catch (slotErr) {
@@ -79,11 +103,14 @@ export const createAppointment = async (data) => {
       throw new Error(msg);
     }
     // Doctor-service unreachable — fall back to local count so booking still works
-    console.warn("⚠️ Slot lock failed, falling back to local queue count:", msg);
+    console.warn(
+      "⚠️ Slot lock failed, falling back to local queue count:",
+      msg,
+    );
     const count = await Appointment.countDocuments({
       doctorId,
       date,
-      status: { $ne: "CANCELLED" }
+      status: { $ne: "CANCELLED" },
     });
     queueNumber = count + 1;
   }
@@ -99,40 +126,58 @@ export const createAppointment = async (data) => {
       doctorFee,
       hospitalFee,
       serviceFee,
-      total: Number.isFinite(totalValue) && totalValue > 0
-        ? totalValue
-        : doctorFee + hospitalFee + serviceFee
+      total:
+        Number.isFinite(totalValue) && totalValue > 0
+          ? totalValue
+          : doctorFee + hospitalFee + serviceFee,
     };
   } else {
-    charges = await fetchCharges(doctorId, data.hospitalId || null, appointmentType);
+    charges = await fetchCharges(
+      doctorId,
+      data.hospitalId || null,
+      appointmentType,
+    );
   }
 
   const appointmentId = await generateAppointmentId();
 
   const extractDoctorSnapshot = (data) => ({
-  doctorName: data.doctorName || data.doctor?.name || data.selectedDoctor?.name || "",
-  doctorEmail: data.doctorEmail || data.doctor?.email || data.selectedDoctor?.email || null,
-  doctorSpecialization:
-    data.doctorSpecialization ||
-    data.doctor?.specialization ||
-    data.doctor?.specialty ||
-    "",
-  doctorHospital: data.doctorHospital || data.hospital || data.doctor?.hospital || "",
-  doctorProfileImage:
-    data.doctorProfileImage ||
-    data.doctor?.profileImage ||
-    data.doctor?.image ||
-    data.doctor?.profilePicture ||
-    "",
-  doctorConsultationFee: Number(
-    data.doctorConsultationFee ||
-    data.doctor?.consultationFee ||
-    data.doctor?.fee ||
-    0
-  )
-});
+    doctorName:
+      data.doctorName ||
+      data.doctor?.name ||
+      data.selectedDoctor?.name ||
+      data.doctorId ||
+      "Unknown Doctor",
+    doctorEmail:
+      data.doctorEmail ||
+      data.doctor?.email ||
+      data.selectedDoctor?.email ||
+      null,
+    doctorSpecialization:
+      data.doctorSpecialization ||
+      data.doctor?.specialization ||
+      data.doctor?.specialty ||
+      "",
+    doctorHospital:
+      data.doctorHospital || data.hospital || data.doctor?.hospital || "",
+    doctorProfileImage:
+      data.doctorProfileImage ||
+      data.doctor?.profileImage ||
+      data.doctor?.image ||
+      data.doctor?.profilePicture ||
+      "",
+    doctorConsultationFee: Number(
+      data.doctorConsultationFee ||
+        data.doctor?.consultationFee ||
+        data.doctor?.fee ||
+        0,
+    ),
+  });
 
-  const doctorSnapshot = extractDoctorSnapshot(data);
+  const doctorSnapshot = extractDoctorSnapshot({
+    ...data,
+    doctor: doctorDetails,
+  });
 
   const appointment = new Appointment({
     ...data,
@@ -142,7 +187,7 @@ export const createAppointment = async (data) => {
     queueNumber,
     charges,
     paymentStatus: "PENDING",
-    status: "PENDING"
+    status: "PENDING",
   });
 
   const saved = await appointment.save();
@@ -166,7 +211,10 @@ export const createAppointment = async (data) => {
       patientName: saved.patientName,
     });
   } catch (err) {
-    console.warn("⚠️ Failed to publish appointment.created event:", err.message || err);
+    console.warn(
+      "⚠️ Failed to publish appointment.created event:",
+      err.message || err,
+    );
   }
 
   io.emit("appointmentBooked", saved);
@@ -182,7 +230,6 @@ export const getAppointmentsByPatient = async (patientId) => {
 export const getAppointmentsByDoctor = async (doctorId) => {
   return await Appointment.find({ doctorId });
 };
-
 
 // ✅ Update appointment (FINAL 🔥)
 export const updateAppointment = async (id, patientId, data) => {
@@ -204,7 +251,7 @@ export const updateAppointment = async (id, patientId, data) => {
 
   // 🧠 24 hour validation
   const appointmentDateTime = new Date(
-    `${appointment.date} ${appointment.time}`
+    `${appointment.date} ${appointment.time}`,
   );
 
   const now = new Date();
@@ -212,7 +259,7 @@ export const updateAppointment = async (id, patientId, data) => {
 
   if (diffHours < 24) {
     throw new Error(
-      "Cannot modify appointment within 24 hours of scheduled time"
+      "Cannot modify appointment within 24 hours of scheduled time",
     );
   }
 
@@ -224,7 +271,7 @@ export const updateAppointment = async (id, patientId, data) => {
     const count = await Appointment.countDocuments({
       doctorId: newDoctorId,
       date: newDate,
-      status: { $ne: "CANCELLED" }
+      status: { $ne: "CANCELLED" },
     });
 
     appointment.queueNumber = count + 1;
@@ -240,8 +287,6 @@ export const updateAppointment = async (id, patientId, data) => {
 
   return updated;
 };
-
-
 
 // ✅ Cancel appointment (FINAL 🔥)
 export const cancelAppointment = async (id, patientId) => {
@@ -273,12 +318,16 @@ export const cancelAppointment = async (id, patientId) => {
 
   // 🔓 Release the slot capacity back in doctor-service
   try {
-    await axios.put(
-      `${DOCTOR_SERVICE_URL}/api/availability/release`,
-      { doctorId: appointment.doctorId, date: appointment.date, time: appointment.time }
-    );
+    await axios.put(`${DOCTOR_SERVICE_URL}/api/availability/release`, {
+      doctorId: appointment.doctorId,
+      date: appointment.date,
+      time: appointment.time,
+    });
   } catch (err) {
-    console.warn("⚠️ Slot release failed (non-critical):", err.response?.data || err.message);
+    console.warn(
+      "⚠️ Slot release failed (non-critical):",
+      err.response?.data || err.message,
+    );
   }
 
   // ⚡ REAL-TIME EMIT
@@ -287,20 +336,17 @@ export const cancelAppointment = async (id, patientId) => {
   return cancelled;
 };
 
-
-
 // 🔥 GET DOCTOR SLOTS (clean version)
 export const getDoctorSlots = async (doctorId, date) => {
   try {
     const res = await axios.get(
       `${DOCTOR_SERVICE_URL}/api/availability/${doctorId}/by-date`,
       {
-        params: { date }
-      }
+        params: { date },
+      },
     );
 
     return res.data;
-
   } catch (error) {
     console.error("Error fetching slots:", error.message);
     throw new Error("Failed to fetch doctor slots");
