@@ -416,6 +416,7 @@ export const getDoctorSlots = async (doctorId, date) => {
           platform: s.platform,
           appointmentType: s.appointmentType,
           serviceFee: s.serviceFee,
+          hospitalFee: s.hospitalFee || 0,
         })),
         online: online.map((s) => ({
           _id: s._id,
@@ -429,6 +430,7 @@ export const getDoctorSlots = async (doctorId, date) => {
           platform: s.platform,
           appointmentType: s.appointmentType,
           serviceFee: s.serviceFee,
+          hospitalFee: 0,
         })),
       };
     } else {
@@ -517,6 +519,7 @@ export const getDoctorSlotsNextDays = async (doctorId) => {
       platform: s.platform,
       appointmentType: s.appointmentType,
       serviceFee: s.serviceFee,
+      hospitalFee: s.appointmentType === "PHYSICAL" ? (s.hospitalFee || 0) : 0,
     });
 
     return {

@@ -168,6 +168,7 @@ const handleSlotUpdateEvent = async (msg) => {
           ).toUpperCase(),
           platform: slot.platform || "",
           serviceFee: slot.serviceFee || 0,
+          hospitalFee: slot.hospitalFee || 0,
           syncedAt: new Date(),
           isActive: true,
         };
