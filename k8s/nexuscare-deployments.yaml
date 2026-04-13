@@ -63,6 +63,12 @@ spec:
                 name: nexuscare-config
             - secretRef:
                 name: nexuscare-secrets
+          env:
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: nexuscare-secrets
+                  key: USER_MONGO_URI
 ---
 apiVersion: v1
 kind: Service
@@ -101,6 +107,12 @@ spec:
                 name: nexuscare-config
             - secretRef:
                 name: nexuscare-secrets
+          env:
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: nexuscare-secrets
+                  key: DOCTOR_MONGO_URI
 ---
 apiVersion: v1
 kind: Service
@@ -139,6 +151,12 @@ spec:
                 name: nexuscare-config
             - secretRef:
                 name: nexuscare-secrets
+          env:
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: nexuscare-secrets
+                  key: APPOINTMENT_MONGO_URI
 ---
 apiVersion: v1
 kind: Service
@@ -177,6 +195,12 @@ spec:
                 name: nexuscare-config
             - secretRef:
                 name: nexuscare-secrets
+          env:
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: nexuscare-secrets
+                  key: VIDEO_MONGO_URI
           livenessProbe:
             httpGet:
               path: /health
@@ -227,6 +251,12 @@ spec:
                 name: nexuscare-config
             - secretRef:
                 name: nexuscare-secrets
+          env:
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: nexuscare-secrets
+                  key: NOTIFICATION_MONGO_URI
 ---
 apiVersion: v1
 kind: Service
@@ -265,6 +295,12 @@ spec:
                 name: nexuscare-config
             - secretRef:
                 name: nexuscare-secrets
+          env:
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: nexuscare-secrets
+                  key: FEE_MONGO_URI
 ---
 apiVersion: v1
 kind: Service
@@ -303,6 +339,12 @@ spec:
                 name: nexuscare-config
             - secretRef:
                 name: nexuscare-secrets
+          env:
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: nexuscare-secrets
+                  key: PAYMENT_MONGO_URI
 ---
 apiVersion: v1
 kind: Service
