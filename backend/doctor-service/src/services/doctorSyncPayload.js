@@ -13,6 +13,7 @@ export const createDoctorSyncPayload = (doctorRecord, identity = {}) => {
     hospital: doctorRecord.hospital || identity.hospital || null,
     location: doctorRecord.location || identity.location || null,
     profileImage: doctorRecord.profileImage || identity.profileImage || null,
+    consultationFee: Number(doctorRecord.consultationFee || doctorRecord.fee || 0),
     isActive: doctorRecord.isActive !== false,
   };
 };

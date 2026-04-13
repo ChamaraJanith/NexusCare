@@ -12,18 +12,21 @@ const enrichSlotsWithDoctorInfo = async (doctorId, slots) => {
     const doctor = await Doctor.findOne({ doctorId }).lean();
     if (!doctor || !slots.length) return slots;
 
-    // Add hospital to each slot
+    // Add hospital to each slot, and preserve denormalized fee fields
     return slots.map((slot) => ({
       ...slot,
       hospital: slot.hospital || doctor.hospital || "Hospital",
       hospitalId: slot.hospitalId || doctor._id?.toString() || doctorId,
+      hospitalFee: slot.hospitalFee ?? 0,
+      serviceFee: slot.serviceFee ?? 0,
     }));
   } catch (error) {
     console.warn("⚠️ Failed to enrich slots with doctor info:", error.message);
-    // Return slots with fallback hospital
     return slots.map((slot) => ({
       ...slot,
       hospital: slot.hospital || "Hospital",
+      hospitalFee: slot.hospitalFee ?? 0,
+      serviceFee: slot.serviceFee ?? 0,
     }));
   }
 };

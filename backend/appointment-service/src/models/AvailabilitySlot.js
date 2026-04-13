@@ -46,6 +46,10 @@ const availabilitySlotSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    hospitalFee: {
+      type: Number,
+      default: 0,
+    },
     // Sync metadata
     syncedAt: {
       type: Date,

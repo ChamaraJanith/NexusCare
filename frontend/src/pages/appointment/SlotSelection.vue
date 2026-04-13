@@ -21,14 +21,14 @@
           <img :src="getImageUrl(doctor.profileImage || doctor.image || doctor.profilePicture)" />
         </q-avatar>
         <div class="col">
-          <div class="text-h5 text-weight-bolder q-mb-xs">{{ doctor.name }}</div>
+          <div class="text-h5 text-weight-bolder q-mb-xs">{{ doctor.name || 'Doctor' }}</div>
           <div class="text-subtitle2 text-blue-4 flex items-center q-mb-xs">
             <q-icon name="medical_services" size="16px" class="q-mr-xs" />
-            {{ doctor.specialization || doctor.specialty }}
+            {{ doctor.specialization || doctor.specialty || 'Specialist' }}
           </div>
           <div class="text-caption text-grey-4 flex items-center">
             <q-icon name="local_hospital" size="14px" class="q-mr-xs" />
-            {{ doctor.hospital }}
+            {{ doctor.hospital || 'Hospital' }}
           </div>
         </div>
         <div class="col-auto text-right" v-if="doctor.consultationFee">
@@ -36,6 +36,21 @@
           <div class="text-h6 text-weight-bold text-green-4">Rs {{ doctor.consultationFee }}</div>
         </div>
       </q-card>
+
+      <!-- STALE DATA BANNER -->
+      <q-banner
+        v-if="slotsStale"
+        class="q-mb-md stale-banner"
+        rounded
+        dense
+      >
+        <template v-slot:avatar>
+          <q-icon name="cloud_off" color="orange-4" />
+        </template>
+        <span class="text-orange-3 text-caption">
+          Doctor service is temporarily unavailable. Showing last known availability — booking is still open.
+        </span>
+      </q-banner>
 
       <!-- HEADER + DATE FILTER -->
       <div class="flex items-center justify-between q-mb-lg">
@@ -284,6 +299,7 @@ const loadingSlots = ref(false)
 const physicalSlots = ref([])
 const onlineSlots = ref([])
 const slotFees = ref({})
+const slotsStale = ref(false)
 
 // Returns hospitalFee from slot (denormalized) or from fetched fee data
 const getHospitalFee = (slot) => {
@@ -396,6 +412,7 @@ const fetchSlots = async () => {
     const slotData = result.data || result
     physicalSlots.value = slotData.physical || []
     onlineSlots.value = slotData.online || []
+    slotsStale.value = result.stale || false
 
     // Show warning if data is stale
     if (result.stale) {
@@ -501,5 +518,9 @@ const handleSlotBooking = (slot, type) => {
 
 .empty-state {
   opacity: 0.7;
+}
+.stale-banner {
+  background: rgba(251, 146, 60, 0.08);
+  border: 1px solid rgba(251, 146, 60, 0.25);
 }
 </style>

@@ -6,6 +6,7 @@ import appointmentRoutes from "./routes/appointmentRoutes.js";
 import doctorSearchRoutes from "./routes/doctorSearchRoutes.js";
 import availabilityRoutes from "./routes/availabilityRoutes.js";
 import { initializeConsumer, closeConsumer } from "./utils/eventConsumer.js";
+import AvailabilitySlot from "./models/AvailabilitySlot.js";
 import http from "node:http";
 import { Server } from "socket.io";
 
@@ -75,6 +76,27 @@ const startServer = async () => {
   try {
     await mongoose.connect(MONGO_URI, mongoOptions);
     console.log("✅ MongoDB Connected");
+
+    // One-time migration: normalize AvailabilitySlot.date from Date → YYYY-MM-DD string
+    try {
+      const slotsWithDateObj = await AvailabilitySlot.find({
+        date: { $type: "date" },
+      }).lean();
+
+      if (slotsWithDateObj.length > 0) {
+        console.log(`🔄 Migrating ${slotsWithDateObj.length} slots: Date → String`);
+        const bulkOps = slotsWithDateObj.map((s) => ({
+          updateOne: {
+            filter: { _id: s._id },
+            update: { $set: { date: new Date(s.date).toISOString().split("T")[0] } },
+          },
+        }));
+        await AvailabilitySlot.bulkWrite(bulkOps);
+        console.log("✅ AvailabilitySlot date migration complete");
+      }
+    } catch (migErr) {
+      console.warn("⚠️ Date migration failed (non-critical):", migErr.message);
+    }
 
     // Start Event Consumer for doctor slot updates
     try {
