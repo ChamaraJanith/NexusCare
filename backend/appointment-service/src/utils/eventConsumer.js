@@ -1,5 +1,6 @@
 import amqplib from "amqplib";
 import AvailabilitySlot from "../models/AvailabilitySlot.js";
+import DoctorSnapshot from "../models/DoctorSnapshot.js";
 
 let connection = null;
 let channel = null;
@@ -8,7 +9,7 @@ const RABBITMQ_URL =
   process.env.RABBITMQ_URL || "amqp://guest:guest@localhost:5672";
 const EXCHANGE_NAME = "doctor_events";
 const CONSUMER_QUEUE_NAME = "appointment_service_slots";
-const ROUTING_PATTERN = "doctor.*.slots_updated";
+const ROUTING_PATTERN = "doctor.#";
 
 /**
  * Initialize RabbitMQ consumer
@@ -30,13 +31,94 @@ export const initializeConsumer = async () => {
     await channel.bindQueue(queue.queue, EXCHANGE_NAME, ROUTING_PATTERN);
 
     // Consume messages
-    await channel.consume(queue.queue, handleSlotUpdateEvent, { noAck: false });
+    await channel.consume(queue.queue, handleEvent, { noAck: false });
 
-    console.log("✅ Event consumer initialized - listening for slot updates");
+    console.log("✅ Event consumer initialized - listening for doctor events");
   } catch (error) {
     console.error("❌ Failed to initialize event consumer:", error.message);
     // Retry after 5 seconds
     setTimeout(initializeConsumer, 5000);
+  }
+};
+
+/**
+ * Route incoming events by routing key
+ */
+const handleEvent = async (msg) => {
+  if (!msg) return;
+  const routingKey = msg.fields?.routingKey || "";
+
+  if (routingKey.endsWith("slots_updated")) {
+    return handleSlotUpdateEvent(msg);
+  }
+  if (routingKey === "doctor.updated") {
+    return handleDoctorUpdatedEvent(msg);
+  }
+  if (routingKey === "doctor.removed") {
+    return handleDoctorRemovedEvent(msg);
+  }
+
+  // Unknown event — ack and ignore
+  channel.ack(msg);
+};
+
+/**
+ * Handle doctor.updated — upsert local DoctorSnapshot
+ */
+const handleDoctorUpdatedEvent = async (msg) => {
+  try {
+    const payload = JSON.parse(msg.content.toString());
+    const { doctorId } = payload;
+
+    if (!doctorId) {
+      channel.nack(msg, false, false);
+      return;
+    }
+
+    await DoctorSnapshot.findOneAndUpdate(
+      { doctorId },
+      {
+        $set: {
+          doctorId,
+          name: payload.name || "",
+          email: payload.email || null,
+          specialization: payload.specialization || "",
+          hospital: payload.hospital || "",
+          location: payload.location || "",
+          profileImage: payload.profileImage || null,
+          consultationFee: payload.consultationFee || 0,
+          isActive: payload.isActive !== false,
+          syncedAt: new Date(),
+        },
+      },
+      { upsert: true, new: true }
+    );
+
+    console.log(`✅ DoctorSnapshot upserted for doctor ${doctorId}`);
+    channel.ack(msg);
+  } catch (error) {
+    console.error("❌ Error handling doctor.updated event:", error.message);
+    channel.nack(msg, false, true);
+  }
+};
+
+/**
+ * Handle doctor.removed — mark snapshot inactive
+ */
+const handleDoctorRemovedEvent = async (msg) => {
+  try {
+    const { doctorId } = JSON.parse(msg.content.toString());
+    if (doctorId) {
+      await DoctorSnapshot.findOneAndUpdate(
+        { doctorId },
+        { $set: { isActive: false, syncedAt: new Date() } }
+      );
+      console.log(`✅ DoctorSnapshot deactivated for doctor ${doctorId}`);
+    }
+    channel.ack(msg);
+  } catch (error) {
+    console.error("❌ Error handling doctor.removed event:", error.message);
+    channel.nack(msg, false, true);
   }
 };
 
@@ -62,19 +144,13 @@ const handleSlotUpdateEvent = async (msg) => {
     // Store new slots
     if (Array.isArray(slots)) {
       const slotsToInsert = slots.map((slot) => {
-        // Normalize date: ensure it's always stored at 00:00:00 UTC
+        // Normalize date: always store as YYYY-MM-DD string to match schema type
         let dateValue = slot.date;
-        if (typeof dateValue === "string") {
-          // Parse string date (e.g., "2026-04-13" or "2026-04-13T00:00:00Z")
-          dateValue = new Date(dateValue);
-        }
-
-        // Reset time to midnight UTC
         if (dateValue instanceof Date) {
-          const year = dateValue.getUTCFullYear();
-          const month = dateValue.getUTCMonth();
-          const date = dateValue.getUTCDate();
-          dateValue = new Date(Date.UTC(year, month, date, 0, 0, 0, 0));
+          dateValue = dateValue.toISOString().split("T")[0];
+        } else if (typeof dateValue === "string") {
+          // Strip any time component — keep only YYYY-MM-DD
+          dateValue = dateValue.split("T")[0];
         }
 
         return {

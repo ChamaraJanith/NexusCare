@@ -2,6 +2,7 @@ import axios from "axios";
 import * as cache from "./cacheService.js";
 import Appointment from "../models/Appointment.js";
 import AvailabilitySlot from "../models/AvailabilitySlot.js";
+import DoctorSnapshot from "../models/DoctorSnapshot.js";
 
 const DOCTOR_SERVICE_URL =
   process.env.DOCTOR_SERVICE_URL || "http://doctor-service:5002";
@@ -237,8 +238,29 @@ export const searchDoctors = async (filters) => {
     const localDoctors = await searchDoctorsFromLocalSlots(filters);
 
     if (localDoctors.length > 0) {
+      // Enrich with DoctorSnapshot profile data
+      const doctorIds = localDoctors.map((d) => d.doctorId || d._id);
+      const snapshots = await DoctorSnapshot.find({ doctorId: { $in: doctorIds } }).lean();
+      const snapshotMap = {};
+      snapshots.forEach((s) => { snapshotMap[s.doctorId] = s; });
+
+      const enriched = localDoctors.map((d) => {
+        const id = d.doctorId || d._id;
+        const snap = snapshotMap[id];
+        if (!snap) return d;
+        return {
+          ...d,
+          name: snap.name || d.name,
+          specialization: snap.specialization || d.specialization,
+          specialty: snap.specialization || d.specialization,
+          hospital: snap.hospital || d.hospital,
+          profileImage: snap.profileImage || d.profileImage,
+          consultationFee: snap.consultationFee || d.consultationFee,
+        };
+      });
+
       return {
-        data: localDoctors,
+        data: enriched,
         stale: true,
         message:
           "Doctor service unavailable - showing doctors with available slots from local database.",
@@ -266,12 +288,32 @@ export const getDoctorById = async (doctorId) => {
     const doctor = res.data?.data || res.data;
     if (doctor) {
       cache.set(cacheKey, doctor, 10 * 60 * 1000);
+      // Keep local snapshot fresh whenever we get a live response
+      DoctorSnapshot.findOneAndUpdate(
+        { doctorId },
+        {
+          $set: {
+            doctorId,
+            name: doctor.name || "",
+            email: doctor.email || null,
+            specialization: doctor.specialization || doctor.specialty || "",
+            hospital: doctor.hospital || "",
+            location: doctor.location || "",
+            profileImage: doctor.profileImage || null,
+            consultationFee: Number(doctor.consultationFee || doctor.fee || 0),
+            isActive: doctor.isActive !== false,
+            syncedAt: new Date(),
+          },
+        },
+        { upsert: true }
+      ).catch(() => {}); // fire-and-forget, non-critical
     }
 
     return { data: doctor, stale: false, message: "" };
   } catch (error) {
     console.error("❌ ERROR fetching doctor details:", error.message);
 
+    // 1. Try in-memory cache first (fastest)
     const cached = cache.get(cacheKey);
     if (cached) {
       console.warn("⚠️ Serving stale doctor details from cache");
@@ -279,6 +321,31 @@ export const getDoctorById = async (doctorId) => {
         data: cached,
         stale: true,
         message: "Doctor service unavailable - showing cached doctor details.",
+      };
+    }
+
+    // 2. Fall back to local DoctorSnapshot (persisted across restarts)
+    const snapshot = await DoctorSnapshot.findOne({ doctorId }).lean();
+    if (snapshot) {
+      console.warn("⚠️ Serving doctor profile from local snapshot");
+      const snapshotData = {
+        _id: snapshot.doctorId,
+        doctorId: snapshot.doctorId,
+        name: snapshot.name,
+        email: snapshot.email,
+        specialization: snapshot.specialization,
+        specialty: snapshot.specialization,
+        hospital: snapshot.hospital,
+        location: snapshot.location,
+        profileImage: snapshot.profileImage,
+        consultationFee: snapshot.consultationFee,
+        isActive: snapshot.isActive,
+      };
+      cache.set(cacheKey, snapshotData, 5 * 60 * 1000);
+      return {
+        data: snapshotData,
+        stale: true,
+        message: "Doctor service unavailable - showing last known doctor profile.",
       };
     }
 
@@ -322,18 +389,10 @@ export const getDoctorSlots = async (doctorId, date) => {
       "⚠️ Doctor service unavailable; using availability slots from local database",
     );
 
-    // Convert date string to date range for proper matching with Date objects
-    const selectedDate = new Date(date);
-    // Ensure UTC midnight
-    const year = selectedDate.getUTCFullYear();
-    const month = selectedDate.getUTCMonth();
-    const dateNum = selectedDate.getUTCDate();
-    const startOfDay = new Date(Date.UTC(year, month, dateNum, 0, 0, 0, 0));
-    const endOfDay = new Date(Date.UTC(year, month, dateNum + 1, 0, 0, 0, 0));
-
+    // Query by exact YYYY-MM-DD string — matches the String date field in AvailabilitySlot
     const slots = await AvailabilitySlot.find({
       doctorId,
-      date: { $gte: startOfDay, $lt: endOfDay },
+      date: date, // exact string match e.g. "2026-04-14"
       isActive: true,
     });
 
@@ -396,7 +455,7 @@ export const getDoctorSlotsNextDays = async (doctorId) => {
 
     const data = res.data;
     if (data) {
-      cache.set(cacheKey, data, 5 * 60 * 1000);
+      cache.set(cacheKey, { data, stale: false, message: "" }, 5 * 60 * 1000);
     }
 
     return { data, stale: false, message: "" };
@@ -406,63 +465,47 @@ export const getDoctorSlotsNextDays = async (doctorId) => {
     const cached = cache.get(cacheKey);
     if (cached) {
       console.warn("⚠️ Serving stale upcoming availability from cache");
-      return cached;
+      // Ensure consistent { data, stale, message } envelope
+      if (cached.stale !== undefined) return cached;
+      return { data: cached, stale: true, message: "Showing cached availability." };
     }
 
     console.warn(
       "⚠️ Doctor service unavailable; using fallback upcoming availability",
     );
 
-    // Get today at midnight UTC
+    // Build YYYY-MM-DD string range — matches the String date field in AvailabilitySlot
     const now = new Date();
-    const year = now.getUTCFullYear();
-    const month = now.getUTCMonth();
-    const date = now.getUTCDate();
-    const today = new Date(Date.UTC(year, month, date, 0, 0, 0, 0));
-
-    // Get 3 days from now at midnight UTC
-    const next3Days = new Date(Date.UTC(year, month, date + 3, 0, 0, 0, 0));
+    const todayStr = now.toISOString().split("T")[0];
+    const future = new Date(now);
+    future.setDate(future.getDate() + 30);
+    const futureStr = future.toISOString().split("T")[0];
 
     console.log(
-      `🔍 Querying slots - doctorId: ${doctorId}, date range: ${today.toISOString()} to ${next3Days.toISOString()}`,
+      `🔍 Querying slots - doctorId: ${doctorId}, date range: ${todayStr} to ${futureStr}`,
     );
 
     const slots = await AvailabilitySlot.find({
       doctorId,
-      date: { $gte: today, $lt: next3Days },
+      date: { $gte: todayStr, $lte: futureStr },
       isActive: true,
-    });
+    }).sort({ date: 1, startTime: 1 });
 
     console.log(
-      `✅ Found ${slots.length} availability slots in local database for next 3 days`,
+      `✅ Found ${slots.length} availability slots in local database for next 30 days`,
     );
 
-    // Debug: log first slot's date if found
-    if (slots.length > 0) {
+    if (slots.length === 0) {
+      const allSlots = await AvailabilitySlot.find({ doctorId }).select("date").limit(3);
       console.log(
-        `📅 First slot date: ${slots[0].date}, Type: ${typeof slots[0].date}`,
+        `⚠️ No slots in range. Sample dates in DB: ${allSlots.map((s) => s.date).join(", ")}`,
       );
-    } else {
-      // Debug: check what dates exist in DB
-      const allSlots = await AvailabilitySlot.find({ doctorId }).select("date");
-      console.log(
-        `⚠️ No slots found in range. Total slots in DB for ${doctorId}: ${allSlots.length}`,
-      );
-      if (allSlots.length > 0) {
-        console.log(
-          `📅 Sample dates in DB: ${allSlots
-            .slice(0, 3)
-            .map((s) => s.date)
-            .join(", ")}`,
-        );
-      }
     }
 
-    const data = { physical: [], online: [] };
     const physical = slots.filter((s) => s.appointmentType === "PHYSICAL");
     const online = slots.filter((s) => s.appointmentType === "ONLINE");
 
-    data.physical = physical.map((s) => ({
+    const mapSlot = (s) => ({
       _id: s._id,
       doctorId: s.doctorId,
       date: s.date,
@@ -474,21 +517,12 @@ export const getDoctorSlotsNextDays = async (doctorId) => {
       platform: s.platform,
       appointmentType: s.appointmentType,
       serviceFee: s.serviceFee,
-    }));
-    data.online = online.map((s) => ({
-      _id: s._id,
-      doctorId: s.doctorId,
-      date: s.date,
-      startTime: s.startTime,
-      slotCount: s.slotCount,
-      bookedCount: s.bookedCount,
-      hospital: s.hospital,
-      hospitalId: s.hospitalId,
-      platform: s.platform,
-      appointmentType: s.appointmentType,
-      serviceFee: s.serviceFee,
-    }));
+    });
 
-    return data;
+    return {
+      data: { physical: physical.map(mapSlot), online: online.map(mapSlot) },
+      stale: true,
+      message: "Doctor service unavailable - showing availability from local database.",
+    };
   }
 };
