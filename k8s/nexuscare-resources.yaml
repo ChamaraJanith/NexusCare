@@ -1,0 +1,75 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: nexuscare-quota
+  namespace: nexuscare
+spec:
+  hard:
+    requests.cpu: "4"
+    requests.memory: "4Gi"
+    limits.cpu: "8"
+    limits.memory: "8Gi"
+    pods: "20"
+    persistentvolumeclaims: "5"
+  scopeSelector:
+    matchExpressions:
+      - operator: In
+        scopeName: PriorityClass
+        values: ["default"]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: nexuscare-network-policy
+  namespace: nexuscare
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow traffic from API Gateway to all services
+    - from:
+        - podSelector:
+            matchLabels:
+              app: api-gateway
+    # Allow traffic within the namespace
+    - from:
+        - podSelector: {}
+    # Allow traffic from external clients to API Gateway
+    - from:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    # Allow traffic to all services within namespace
+    - to:
+        - podSelector: {}
+    # Allow DNS (external)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+    # Allow traffic to external APIs (payment gateways, email, SMS services)
+    - to:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: nexuscare-pdb
+  namespace: nexuscare
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      disruption-budget: enabled
