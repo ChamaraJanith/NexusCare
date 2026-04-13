@@ -1,17 +1,22 @@
 <template>
   <q-page class="search-page-bg text-white font-jakarta flex column items-center q-pt-xl">
     <div class="max-width-1000 w-full q-px-md">
-
       <!-- BACK -->
       <div class="flex items-center q-mb-lg">
-        <div class="flex items-center cursor-pointer text-grey-4 back-link" @click="router.push('/appointment/results')">
+        <div
+          class="flex items-center cursor-pointer text-grey-4 back-link"
+          @click="router.push('/appointment/results')"
+        >
           <q-icon name="arrow_back" size="sm" class="q-mr-sm" />
           <span class="text-weight-bold">Back to Doctors</span>
         </div>
       </div>
 
       <!-- DOCTOR CARD -->
-      <q-card class="doctor-card q-mb-xl q-pa-lg row items-center no-wrap shadow-none" v-if="doctor">
+      <q-card
+        class="doctor-card q-mb-xl q-pa-lg row items-center no-wrap shadow-none"
+        v-if="doctor"
+      >
         <q-avatar size="80px" class="q-mr-lg doctor-avatar">
           <img :src="getImageUrl(doctor.profileImage || doctor.image || doctor.profilePicture)" />
         </q-avatar>
@@ -43,7 +48,9 @@
         <q-input
           v-model="selectedDateStr"
           type="date"
-          outlined dense dark
+          outlined
+          dense
+          dark
           color="blue-5"
           class="nexus-input"
           :min="today"
@@ -86,7 +93,6 @@
 
             <div class="slot-card q-mb-sm" v-for="slot in group" :key="slot._id">
               <div class="row items-center no-wrap q-pa-md">
-
                 <!-- Hospital icon + name -->
                 <div class="col-auto q-mr-md">
                   <div class="hospital-icon flex flex-center">
@@ -96,13 +102,17 @@
 
                 <!-- Hospital + type -->
                 <div class="col">
-                  <div class="text-weight-bold text-white" style="font-size:14px">{{ slot.hospital || 'Hospital' }}</div>
-                  <div class="text-caption text-grey-5">{{ doctor.specialization || doctor.specialty }}</div>
+                  <div class="text-weight-bold text-white" style="font-size: 14px">
+                    {{ slot.hospital || 'Hospital' }}
+                  </div>
+                  <div class="text-caption text-grey-5">
+                    {{ doctor.specialization || doctor.specialty }}
+                  </div>
                 </div>
 
                 <!-- Time -->
                 <div class="col-auto text-center q-mx-md">
-                  <div class="text-blue-4 text-weight-bold" style="font-size:15px">
+                  <div class="text-blue-4 text-weight-bold" style="font-size: 15px">
                     {{ formatTime(slot.startTime) }}
                   </div>
                   <div class="text-caption text-grey-6">{{ getSession(slot.startTime) }}</div>
@@ -116,7 +126,10 @@
 
                 <!-- Available count -->
                 <div class="col-auto text-center q-mx-md">
-                  <div :class="availableCount(slot) > 0 ? 'text-green-4' : 'text-red-4'" class="text-weight-bold">
+                  <div
+                    :class="availableCount(slot) > 0 ? 'text-green-4' : 'text-red-4'"
+                    class="text-weight-bold"
+                  >
                     {{ availableCount(slot) }}
                   </div>
                   <div class="text-caption text-grey-6">Available</div>
@@ -124,8 +137,13 @@
 
                 <!-- Fee (physical) -->
                 <div class="col-auto text-right q-mx-md">
-                  <div class="text-green-4 text-weight-bold" style="font-size:13px">
-                    Rs {{ ((Number(doctor.consultationFee) || 0) + getHospitalFee(slot)).toLocaleString() }}
+                  <div class="text-green-4 text-weight-bold" style="font-size: 13px">
+                    Rs
+                    {{
+                      (
+                        (Number(doctor.consultationFee) || 0) + getHospitalFee(slot)
+                      ).toLocaleString()
+                    }}
                   </div>
                   <div class="text-caption text-grey-6">+ Booking Fee</div>
                 </div>
@@ -133,7 +151,8 @@
                 <!-- Action -->
                 <div class="col-auto q-ml-md">
                   <q-btn
-                    unelevated rounded
+                    unelevated
+                    rounded
                     :color="isFull(slot) ? 'grey-8' : 'primary'"
                     :disable="isFull(slot)"
                     class="book-btn text-weight-bold"
@@ -164,7 +183,6 @@
 
             <div class="slot-card q-mb-sm" v-for="slot in group" :key="slot._id">
               <div class="row items-center no-wrap q-pa-md">
-
                 <div class="col-auto q-mr-md">
                   <div class="hospital-icon hospital-icon--online flex flex-center">
                     <q-icon name="videocam" size="22px" color="teal-4" />
@@ -172,12 +190,16 @@
                 </div>
 
                 <div class="col">
-                  <div class="text-weight-bold text-white" style="font-size:14px">{{ slot.platform || 'Online' }}</div>
-                  <div class="text-caption text-grey-5">{{ doctor.specialization || doctor.specialty }}</div>
+                  <div class="text-weight-bold text-white" style="font-size: 14px">
+                    {{ slot.platform || 'Online' }}
+                  </div>
+                  <div class="text-caption text-grey-5">
+                    {{ doctor.specialization || doctor.specialty }}
+                  </div>
                 </div>
 
                 <div class="col-auto text-center q-mx-md">
-                  <div class="text-blue-4 text-weight-bold" style="font-size:15px">
+                  <div class="text-blue-4 text-weight-bold" style="font-size: 15px">
                     {{ formatTime(slot.startTime) }}
                   </div>
                   <div class="text-caption text-grey-6">{{ getSession(slot.startTime) }}</div>
@@ -189,7 +211,10 @@
                 </div>
 
                 <div class="col-auto text-center q-mx-md">
-                  <div :class="availableCount(slot) > 0 ? 'text-green-4' : 'text-red-4'" class="text-weight-bold">
+                  <div
+                    :class="availableCount(slot) > 0 ? 'text-green-4' : 'text-red-4'"
+                    class="text-weight-bold"
+                  >
                     {{ availableCount(slot) }}
                   </div>
                   <div class="text-caption text-grey-6">Available</div>
@@ -197,7 +222,7 @@
 
                 <!-- Fee (online) -->
                 <div class="col-auto text-right q-mx-md">
-                  <div class="text-green-4 text-weight-bold" style="font-size:13px">
+                  <div class="text-green-4 text-weight-bold" style="font-size: 13px">
                     Rs {{ (Number(doctor.consultationFee) || 0).toLocaleString() }}
                   </div>
                   <div class="text-caption text-grey-6">+ Booking Fee</div>
@@ -205,7 +230,8 @@
 
                 <div class="col-auto q-ml-md">
                   <q-btn
-                    unelevated rounded
+                    unelevated
+                    rounded
                     :color="isFull(slot) ? 'grey-8' : 'teal'"
                     :disable="isFull(slot)"
                     class="book-btn text-weight-bold"
@@ -223,102 +249,114 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
-import { useAppointmentStore } from '../../stores/appointmentStore';
-import { useAuthStore } from '../../stores/authStore';
-import { getDoctorSlots, getDoctorSlotsNext30Days, getDoctorDetails, calculateSlotFee } from '../../services/appointmentService';
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { useAppointmentStore } from '../../stores/appointmentStore'
+import { useAuthStore } from '../../stores/authStore'
+import {
+  getDoctorSlots,
+  getDoctorSlotsNext30Days,
+  getDoctorDetails,
+  calculateSlotFee,
+} from '../../services/appointmentService'
 
-const store = useAppointmentStore();
-const authStore = useAuthStore();
-const router = useRouter();
-const route = useRoute();
+const store = useAppointmentStore()
+const authStore = useAuthStore()
+const router = useRouter()
+const route = useRoute()
 
-const doctor = ref(store.selectedDoctor || null);
+const doctor = ref(store.selectedDoctor || null)
 
 const getImageUrl = (img) => {
-  if (!img) return 'https://cdn-icons-png.flaticon.com/512/3774/3774299.png';
-  if (typeof img === 'object' && img.url) img = img.url;
+  if (!img) return 'https://cdn-icons-png.flaticon.com/512/3774/3774299.png'
+  if (typeof img === 'object' && img.url) img = img.url
   if (typeof img === 'string') {
-    if (img.startsWith('http')) return img;
+    if (img.startsWith('http')) return img
     if (img.startsWith('/uploads'))
-      return `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}${img}`;
+      return `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}${img}`
   }
-  return img;
-};
+  return img
+}
 
-const today = new Date().toISOString().split('T')[0];
-const selectedDateStr = ref('');
-const loadingSlots = ref(false);
-const physicalSlots = ref([]);
-const onlineSlots = ref([]);
-const slotFees = ref({});
+const today = new Date().toISOString().split('T')[0]
+const selectedDateStr = ref('')
+const loadingSlots = ref(false)
+const physicalSlots = ref([])
+const onlineSlots = ref([])
+const slotFees = ref({})
 
 // Returns hospitalFee from slot (denormalized) or from fetched fee data
 const getHospitalFee = (slot) => {
-  if (slot.hospitalFee != null) return slot.hospitalFee;
-  return slotFees.value[slot._id]?.hospitalFee || 0;
-};
+  if (slot.hospitalFee != null) return slot.hospitalFee
+  return slotFees.value[slot._id]?.hospitalFee || 0
+}
 
 const fetchFeesForSlots = async (slots, type) => {
-  const doctorId = doctor.value?.doctorId || doctor.value?._id || doctor.value?.id;
+  const doctorId = doctor.value?.doctorId || doctor.value?._id || doctor.value?.id
   // Only fetch from fee-service for slots that don't have hospitalFee stored
-  const needsFetch = slots.filter(s => s.hospitalFee == null);
-  await Promise.all(needsFetch.map(async (slot) => {
-    if (slotFees.value[slot._id]) return;
-    const fee = await calculateSlotFee(doctorId, slot.hospitalId || '', type, slot.hospital || '');
-    if (fee) slotFees.value[slot._id] = fee;
-  }));
-};
+  const needsFetch = slots.filter((s) => s.hospitalFee == null)
+  await Promise.all(
+    needsFetch.map(async (slot) => {
+      if (slotFees.value[slot._id]) return
+      const fee = await calculateSlotFee(doctorId, slot.hospitalId || '', type, slot.hospital || '')
+      if (fee) slotFees.value[slot._id] = fee
+    }),
+  )
+}
 
-const totalSlots = computed(() => physicalSlots.value.length + onlineSlots.value.length);
+const totalSlots = computed(() => physicalSlots.value.length + onlineSlots.value.length)
 
 const groupByDate = (slots) => {
   return slots.reduce((acc, slot) => {
-    const key = new Date(slot.date).toISOString().split('T')[0];
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(slot);
-    return acc;
-  }, {});
-};
+    const key = new Date(slot.date).toISOString().split('T')[0]
+    if (!acc[key]) acc[key] = []
+    acc[key].push(slot)
+    return acc
+  }, {})
+}
 
-const groupedPhysical = computed(() => groupByDate(physicalSlots.value));
-const groupedOnline   = computed(() => groupByDate(onlineSlots.value));
+const groupedPhysical = computed(() => groupByDate(physicalSlots.value))
+const groupedOnline = computed(() => groupByDate(onlineSlots.value))
 
-const availableCount = (slot) => Math.max((slot.slotCount || 1) - (slot.bookedCount || 0), 0);
-const isFull = (slot) => availableCount(slot) === 0;
+const availableCount = (slot) => Math.max((slot.slotCount || 1) - (slot.bookedCount || 0), 0)
+const isFull = (slot) => availableCount(slot) === 0
 
 const formatDateLabel = (dateStr) => {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-};
+  const d = new Date(dateStr)
+  return d.toLocaleDateString('en-US', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+}
 
 const formatTime = (time) => {
-  if (!time) return '';
-  const [h, m] = time.split(':');
-  const hour = parseInt(h);
-  const ampm = hour >= 12 ? 'PM' : 'AM';
-  const h12 = hour % 12 || 12;
-  return `${h12}:${m} ${ampm}`;
-};
+  if (!time) return ''
+  const [h, m] = time.split(':')
+  const hour = parseInt(h)
+  const ampm = hour >= 12 ? 'PM' : 'AM'
+  const h12 = hour % 12 || 12
+  return `${h12}:${m} ${ampm}`
+}
 
 const getSession = (time) => {
-  if (!time) return '';
-  const hour = parseInt(time.split(':')[0]);
-  if (hour < 12) return 'Morning';
-  if (hour < 17) return 'Afternoon';
-  return 'Evening';
-};
+  if (!time) return ''
+  const hour = parseInt(time.split(':')[0])
+  if (hour < 12) return 'Morning'
+  if (hour < 17) return 'Afternoon'
+  return 'Evening'
+}
 
 onMounted(async () => {
-  const doctorId = route.params.doctorId || route.query.doctorId;
+  const doctorId = route.params.doctorId || route.query.doctorId
 
   if (!doctor.value && store.selectedDoctor) {
-    doctor.value = store.selectedDoctor;
+    doctor.value = store.selectedDoctor
   }
 
   if (!doctor.value && doctorId) {
-    const details = await getDoctorDetails(doctorId);
+    const details = await getDoctorDetails(doctorId)
     if (details) {
       doctor.value = {
         doctorId,
@@ -328,59 +366,79 @@ onMounted(async () => {
         experience: details.profile?.experience || null,
         consultationFee: details.profile?.consultationFee || details.profile?.fee || null,
         profileImage: details.profile?.profileImage || null,
-      };
+      }
     } else {
-      doctor.value = { doctorId };
+      doctor.value = { doctorId }
     }
   }
 
-  if (!doctor.value) { router.push('/search'); return; }
-  if (doctorId && !doctor.value.doctorId) doctor.value.doctorId = doctorId;
-  if (!store.selectedDoctor) store.selectDoctor(doctor.value);
+  if (!doctor.value) {
+    router.push('/search')
+    return
+  }
+  if (doctorId && !doctor.value.doctorId) doctor.value.doctorId = doctorId
+  if (!store.selectedDoctor) store.selectDoctor(doctor.value)
 
-  fetchSlots();
-});
+  fetchSlots()
+})
 
 const fetchSlots = async () => {
-  loadingSlots.value = true;
-  store.selectedDate = selectedDateStr.value;
-  store.selectedSlot = null;
+  loadingSlots.value = true
+  store.selectedDate = selectedDateStr.value
+  store.selectedSlot = null
   try {
-    const doctorId = doctor.value.doctorId || doctor.value._id || doctor.value.id;
-    const data = selectedDateStr.value
+    const doctorId = doctor.value.doctorId || doctor.value._id || doctor.value.id
+    const result = selectedDateStr.value
       ? await getDoctorSlots(doctorId, selectedDateStr.value)
-      : await getDoctorSlotsNext30Days(doctorId);
-    physicalSlots.value = data.physical || [];
-    onlineSlots.value   = data.online   || [];
-    await store.fetchQueueNumber();
-    // Fetch fees for legacy slots that don't have hospitalFee stored yet
-    fetchFeesForSlots(physicalSlots.value, 'PHYSICAL').catch(() => {});
-    fetchFeesForSlots(onlineSlots.value, 'ONLINE').catch(() => {});
-  } catch (e) {
-    console.error(e);
-    physicalSlots.value = [];
-    onlineSlots.value   = [];
-  } finally {
-    loadingSlots.value = false;
-  }
-};
+      : await getDoctorSlotsNext30Days(doctorId)
 
-watch(selectedDateStr, fetchSlots);
+    // Extract data from response envelope { data, stale, message }
+    const slotData = result.data || result
+    physicalSlots.value = slotData.physical || []
+    onlineSlots.value = slotData.online || []
+
+    // Show warning if data is stale
+    if (result.stale) {
+      console.warn('⚠️ Showing cached/fallback availability:', result.message)
+    }
+
+    await store.fetchQueueNumber()
+    // Fetch fees for legacy slots that don't have hospitalFee stored yet
+    fetchFeesForSlots(physicalSlots.value, 'PHYSICAL').catch(() => {})
+    fetchFeesForSlots(onlineSlots.value, 'ONLINE').catch(() => {})
+  } catch (e) {
+    console.error('❌ Failed to fetch slots:', e)
+    physicalSlots.value = []
+    onlineSlots.value = []
+  } finally {
+    loadingSlots.value = false
+  }
+}
+
+watch(selectedDateStr, fetchSlots)
 
 const handleSlotBooking = (slot, type) => {
-  store.selectSlot(slot, type);
+  store.selectSlot(slot, type)
   if (!authStore.isLoggedIn) {
-    router.push({ path: '/login', query: { redirect: '/appointment/form' } });
-    return;
+    router.push({ path: '/login', query: { redirect: '/appointment/form' } })
+    return
   }
-  router.push('/appointment/form');
-};
+  router.push('/appointment/form')
+}
 </script>
 
 <style scoped>
-.search-page-bg { background: radial-gradient(circle at top right, #0a1128 0%, #030612 100%); min-height: 100vh; }
-.max-width-1000 { max-width: 1000px; width: 100%; }
-.back-link:hover { color: #60a5fa !important; }
+.search-page-bg {
+  background: radial-gradient(circle at top right, #0a1128 0%, #030612 100%);
+  min-height: 100vh;
+}
+.max-width-1000 {
+  max-width: 1000px;
+  width: 100%;
+}
+.back-link:hover {
+  color: #60a5fa !important;
+}
 
 .doctor-card {
   border: 1px solid rgba(30, 58, 138, 0.4);
@@ -393,15 +451,23 @@ const handleSlotBooking = (slot, type) => {
   background: #0f172a;
 }
 
-.section-header { border-left: 3px solid #3b82f6; padding-left: 10px; }
+.section-header {
+  border-left: 3px solid #3b82f6;
+  padding-left: 10px;
+}
 
-.date-label { display: flex; align-items: center; }
+.date-label {
+  display: flex;
+  align-items: center;
+}
 
 .slot-card {
   background: rgba(15, 23, 42, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 12px;
-  transition: border-color 0.2s, background 0.2s;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
 }
 .slot-card:hover {
   border-color: rgba(59, 130, 246, 0.4);
@@ -409,7 +475,8 @@ const handleSlotBooking = (slot, type) => {
 }
 
 .hospital-icon {
-  width: 44px; height: 44px;
+  width: 44px;
+  height: 44px;
   border-radius: 10px;
   background: rgba(59, 130, 246, 0.1);
   border: 1px solid rgba(59, 130, 246, 0.2);
@@ -419,13 +486,20 @@ const handleSlotBooking = (slot, type) => {
   border-color: rgba(20, 184, 166, 0.2);
 }
 
-.book-btn { min-width: 100px; font-size: 13px; }
+.book-btn {
+  min-width: 100px;
+  font-size: 13px;
+}
 
 .nexus-input :deep(.q-field__control) {
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
-.nexus-input :deep(.q-field__control:hover) { border-color: rgba(59, 130, 246, 0.5); }
+.nexus-input :deep(.q-field__control:hover) {
+  border-color: rgba(59, 130, 246, 0.5);
+}
 
-.empty-state { opacity: 0.7; }
+.empty-state {
+  opacity: 0.7;
+}
 </style>

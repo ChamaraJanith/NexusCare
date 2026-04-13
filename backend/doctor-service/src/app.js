@@ -7,6 +7,7 @@ import doctorRoutes from "./routes/doctor.routes.js";
 import availabilityRoutes from "./routes/availability.routes.js";
 import prescriptionRoutes from "./routes/prescription.routes.js"; // 🔥 ADD THIS
 import { startRabbitMQConsumer } from "./services/rabbitmqConsumer.js";
+import { initializePublisher, closePublisher } from "./utils/eventPublisher.js";
 import { migrateHospitalFees } from "./services/migrateHospitalFees.js";
 
 dotenv.config();
@@ -84,11 +85,24 @@ const startServer = async () => {
 
     console.log("✅ MongoDB Connected");
 
+    // Start Event Publisher for doctor availability updates
+    try {
+      await initializePublisher();
+    } catch (publisherError) {
+      console.warn(
+        "⚠️ Event publisher failed to start:",
+        publisherError.message,
+      );
+    }
+
     // Start RabbitMQ consumer for doctor.registered events
     try {
       await startRabbitMQConsumer();
     } catch (consumerError) {
-      console.warn("⚠️ RabbitMQ consumer failed to start:", consumerError.message);
+      console.warn(
+        "⚠️ RabbitMQ consumer failed to start:",
+        consumerError.message,
+      );
     }
 
     try {
@@ -96,18 +110,20 @@ const startServer = async () => {
       const result = await syncResult.syncFullDoctorCatalog();
       console.log("✅ Full doctor catalog sync triggered at startup:", result);
     } catch (syncError) {
-      console.warn("⚠️ Full doctor catalog sync failed at startup:", syncError.message);
+      console.warn(
+        "⚠️ Full doctor catalog sync failed at startup:",
+        syncError.message,
+      );
     }
 
     // Backfill hospitalFee on existing slots (runs once, skips already-migrated slots)
-    migrateHospitalFees().catch(err =>
-      console.warn("⚠️ Hospital fee migration error:", err.message)
+    migrateHospitalFees().catch((err) =>
+      console.warn("⚠️ Hospital fee migration error:", err.message),
     );
 
     app.listen(PORT, () => {
       console.log(`🚀 Doctor Service running on port ${PORT}`);
     });
-
   } catch (error) {
     console.error("❌ MongoDB connection failed:", error.message);
     process.exit(1);

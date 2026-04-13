@@ -5,16 +5,19 @@ import cors from "cors";
 import appointmentRoutes from "./routes/appointmentRoutes.js";
 import doctorSearchRoutes from "./routes/doctorSearchRoutes.js";
 import availabilityRoutes from "./routes/availabilityRoutes.js";
+import { initializeConsumer, closeConsumer } from "./utils/eventConsumer.js";
 import http from "node:http";
 import { Server } from "socket.io";
 
 const app = express();
 
 // CORS for HTTP requests from frontend
-app.use(cors({
-  origin: "http://localhost:9000",
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: "http://localhost:9000",
+    credentials: true,
+  }),
+);
 
 app.use(express.json());
 
@@ -24,8 +27,8 @@ const server = http.createServer(app);
 // 🔥 socket.io setup
 const io = new Server(server, {
   cors: {
-    origin: "*"
-  }
+    origin: "*",
+  },
 });
 
 // 🔥 socket connection
@@ -61,15 +64,24 @@ const startServer = async () => {
     serverSelectionTimeoutMS: 15000,
   };
 
-  const shouldUseTls = MONGO_URI.startsWith('mongodb+srv://') || process.env.MONGO_TLS === 'true';
+  const shouldUseTls =
+    MONGO_URI.startsWith("mongodb+srv://") || process.env.MONGO_TLS === "true";
   if (shouldUseTls) {
     mongoOptions.tls = true;
-    mongoOptions.tlsAllowInvalidCertificates = process.env.NODE_ENV !== 'production';
+    mongoOptions.tlsAllowInvalidCertificates =
+      process.env.NODE_ENV !== "production";
   }
 
   try {
     await mongoose.connect(MONGO_URI, mongoOptions);
     console.log("✅ MongoDB Connected");
+
+    // Start Event Consumer for doctor slot updates
+    try {
+      await initializeConsumer();
+    } catch (consumerError) {
+      console.warn("⚠️ Event consumer failed to start:", consumerError.message);
+    }
   } catch (err) {
     console.error("❌ MongoDB connection failed:", err.message);
     console.error(err);
