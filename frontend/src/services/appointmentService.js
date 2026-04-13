@@ -1,118 +1,173 @@
-import axios from "axios";
+import axios from 'axios'
 
-const API = `${import.meta.env.VITE_API_URL}/api/appointments`;
-const DOCTOR_API = `${import.meta.env.VITE_API_URL}/api/doctors`;
-const AVAILABILITY_API = `${import.meta.env.VITE_API_URL}/api/availability`;
+const API = `${import.meta.env.VITE_API_URL}/api/appointments`
+const DOCTOR_API = `${import.meta.env.VITE_API_URL}/api/doctors`
+const AVAILABILITY_API = `${import.meta.env.VITE_API_URL}/api/availability`
 
 // ── Token helper ──────────────────────────────────────────────────
-const getToken = () =>
-  localStorage.getItem('nexus_token') || localStorage.getItem('token');
+const getToken = () => localStorage.getItem('nexus_token') || localStorage.getItem('token')
 
 export const getDoctorDetails = async (doctorId) => {
   try {
-    const res = await axios.get(`${DOCTOR_API}/internal/${doctorId}`);
-    return res.data?.data || res.data || null;
+    const res = await axios.get(`${DOCTOR_API}/internal/${doctorId}`)
+    return res.data?.data || res.data || null
   } catch (error) {
-    console.warn('⚠️ Failed to fetch doctor details:', error.message);
-    return null;
+    console.warn('⚠️ Failed to fetch doctor details:', error.message)
+    return null
   }
-};
+}
 
 // ── Search doctors via doctor-service directly ───────────────────────
 export const searchDoctors = async (filters) => {
-  console.log('FILTERS:', filters);
+  console.log('FILTERS:', filters)
   try {
-    const res = await axios.get(`${DOCTOR_API}/search`, { params: filters });
-    const payload = res.data;
+    const res = await axios.get(`${DOCTOR_API}/search`, { params: filters })
+    const payload = res.data
 
     if (Array.isArray(payload)) {
-      return { doctors: payload, stale: false };
+      return { doctors: payload, stale: false }
     }
 
     return {
       doctors: Array.isArray(payload?.data) ? payload.data : [],
       stale: Boolean(payload?.stale),
-      message: payload?.message || ''
-    };
+      message: payload?.message || '',
+    }
   } catch (error) {
-    const message = error.response?.data?.error || error.response?.data?.message || error.message || 'Doctor search failed';
-    throw new Error(message);
+    const message =
+      error.response?.data?.error ||
+      error.response?.data?.message ||
+      error.message ||
+      'Doctor search failed'
+    throw new Error(message)
   }
-};
+}
 
 // ── Get doctor slots by date ───────────────────────────────────────
 export const getDoctorSlots = async (doctorId, date) => {
-  const res = await axios.get(`${AVAILABILITY_API}/${doctorId}/by-date`, {
-    params: { date }
-  });
-  return res.data;
-};
+  try {
+    const res = await axios.get(`${AVAILABILITY_API}/${doctorId}/by-date`, {
+      params: { date },
+    })
+
+    const payload = res.data
+
+    // Handle new response format with stale flag
+    if (payload.stale !== undefined) {
+      return {
+        data: payload.data,
+        stale: payload.stale,
+        message: payload.message,
+      }
+    }
+
+    // Legacy format (direct data)
+    return {
+      data: payload,
+      stale: false,
+      message: '',
+    }
+  } catch (error) {
+    console.error('❌ ERROR fetching doctor availability:', error.message)
+    // Return empty slots with error indicator
+    return {
+      data: { physical: [], online: [] },
+      stale: true,
+      message: `Failed to fetch availability: ${error.message}`,
+    }
+  }
+}
 
 // ── Get next queue number ─────────────────────────────────────────
 export const getNextQueueNumber = async (doctorId, date) => {
   const res = await axios.get(`${API}/queue/next`, {
-    params: { doctorId, date }
-  });
-  return res.data;
-};
+    params: { doctorId, date },
+  })
+  return res.data
+}
 
 // ── Book appointment (token required) ────────────────────────────
 export const bookAppointment = async (data) => {
   const res = await axios.post(API, data, {
-    headers: { Authorization: `Bearer ${getToken()}` }
-  });
-  return res.data;
-};
+    headers: { Authorization: `Bearer ${getToken()}` },
+  })
+  return res.data
+}
 
 // ── Get patient appointments (token required) ─────────────────────
 export const getMyAppointments = async (patientId) => {
   const res = await axios.get(`${API}/patient/${patientId}`, {
-    headers: { Authorization: `Bearer ${getToken()}` }
-  });
-  return Array.isArray(res.data) ? res.data : (res.data.appointments || []);
-};
+    headers: { Authorization: `Bearer ${getToken()}` },
+  })
+  return Array.isArray(res.data) ? res.data : res.data.appointments || []
+}
 
 // ── Cancel appointment (token required) ───────────────────────────
 export const cancelAppointment = async (id) => {
   const res = await axios.delete(`${API}/${id}`, {
-    headers: { Authorization: `Bearer ${getToken()}` }
-  });
-  return res.data;
-};
+    headers: { Authorization: `Bearer ${getToken()}` },
+  })
+  return res.data
+}
 
 // ── Calculate fees for a slot (doctor + hospital + service) ──────
-export const calculateSlotFee = async (doctorId, hospitalId, appointmentType, hospitalName = '') => {
+export const calculateSlotFee = async (
+  doctorId,
+  hospitalId,
+  appointmentType,
+  hospitalName = '',
+) => {
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 4000); // 4s timeout
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 4000) // 4s timeout
     const res = await axios.post(
       `${import.meta.env.VITE_API_URL}/api/service-fee/calculate/public`,
       { doctorId, hospitalId: hospitalId || '', hospitalName, appointmentType },
-      { signal: controller.signal }
-    );
-    clearTimeout(timeout);
-    return res.data?.data || null;
+      { signal: controller.signal },
+    )
+    clearTimeout(timeout)
+    return res.data?.data || null
   } catch (error) {
     if (error.name === 'CanceledError') {
-      console.warn('⚠️ Fee service timeout — showing doctor fee only');
+      console.warn('⚠️ Fee service timeout — showing doctor fee only')
     } else {
-      console.warn('⚠️ Fee calculation failed:', error.message);
+      console.warn('⚠️ Fee calculation failed:', error.message)
     }
-    return null;
+    return null
   }
-};
+}
 export const getDoctorSlotsNext30Days = async (doctorId) => {
   try {
-    const res = await axios.get(`${AVAILABILITY_API}/${doctorId}/next`);
-    const payload = res.data;
-    const data = payload?.data ?? payload;
+    const res = await axios.get(`${AVAILABILITY_API}/${doctorId}/next`)
+    const payload = res.data
 
+    // Handle new response format with stale flag
+    if (payload.stale !== undefined) {
+      const data = payload.data
+      return {
+        physical: Array.isArray(data.physical) ? data.physical : [],
+        online: Array.isArray(data.online) ? data.online : [],
+        stale: payload.stale,
+        message: payload.message,
+      }
+    }
+
+    // Legacy format (direct data)
+    const data = payload?.data ?? payload
     return {
       physical: Array.isArray(data.physical) ? data.physical : [],
-      online: Array.isArray(data.online) ? data.online : []
-    };
+      online: Array.isArray(data.online) ? data.online : [],
+      stale: false,
+      message: '',
+    }
   } catch (error) {
-    console.error("❌ ERROR fetching doctor availability:", error.message);
-    throw error;
+    console.error('❌ ERROR fetching doctor availability:', error.message)
+    // Return empty slots with error indicator
+    return {
+      physical: [],
+      online: [],
+      stale: true,
+      message: `Failed to fetch availability: ${error.message}`,
+    }
   }
-};
+}

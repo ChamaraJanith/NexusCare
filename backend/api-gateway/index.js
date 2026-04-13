@@ -153,10 +153,8 @@ app.use(
   "/api/doctors/search",
   route(APPOINTMENT_SERVICE_URL, "appointment-service"),
 );
-app.use(
-  "/api/doctors/internal",
-  route(APPOINTMENT_SERVICE_URL, "appointment-service"),
-);
+// Internal doctor lookups go to doctor-service directly
+app.use("/api/doctors/internal", route(DOCTOR_SERVICE_URL, "doctor-service"));
 app.use("/api/doctors", route(DOCTOR_SERVICE_URL, "doctor-service"));
 app.use("/api/availability", routeAvailability);
 app.use("/api/prescriptions", route(DOCTOR_SERVICE_URL, "doctor-service"));

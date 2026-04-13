@@ -1,6 +1,32 @@
 import * as availabilityService from "../services/availabilityService.js";
 import { getOrCreateSlotInstance } from "../services/availabilityService.js";
+import { publishSlotUpdate } from "../utils/eventPublisher.js";
 import AvailabilitySlot from "../models/AvailabilitySlot.js";
+import Doctor from "../models/Doctor.js";
+
+/**
+ * Enrich slots with doctor's hospital information
+ */
+const enrichSlotsWithDoctorInfo = async (doctorId, slots) => {
+  try {
+    const doctor = await Doctor.findOne({ doctorId }).lean();
+    if (!doctor || !slots.length) return slots;
+
+    // Add hospital to each slot
+    return slots.map((slot) => ({
+      ...slot,
+      hospital: slot.hospital || doctor.hospital || "Hospital",
+      hospitalId: slot.hospitalId || doctor._id?.toString() || doctorId,
+    }));
+  } catch (error) {
+    console.warn("⚠️ Failed to enrich slots with doctor info:", error.message);
+    // Return slots with fallback hospital
+    return slots.map((slot) => ({
+      ...slot,
+      hospital: slot.hospital || "Hospital",
+    }));
+  }
+};
 
 // POST /api/availability
 export const createSlot = async (req, res) => {
@@ -11,7 +37,7 @@ export const createSlot = async (req, res) => {
     res.status(201).json({
       success: true,
       data: slot,
-      message: "Availability slot created successfully"
+      message: "Availability slot created successfully",
     });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
@@ -24,7 +50,15 @@ const resolveSlotsForDate = async (doctorId, date) => {
   const nextDate = new Date(selectedDate);
   nextDate.setDate(nextDate.getDate() + 1);
 
-  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const dayNames = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ];
   const dayOfWeek = dayNames[selectedDate.getDay()];
 
   const oneTimeSlots = await AvailabilitySlot.find({
@@ -33,7 +67,7 @@ const resolveSlotsForDate = async (doctorId, date) => {
     isDeleted: false,
     parentSlotId: null,
     isRecurring: false,
-    $expr: { $lt: ["$bookedCount", "$slotCount"] }
+    $expr: { $lt: ["$bookedCount", "$slotCount"] },
   });
 
   const recurringTemplates = await AvailabilitySlot.find({
@@ -41,13 +75,13 @@ const resolveSlotsForDate = async (doctorId, date) => {
     isRecurring: true,
     dayOfWeek,
     isDeleted: false,
-    parentSlotId: null
+    parentSlotId: null,
   });
 
   const recurringInstances = await Promise.all(
     recurringTemplates.map((template) =>
-      getOrCreateSlotInstance(doctorId, selectedDate, template)
-    )
+      getOrCreateSlotInstance(doctorId, selectedDate, template),
+    ),
   );
 
   const existingInstances = await AvailabilitySlot.find({
@@ -55,14 +89,10 @@ const resolveSlotsForDate = async (doctorId, date) => {
     date: { $gte: selectedDate, $lt: nextDate },
     isDeleted: false,
     parentSlotId: { $ne: null },
-    $expr: { $lt: ["$bookedCount", "$slotCount"] }
+    $expr: { $lt: ["$bookedCount", "$slotCount"] },
   });
 
-  const slots = [
-    ...oneTimeSlots,
-    ...recurringInstances,
-    ...existingInstances
-  ];
+  const slots = [...oneTimeSlots, ...recurringInstances, ...existingInstances];
 
   const seen = new Map();
   slots.forEach((slot) => {
@@ -79,7 +109,7 @@ const resolveSlotsForDate = async (doctorId, date) => {
 
   return {
     physical: validSlots.filter((s) => s.slotType === "PHYSICAL"),
-    online: validSlots.filter((s) => s.slotType === "ONLINE")
+    online: validSlots.filter((s) => s.slotType === "ONLINE"),
   };
 };
 
@@ -89,33 +119,42 @@ const resolveSlotsForNextDays = async (doctorId, dayCount = 30) => {
   const endDate = new Date(today);
   endDate.setDate(today.getDate() + dayCount);
 
-  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const dayNames = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ];
   const now = new Date();
 
   // ── 1. Single bulk fetch: all one-time slots in the date range ──
-  const [oneTimeSlots, recurringTemplates, existingInstances] = await Promise.all([
-    AvailabilitySlot.find({
-      doctorId,
-      date: { $gte: today, $lt: endDate },
-      isDeleted: false,
-      isRecurring: false,
-      parentSlotId: null
-    }).lean(),
+  const [oneTimeSlots, recurringTemplates, existingInstances] =
+    await Promise.all([
+      AvailabilitySlot.find({
+        doctorId,
+        date: { $gte: today, $lt: endDate },
+        isDeleted: false,
+        isRecurring: false,
+        parentSlotId: null,
+      }).lean(),
 
-    AvailabilitySlot.find({
-      doctorId,
-      isRecurring: true,
-      isDeleted: false,
-      parentSlotId: null
-    }).lean(),
+      AvailabilitySlot.find({
+        doctorId,
+        isRecurring: true,
+        isDeleted: false,
+        parentSlotId: null,
+      }).lean(),
 
-    AvailabilitySlot.find({
-      doctorId,
-      date: { $gte: today, $lt: endDate },
-      isDeleted: false,
-      parentSlotId: { $ne: null }
-    }).lean()
-  ]);
+      AvailabilitySlot.find({
+        doctorId,
+        date: { $gte: today, $lt: endDate },
+        isDeleted: false,
+        parentSlotId: { $ne: null },
+      }).lean(),
+    ]);
 
   // ── 2. Build a lookup of already-existing instances keyed by "parentId_dateStr" ──
   const instanceMap = new Map();
@@ -143,20 +182,20 @@ const resolveSlotsForNextDays = async (doctorId, dayCount = 30) => {
         toCreate.push({
           doctorId,
           date: new Date(date),
-          startTime:   template.startTime,
-          endTime:     template.endTime,
-          slotType:    template.slotType,
-          hospital:    template.hospital  || "",
-          hospitalId:  template.hospitalId || "",
-          location:    template.location  || "",
-          platform:    template.platform  || "",
-          slotCount:   template.slotCount,
+          startTime: template.startTime,
+          endTime: template.endTime,
+          slotType: template.slotType,
+          hospital: template.hospital || "",
+          hospitalId: template.hospitalId || "",
+          location: template.location || "",
+          platform: template.platform || "",
+          slotCount: template.slotCount,
           bookedCount: 0,
-          isBooked:    false,
+          isBooked: false,
           isRecurring: false,
-          dayOfWeek:   null,
+          dayOfWeek: null,
           parentSlotId: template._id,
-          isDeleted:   false
+          isDeleted: false,
         });
       }
     }
@@ -170,7 +209,12 @@ const resolveSlotsForNextDays = async (doctorId, dayCount = 30) => {
 
   // ── 5. Merge + deduplicate + filter ──
   const seen = new Map();
-  for (const s of [...oneTimeSlots, ...resolvedInstances, ...existingInstances, ...newInstances]) {
+  for (const s of [
+    ...oneTimeSlots,
+    ...resolvedInstances,
+    ...existingInstances,
+    ...newInstances,
+  ]) {
     seen.set(s._id.toString(), s);
   }
 
@@ -186,14 +230,27 @@ const resolveSlotsForNextDays = async (doctorId, dayCount = 30) => {
 
   return {
     physical: validSlots.filter((s) => s.slotType === "PHYSICAL"),
-    online:   validSlots.filter((s) => s.slotType === "ONLINE")
+    online: validSlots.filter((s) => s.slotType === "ONLINE"),
   };
 };
 
 // GET /api/availability/:doctorId
 export const getSlots = async (req, res) => {
   try {
-    const slots = await availabilityService.getSlotsByDoctor(req.params.doctorId);
+    const { doctorId } = req.params;
+    const slots = await availabilityService.getSlotsByDoctor(doctorId);
+
+    // Enrich slots with doctor's hospital info
+    const allSlots = [...(slots.physical || []), ...(slots.online || [])];
+    const enrichedSlots = await enrichSlotsWithDoctorInfo(doctorId, allSlots);
+
+    // Publish slot update event to RabbitMQ
+    if (enrichedSlots.length > 0) {
+      publishSlotUpdate(doctorId, enrichedSlots).catch((err) =>
+        console.warn("⚠️ Failed to publish slot update event:", err.message),
+      );
+    }
+
     res.json({ success: true, data: slots });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -203,8 +260,21 @@ export const getSlots = async (req, res) => {
 // GET /api/availability/:doctorId/next
 export const getSlotsNextDays = async (req, res) => {
   try {
+    const { doctorId } = req.params;
     const days = Number(req.query.days) || 30;
-    const slots = await resolveSlotsForNextDays(req.params.doctorId, days);
+    const slots = await resolveSlotsForNextDays(doctorId, days);
+
+    // Enrich slots with doctor's hospital info
+    const allSlots = [...(slots.physical || []), ...(slots.online || [])];
+    const enrichedSlots = await enrichSlotsWithDoctorInfo(doctorId, allSlots);
+
+    // Publish slot update event to RabbitMQ
+    if (enrichedSlots.length > 0) {
+      publishSlotUpdate(doctorId, enrichedSlots).catch((err) =>
+        console.warn("⚠️ Failed to publish slot update event:", err.message),
+      );
+    }
+
     res.json({ success: true, data: slots });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -215,12 +285,16 @@ export const getSlotsNextDays = async (req, res) => {
 export const updateSlot = async (req, res) => {
   try {
     const doctorId = req.user.doctorId || req.user.roleId;
-    const updated = await availabilityService.updateSlot(req.params.slotId, req.body, doctorId);
+    const updated = await availabilityService.updateSlot(
+      req.params.slotId,
+      req.body,
+      doctorId,
+    );
 
     res.json({
       success: true,
       data: updated,
-      message: "Slot updated successfully"
+      message: "Slot updated successfully",
     });
   } catch (err) {
     const status = err.message.startsWith("Forbidden") ? 403 : 400;
@@ -254,7 +328,15 @@ export const getSlotsByDoctorAndDate = async (req, res) => {
     nextDate.setDate(nextDate.getDate() + 1);
 
     // Determine the day-of-week label for matching recurring templates
-    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const dayNames = [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ];
     const dayOfWeek = dayNames[selectedDate.getDay()];
 
     // --- Fetch 1: One-time slots on the exact date (already instances / non-recurring)
@@ -262,9 +344,9 @@ export const getSlotsByDoctorAndDate = async (req, res) => {
       doctorId,
       date: { $gte: selectedDate, $lt: nextDate },
       isDeleted: false,
-      parentSlotId: null,          // exclude already-created instances (avoid duplication)
+      parentSlotId: null, // exclude already-created instances (avoid duplication)
       isRecurring: false,
-      $expr: { $lt: ["$bookedCount", "$slotCount"] }
+      $expr: { $lt: ["$bookedCount", "$slotCount"] },
     }).lean();
 
     // --- Fetch 2: Recurring templates that match this day of week
@@ -273,12 +355,12 @@ export const getSlotsByDoctorAndDate = async (req, res) => {
       isRecurring: true,
       dayOfWeek,
       isDeleted: false,
-      parentSlotId: null
+      parentSlotId: null,
     }).lean();
 
     // --- Resolve each recurring template into a date-specific instance (lazy creation)
-    const instancePromises = recurringTemplates.map(template =>
-      getOrCreateSlotInstance(doctorId, selectedDate, template)
+    const instancePromises = recurringTemplates.map((template) =>
+      getOrCreateSlotInstance(doctorId, selectedDate, template),
     );
     const recurringInstances = await Promise.all(instancePromises);
 
@@ -288,19 +370,21 @@ export const getSlotsByDoctorAndDate = async (req, res) => {
       date: { $gte: selectedDate, $lt: nextDate },
       isDeleted: false,
       parentSlotId: { $ne: null },
-      $expr: { $lt: ["$bookedCount", "$slotCount"] }
+      $expr: { $lt: ["$bookedCount", "$slotCount"] },
     }).lean();
 
     // Deduplicate: use a Map keyed by _id string
     const seen = new Map();
-    [...oneTimeSlots, ...recurringInstances, ...existingInstances].forEach(s => {
-      seen.set(s._id.toString(), s);
-    });
+    [...oneTimeSlots, ...recurringInstances, ...existingInstances].forEach(
+      (s) => {
+        seen.set(s._id.toString(), s);
+      },
+    );
     const allSlots = [...seen.values()];
 
     // Filter out expired slots (past date+time)
     const now = new Date();
-    const validSlots = allSlots.filter(slot => {
+    const validSlots = allSlots.filter((slot) => {
       const slotDateTime = new Date(slot.date);
       const [h, m] = slot.startTime.split(":");
       slotDateTime.setHours(parseInt(h), parseInt(m), 0, 0);
@@ -308,11 +392,20 @@ export const getSlotsByDoctorAndDate = async (req, res) => {
     });
 
     // Split by type
-    const physical = validSlots.filter(s => s.slotType === "PHYSICAL");
-    const online   = validSlots.filter(s => s.slotType === "ONLINE");
+    const physical = validSlots.filter((s) => s.slotType === "PHYSICAL");
+    const online = validSlots.filter((s) => s.slotType === "ONLINE");
+
+    // Enrich slots with doctor's hospital info before publishing
+    const enrichedSlots = await enrichSlotsWithDoctorInfo(doctorId, validSlots);
+
+    // Publish slot update event to RabbitMQ
+    if (enrichedSlots.length > 0) {
+      publishSlotUpdate(doctorId, enrichedSlots).catch((err) =>
+        console.warn("⚠️ Failed to publish slot update event:", err.message),
+      );
+    }
 
     res.json({ physical, online });
-
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -333,7 +426,7 @@ export const bookSlot = async (req, res) => {
       doctorId,
       date: { $gte: selectedDate, $lt: nextDate },
       startTime: time,
-      isDeleted: false
+      isDeleted: false,
     });
 
     if (!slot) {
@@ -343,7 +436,7 @@ export const bookSlot = async (req, res) => {
     // Block booking on raw recurring templates
     if (slot.isRecurring) {
       return res.status(400).json({
-        message: "Cannot book a recurring template directly."
+        message: "Cannot book a recurring template directly.",
       });
     }
 
@@ -375,7 +468,6 @@ export const bookSlot = async (req, res) => {
     await slot.save();
 
     res.json({ message: "Booked successfully", queueNumber });
-
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -395,7 +487,7 @@ export const releaseSlot = async (req, res) => {
       doctorId,
       date: { $gte: selectedDate, $lt: nextDate },
       startTime: time,
-      isDeleted: false
+      isDeleted: false,
     });
 
     if (!slot) {
@@ -413,8 +505,10 @@ export const releaseSlot = async (req, res) => {
 
     await slot.save();
 
-    res.json({ message: "Slot released successfully", bookedCount: slot.bookedCount });
-
+    res.json({
+      message: "Slot released successfully",
+      bookedCount: slot.bookedCount,
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
