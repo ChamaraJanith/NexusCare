@@ -36,6 +36,70 @@ const route = (target, label) => (req, res) => {
   proxy.web(req, res, { target, changeOrigin: true });
 };
 
+const routeAvailability = (req, res) => {
+  if (!DOCTOR_SERVICE_URL && !APPOINTMENT_SERVICE_URL) {
+    res.writeHead(502, { "Content-Type": "application/json" });
+    return res.end(
+      JSON.stringify({
+        error: "Bad Gateway",
+        message: "Availability route targets not configured",
+      }),
+    );
+  }
+
+  req.url = req.originalUrl;
+
+  const fallbackToAppointment = (err) => {
+    console.warn(
+      "⚠️ Availability fallback - doctor-service unavailable:",
+      err.message || err,
+    );
+    proxy.web(
+      req,
+      res,
+      { target: APPOINTMENT_SERVICE_URL, changeOrigin: true },
+      (fallbackErr) => {
+        console.error(
+          "⚠️ Availability fallback failed:",
+          fallbackErr?.message || fallbackErr,
+        );
+        if (!res.headersSent) {
+          res.writeHead(502, { "Content-Type": "application/json" });
+          res.end(
+            JSON.stringify({
+              error: "Bad Gateway",
+              message:
+                fallbackErr?.message || "Appointment service unavailable",
+            }),
+          );
+        }
+      },
+    );
+  };
+
+  proxy.web(
+    req,
+    res,
+    { target: DOCTOR_SERVICE_URL, changeOrigin: true },
+    (err) => {
+      if (req.method === "GET") {
+        return fallbackToAppointment(err);
+      }
+
+      console.error("Proxy error to doctor-service:", err.message || err);
+      if (!res.headersSent) {
+        res.writeHead(502, { "Content-Type": "application/json" });
+        res.end(
+          JSON.stringify({
+            error: "Bad Gateway",
+            message: err?.message || "doctor-service unavailable",
+          }),
+        );
+      }
+    },
+  );
+};
+
 const allowedOrigins = new Set(
   (process.env.ALLOWED_ORIGINS || "http://localhost:9000")
     .split(",")
@@ -94,10 +158,7 @@ app.use(
   route(APPOINTMENT_SERVICE_URL, "appointment-service"),
 );
 app.use("/api/doctors", route(DOCTOR_SERVICE_URL, "doctor-service"));
-app.use(
-  "/api/availability",
-  route(APPOINTMENT_SERVICE_URL, "appointment-service"),
-);
+app.use("/api/availability", routeAvailability);
 app.use("/api/prescriptions", route(DOCTOR_SERVICE_URL, "doctor-service"));
 app.use(
   "/api/appointments",
