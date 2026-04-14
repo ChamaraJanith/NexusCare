@@ -58,6 +58,7 @@ export const getDoctorFullProfile = async (doctorId, bearerToken) => {
     location: doctorRecord?.location || "",
     bio: doctorRecord?.bio || "",
     profileImage: resolveProfileImage(doctorRecord?.profileImage, userIdentity?.profileImage),
+    consultationFee: doctorRecord?.consultationFee ?? null,
     isActive: doctorRecord?.isActive !== undefined ? doctorRecord.isActive : true,
   };
 };

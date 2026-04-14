@@ -5,6 +5,7 @@ import {
   uploadProfileImage,
   getDoctor,
   getDoctorInternal,
+  getDoctorPublicProfile,
   updateDoctor,
   searchDoctors,
   syncDoctorCatalog,
@@ -34,6 +35,9 @@ router.post("/sync/full", verifyToken, allowRoles("admin"), syncDoctorCatalog);
 
 // Internal doctor contact lookup for service-to-service calls
 router.get("/internal/:id", getDoctorInternal);
+
+// 🌐 Public doctor profile — no auth required (used by frontend on page refresh)
+router.get("/public/:id", getDoctorPublicProfile);
 
 // 👤 GET aggregated doctor profile (identity + professional data)
 // MUST be before /:id to prevent "me" being treated as an ID

@@ -375,13 +375,13 @@ onMounted(async () => {
     const details = await getDoctorDetails(doctorId)
     if (details) {
       doctor.value = {
-        doctorId,
-        name: details.name || details.profile?.name || doctorId,
-        specialization: details.profile?.specialty || details.profile?.specialization || null,
-        hospital: details.profile?.hospital || null,
-        experience: details.profile?.experience || null,
-        consultationFee: details.profile?.consultationFee || details.profile?.fee || null,
-        profileImage: details.profile?.profileImage || null,
+        doctorId: details.doctorId || doctorId,
+        name: details.name || doctorId,
+        specialization: details.specialization || null,
+        hospital: details.hospital || null,
+        experience: details.experience || null,
+        consultationFee: details.consultationFee ?? null,
+        profileImage: details.profileImage || null,
       }
     } else {
       doctor.value = { doctorId }
