@@ -29,9 +29,34 @@ const publishPaymentEvent = async (routingKey,payload) => {
 };
 
 const notifyAppointmentService = async (appointmentId, body) => {
-  const urls = getAppointmentServiceUrls();
-  let lastError = null;
+  // 1. Update local AppointmentSnapshot immediately — this is what the fallback
+  //    endpoint reads when appointment-service is down.
+  try {
+    const { updateSnapshotPaymentStatus } = require("../services/appointmentCache");
+    const updated = await updateSnapshotPaymentStatus(appointmentId, body.paymentStatus);
+    if (updated) {
+      console.log(`✅ Local AppointmentSnapshot updated: ${appointmentId} → ${body.paymentStatus}`);
+    } else {
+      console.warn(`⚠️ AppointmentSnapshot not found for id: ${appointmentId} — snapshot may not exist yet`);
+    }
+  } catch (snapErr) {
+    console.warn("⚠️ Failed to update local AppointmentSnapshot:", snapErr.message);
+  }
 
+  // 2. Publish to RabbitMQ — guaranteed delivery to appointment-service when it recovers.
+  try {
+    await publishEvent("payments", "payment.appointment_status_update", {
+      appointmentId,
+      ...body,
+      timestamp: new Date().toISOString(),
+    });
+    console.log(`✅ Published payment.appointment_status_update for ${appointmentId}`);
+  } catch (mqErr) {
+    console.error("❌ RabbitMQ publish failed:", mqErr.message);
+  }
+
+  // 3. Best-effort HTTP — updates appointment-service immediately if it's up.
+  const urls = getAppointmentServiceUrls();
   for (const baseUrl of urls) {
     try {
       const response = await axios.patch(
@@ -45,12 +70,9 @@ const notifyAppointmentService = async (appointmentId, body) => {
       console.log(`✅ Appointment ${appointmentId} marked as PAID via ${baseUrl}`);
       return response.data;
     } catch (err) {
-      lastError = err;
-      console.warn(`⚠️ Failed to notify appointment service at ${baseUrl}:`, err.response?.data || err.message);
+      console.warn(`⚠️ HTTP notify failed at ${baseUrl}:`, err.response?.data || err.message);
     }
   }
-
-  throw lastError || new Error("Failed to notify appointment service to update payment status");
 };
 
 const logNotificationEvent = async (data) => {
@@ -429,6 +451,95 @@ const getPaymentStats = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
+// ─── GET PATIENT APPOINTMENTS FALLBACK ───────────────────────────────────────
+// Called by API gateway when appointment-service is down.
+// Strategy (real-world pattern — payment-service owns payment truth):
+// 1. Get all snapshots for this patient (from RabbitMQ-synced read-replica)
+// 2. Get all payments for this patient from Payment collection (authoritative)
+// 3. Merge: override paymentStatus on snapshots using Payment records
+// 4. For appointments that have a Payment but NO snapshot, synthesize a minimal
+//    record from the Payment data so the patient can always see their paid appointments
+const getPatientAppointmentsFallback = async (req, res, next) => {
+  try {
+    const { patientId } = req.params;
+    if (req.user.role === "patient" && req.user.roleId !== patientId) {
+      return res.status(403).json({ success: false, message: "Access denied." });
+    }
+
+    const { getPatientSnapshots } = require("../services/appointmentCache");
+
+    // Run both queries in parallel
+    const [snapshots, allPatientPayments] = await Promise.all([
+      getPatientSnapshots(patientId),
+      Payment.find({ patientId }).sort({ createdAt: -1 }).lean(),
+    ]);
+
+    console.log(`[fallback] patientId=${patientId} snapshots=${snapshots.length} payments=${allPatientPayments.length}`);
+    console.log(`[fallback] payments:`, allPatientPayments.map(p => ({ id: p._id, appointmentId: p.appointmentId, status: p.status })));
+    console.log(`[fallback] snapshots:`, snapshots.map(s => ({ appointmentId: s.appointmentId, mongoId: s.mongoId, paymentStatus: s.paymentStatus })));
+
+    // Build a map of appointmentId → payment for fast lookup
+    // Payment.appointmentId is the MongoDB _id of the appointment
+    const paymentByAppointmentId = {};
+    allPatientPayments.forEach((p) => {
+      if (p.appointmentId) {
+        // Keep the most recent successful payment, or any payment if no success
+        const existing = paymentByAppointmentId[p.appointmentId];
+        if (!existing || p.status === "success") {
+          paymentByAppointmentId[p.appointmentId] = p;
+        }
+      }
+    });
+
+    // Step 1: Enrich snapshots with authoritative paymentStatus from Payment collection
+    // Snapshot.mongoId = MongoDB _id = Payment.appointmentId
+    const enrichedSnapshots = snapshots.map((s) => {
+      const payment = paymentByAppointmentId[s.mongoId] || paymentByAppointmentId[s.appointmentId];
+      const isPaid = payment && payment.status === "success";
+      return {
+        ...s,
+        // Expose _id as mongoId so MyAppointments.vue can use appt._id correctly
+        _id: s.mongoId || s.appointmentId,
+        paymentStatus: isPaid ? "PAID" : (s.paymentStatus || "PENDING"),
+      };
+    });
+
+    // Step 2: Find payments that have NO snapshot (appointment booked before consumer started)
+    // These are appointments the patient paid for but we have no snapshot of
+    const snapshotMongoIds = new Set(snapshots.map((s) => s.mongoId).filter(Boolean));
+    const snapshotAppointmentIds = new Set(snapshots.map((s) => s.appointmentId).filter(Boolean));
+
+    const orphanPayments = allPatientPayments.filter((p) => {
+      if (!p.appointmentId) return false;
+      return !snapshotMongoIds.has(p.appointmentId) && !snapshotAppointmentIds.has(p.appointmentId);
+    });
+
+    // Synthesize minimal appointment records from orphan payments
+    const synthesized = orphanPayments.map((p) => ({
+      _id: p.appointmentId,
+      appointmentId: p.appointmentId,
+      mongoId: p.appointmentId,
+      patientId,
+      doctorId: p.doctorId || "",
+      doctorName: p.doctorName || "",
+      patientName: p.patientName || "",
+      date: "",
+      time: "",
+      appointmentType: "PHYSICAL",
+      status: "CONFIRMED",
+      paymentStatus: p.status === "success" ? "PAID" : "PENDING",
+      charges: { total: p.amount || 0, doctorFee: 0, hospitalFee: 0, serviceFee: 0 },
+      _synthesized: true,
+    }));
+
+    const result = [...enrichedSnapshots, ...synthesized];
+
+    res.set("X-Data-Source", "payment-service-snapshot");
+    res.set("X-Cache", "STALE");
+    res.status(200).json(result);
+  } catch (error) { next(error); }
+};
+
 module.exports = {
   initiatePayment,
   payhereWebhook,
@@ -437,4 +548,5 @@ module.exports = {
   getPaymentStatus,
   getAllPayments,
   getPaymentStats,
+  getPatientAppointmentsFallback,
 };

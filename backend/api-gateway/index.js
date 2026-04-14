@@ -151,10 +151,43 @@ app.use("/api/doctors/internal", route(DOCTOR_SERVICE_URL, "doctor-service"));
 app.use("/api/doctors", route(DOCTOR_SERVICE_URL, "doctor-service"));
 app.use("/api/availability", routeAvailability);
 app.use("/api/prescriptions", route(DOCTOR_SERVICE_URL, "doctor-service"));
-app.use(
-  "/api/appointments",
-  route(APPOINTMENT_SERVICE_URL, "appointment-service"),
-);
+
+// Appointments — proxy to appointment-service.
+// For GET /api/appointments/patient/:patientId, fall back to payment-service
+// snapshot when appointment-service is down, so patients can still see their appointments.
+app.use("/api/appointments", (req, res) => {
+  req.url = req.originalUrl;
+
+  proxy.web(req, res, { target: APPOINTMENT_SERVICE_URL, changeOrigin: true }, (err) => {
+    const patientReadMatch =
+      req.method === "GET" &&
+      /\/api\/appointments\/patient\/[^/?]+/.test(req.originalUrl);
+
+    if (patientReadMatch) {
+      console.warn("⚠️ appointment-service down — serving patient appointments from payment-service snapshot");
+      req.url = req.originalUrl.replace(
+        /\/api\/appointments\/patient\//,
+        "/api/payments/fallback/appointments/patient/"
+      );
+      proxy.web(req, res, { target: PAYMENT_SERVICE_URL, changeOrigin: true }, (fallbackErr) => {
+        if (!res.headersSent) {
+          res.writeHead(503, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({
+            error: "Service Unavailable",
+            message: "Appointment service is currently unavailable. Please try again shortly.",
+          }));
+        }
+      });
+      return;
+    }
+
+    if (!res.headersSent) {
+      res.writeHead(502, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Bad Gateway", message: err?.message || "appointment-service unavailable" }));
+    }
+  });
+});
+
 app.use("/api/ai", route(AI_SERVICE_URL, "ai-service"));
 app.use("/api/payments", route(PAYMENT_SERVICE_URL, "payment-service"));
 app.use("/api/service-fee", route(FEE_SERVICE_URL, "fee-service"));

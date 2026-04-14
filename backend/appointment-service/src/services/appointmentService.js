@@ -209,6 +209,7 @@ export const createAppointment = async (data) => {
       queueNumber: saved.queueNumber,
       doctorName: saved.doctorName,
       patientName: saved.patientName,
+      charges: saved.charges || null,
     });
   } catch (err) {
     console.warn(
