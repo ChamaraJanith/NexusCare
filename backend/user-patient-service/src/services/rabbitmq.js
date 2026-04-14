@@ -75,8 +75,26 @@ const publishDoctorVerifiedEvent = async (payload) => {
   return published;
 };
 
+const publishDoctorFeeUpdatedEvent = async (payload) => {
+  const ch = await createChannel();
+  const feeQueue = 'doctor.fee_updated';
+  await ch.assertQueue(feeQueue, { durable: true });
+
+  const published = ch.sendToQueue(feeQueue, Buffer.from(JSON.stringify(payload)), {
+    persistent: true,
+  });
+
+  if (!published) {
+    throw new Error('Failed to publish doctor.fee_updated event to RabbitMQ');
+  }
+
+  console.log(`📤 Published doctor.fee_updated event for ${payload.doctorId} → fee: ${payload.consultationFee}`);
+  return published;
+};
+
 module.exports = {
   publishRegistrationEvent,
   publishDoctorRegisteredEvent,
   publishDoctorVerifiedEvent,
+  publishDoctorFeeUpdatedEvent,
 };
