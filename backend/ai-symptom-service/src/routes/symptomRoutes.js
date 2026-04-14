@@ -1,4 +1,3 @@
-// src/routes/symptomRoutes.js
 const express = require("express");
 const { checkSymptoms } = require("../controllers/ai.controller");
 

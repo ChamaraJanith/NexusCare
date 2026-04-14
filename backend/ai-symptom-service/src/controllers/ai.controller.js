@@ -1,7 +1,4 @@
-// src/controllers/ai.controller.js
-const {
-  checkSymptomsWithGemini,
-} = require("../services/geminiSymptomService");
+const { checkSymptomsWithGemini } = require("../services/geminiSymptomService");
 
 const checkSymptoms = async (req, res) => {
   try {
@@ -14,11 +11,7 @@ const checkSymptoms = async (req, res) => {
       });
     }
 
-    const analysis = await checkSymptomsWithGemini(
-      symptomsText,
-      age,
-      gender
-    );
+    const analysis = await checkSymptomsWithGemini(symptomsText, age, gender);
 
     return res.json({
       success: true,
@@ -30,7 +23,7 @@ const checkSymptoms = async (req, res) => {
     if (err.response && err.response.data) {
       console.error(
         "Gemini error response:",
-        JSON.stringify(err.response.data, null, 2)
+        JSON.stringify(err.response.data, null, 2),
       );
       return res.status(err.response.status || 500).json({
         success: false,

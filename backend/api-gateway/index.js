@@ -31,7 +31,6 @@ const route = (target, label) => (req, res) => {
       }),
     );
   }
-
   req.url = req.originalUrl;
   proxy.web(req, res, { target, changeOrigin: true });
 };
@@ -112,7 +111,6 @@ proxy.on("error", (err, req, res) => {
   res.writeHead(502, { "Content-Type": "application/json" });
   res.end(JSON.stringify({ error: "Bad Gateway", message: err.message }));
 });
-
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -126,8 +124,6 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization", "x-internal-service-key"],
   }),
 );
-
-// Health check
 app.get("/health", (req, res) => {
   res.json({
     status: "ok",
@@ -147,13 +143,10 @@ app.get("/health", (req, res) => {
 app.use("/api/auth", route(USER_SERVICE_URL, "user-service"));
 app.use("/api/patient", route(USER_SERVICE_URL, "user-service"));
 app.use("/api/admin", route(USER_SERVICE_URL, "user-service"));
-// Doctor search goes via appointment-service (has cache fallback)
-// All other /api/doctors routes go directly to doctor-service
 app.use(
   "/api/doctors/search",
   route(APPOINTMENT_SERVICE_URL, "appointment-service"),
 );
-// Internal doctor lookups go to doctor-service directly
 app.use("/api/doctors/internal", route(DOCTOR_SERVICE_URL, "doctor-service"));
 app.use("/api/doctors", route(DOCTOR_SERVICE_URL, "doctor-service"));
 app.use("/api/availability", routeAvailability);

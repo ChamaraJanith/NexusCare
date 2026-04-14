@@ -1,26 +1,25 @@
-const assert = require('node:assert');
-const { describe, it } = require('node:test');
-const { retryAsync } = require('../services/retryHelper');
+const assert = require("node:assert");
+const { describe, it } = require("node:test");
+const { retryAsync } = require("../services/retryHelper");
 
-describe('retryAsync', () => {
-  it('resolves successfully after a transient failure', async () => {
+describe("retryAsync", () => {
+  it("resolves successfully after a transient failure", async () => {
     let attempts = 0;
     const result = await retryAsync(
       async () => {
         attempts += 1;
         if (attempts < 2) {
-          throw new Error('temporary failure');
+          throw new Error("temporary failure");
         }
-        return 'ok';
+        return "ok";
       },
-      { retries: 3, initialDelayMs: 1 }
+      { retries: 3, initialDelayMs: 1 },
     );
 
-    assert.equal(result, 'ok');
+    assert.equal(result, "ok");
     assert.equal(attempts, 2);
   });
-
-  it('fails after all retry attempts are exhausted', async () => {
+  it("fails after all retry attempts are exhausted", async () => {
     let attempts = 0;
 
     await assert.rejects(
@@ -28,12 +27,12 @@ describe('retryAsync', () => {
         await retryAsync(
           async () => {
             attempts += 1;
-            throw new Error('fatal');
+            throw new Error("fatal");
           },
-          { retries: 2, initialDelayMs: 1 }
+          { retries: 2, initialDelayMs: 1 },
         );
       },
-      { message: 'fatal' }
+      { message: "fatal" },
     );
 
     assert.equal(attempts, 2);
