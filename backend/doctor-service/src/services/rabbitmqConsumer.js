@@ -5,6 +5,7 @@ import { retryAsync } from './retryHelper.js';
 const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://guest:guest@rabbitmq:5672';
 const QUEUE = 'doctor.registered';
 const VERIFY_QUEUE = 'doctor.verified';
+const FEE_QUEUE = 'doctor.fee_updated';
 
 const connectWithRetry = async () => {
   return retryAsync(
@@ -45,8 +46,9 @@ export const startRabbitMQConsumer = async () => {
 
     await channel.assertQueue(QUEUE, { durable: true });
     await channel.assertQueue(VERIFY_QUEUE, { durable: true });
+    await channel.assertQueue(FEE_QUEUE, { durable: true });
 
-    console.log(`📥 Doctor Service RabbitMQ consumer connected, listening for ${QUEUE} and ${VERIFY_QUEUE}`);
+    console.log(`📥 Doctor Service RabbitMQ consumer connected, listening for ${QUEUE}, ${VERIFY_QUEUE} and ${FEE_QUEUE}`);
 
     channel.consume(
       QUEUE,
@@ -125,6 +127,36 @@ export const startRabbitMQConsumer = async () => {
       },
       { noAck: false }
     );
+
+    // Consume doctor.fee_updated — keeps MS2 consultationFee in sync with MS1
+    channel.consume(
+      FEE_QUEUE,
+      async (msg) => {
+        if (!msg) return;
+        try {
+          const payload = JSON.parse(msg.content.toString());
+          const { doctorId, consultationFee } = payload;
+
+          if (!doctorId || consultationFee === undefined) {
+            channel.ack(msg);
+            return;
+          }
+
+          await Doctor.findOneAndUpdate(
+            { doctorId },
+            { $set: { consultationFee: Number(consultationFee) } }
+          );
+
+          console.log(`✅ consultationFee synced in doctor-service: ${doctorId} → ${consultationFee}`);
+          channel.ack(msg);
+        } catch (error) {
+          console.error('❌ Failed to process doctor.fee_updated event:', error);
+          channel.nack(msg, false, !msg.fields.redelivered);
+        }
+      },
+      { noAck: false }
+    );
+
   } catch (error) {
     console.error('❌ RabbitMQ consumer failed to start:', error);
   }

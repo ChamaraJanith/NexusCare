@@ -5,7 +5,7 @@ const User = require("../models/User");
 const PatientProfile = require("../models/PatientProfile");
 const DoctorProfile = require("../models/DoctorProfile");
 const cloudinary = require("../config/cloudinary");
-const { publishRegistrationEvent, publishDoctorRegisteredEvent } = require("../services/rabbitmq");
+const { publishRegistrationEvent, publishDoctorRegisteredEvent, publishDoctorFeeUpdatedEvent } = require("../services/rabbitmq");
 
 // Helper: Generate JWT token from userId and role
 const generateToken = (userId, role, roleId, name) => {
@@ -450,6 +450,14 @@ const updateDoctorFee = async (req, res, next) => {
     if (!profile) {
       return res.status(404).json({ success: false, message: "Doctor not found." });
     }
+
+    // Publish fee update event — doctor-service consumes this to keep its DB in sync
+    publishDoctorFeeUpdatedEvent({
+      doctorId,
+      consultationFee: Number(consultationFee),
+    }).catch((err) =>
+      console.warn('⚠️ Failed to publish doctor.fee_updated event:', err.message)
+    );
 
     res.json({
       success: true,
