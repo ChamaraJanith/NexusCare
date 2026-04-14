@@ -9,7 +9,7 @@ const getToken = () => localStorage.getItem('nexus_token') || localStorage.getIt
 
 export const getDoctorDetails = async (doctorId) => {
   try {
-    const res = await axios.get(`${DOCTOR_API}/internal/${doctorId}`)
+    const res = await axios.get(`${DOCTOR_API}/public/${doctorId}`)
     return res.data?.data || res.data || null
   } catch (error) {
     console.warn('⚠️ Failed to fetch doctor details:', error.message)

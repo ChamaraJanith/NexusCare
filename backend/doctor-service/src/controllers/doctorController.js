@@ -252,6 +252,38 @@ export const getDoctor = async (req, res) => {
   }
 };
 
+// ─── GET /api/doctors/public/:id ─────────────────────────────────────────────
+// Public endpoint — no auth required. Returns the doctor's public profile
+// (name, specialization, hospital, consultationFee, profileImage) for use
+// by the frontend on page refresh without needing an internal service key.
+export const getDoctorPublicProfile = async (req, res) => {
+  try {
+    const doctorId = req.params.id;
+    const profile = await doctorService.getDoctorFullProfile(doctorId, null);
+
+    if (!profile || (!profile.name && !profile.specialization)) {
+      return res.status(404).json({ success: false, message: "Doctor not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        doctorId: profile.doctorId,
+        name: profile.name || null,
+        specialization: profile.specialization || null,
+        hospital: profile.hospital || null,
+        consultationFee: profile.consultationFee ?? null,
+        profileImage: profile.profileImage || null,
+        experience: profile.experience || null,
+        location: profile.location || null,
+      },
+    });
+  } catch (err) {
+    console.error("[getDoctorPublicProfile] ERROR:", err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 // ─── POST /api/doctors/sync/full ─────────────────────────────────────────────
 export const syncDoctorCatalog = async (req, res) => {
   try {
