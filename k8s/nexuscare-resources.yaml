@@ -28,25 +28,20 @@ spec:
     - Ingress
     - Egress
   ingress:
-    # Allow traffic from API Gateway to all services
     - from:
         - podSelector:
             matchLabels:
               app: api-gateway
-    # Allow traffic within the namespace
     - from:
         - podSelector: {}
-    # Allow traffic from external clients to API Gateway
     - from:
         - namespaceSelector: {}
       ports:
         - protocol: TCP
           port: 8080
   egress:
-    # Allow traffic to all services within namespace
     - to:
         - podSelector: {}
-    # Allow DNS (external)
     - to:
         - namespaceSelector:
             matchLabels:
@@ -54,7 +49,6 @@ spec:
       ports:
         - protocol: UDP
           port: 53
-    # Allow traffic to external APIs (payment gateways, email, SMS services)
     - to:
         - podSelector: {}
       ports:

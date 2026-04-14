@@ -1,27 +1,33 @@
-const VideoSession = require('../models/videoSessionModel');
-const videoService = require('../services/videoService');
-const { publishEvent } = require('../services/eventPublisher');
+const VideoSession = require("../models/videoSessionModel");
+const videoService = require("../services/videoService");
+const { publishEvent } = require("../services/eventPublisher");
 
 const initializeSession = async (req, res, next) => {
   try {
-    const { patientId, doctorId, patientEmail, doctorEmail, patientPhone, appointmentId } = req.body;
-    const safeAppointmentId = appointmentId ? String(appointmentId).replaceAll(/[^A-Za-z0-9_-]/g, '') : null;
-
-    // req.user is set by the protect middleware
+    const {
+      patientId,
+      doctorId,
+      patientEmail,
+      doctorEmail,
+      patientPhone,
+      appointmentId,
+    } = req.body;
+    const safeAppointmentId = appointmentId
+      ? String(appointmentId).replaceAll(/[^A-Za-z0-9_-]/g, "")
+      : null;
     const requestingUserId = req.user?.id;
     const requestingUserRole = req.user?.role;
 
     const existingSession = safeAppointmentId
       ? await VideoSession.findOne({ appointmentId: safeAppointmentId })
-      : await VideoSession.findOne({ patientId, doctorId, status: 'ACTIVE' });
+      : await VideoSession.findOne({ patientId, doctorId, status: "ACTIVE" });
 
     if (existingSession) {
-      // Generate a fresh Jitsi token for this specific user
       const jitsiToken = videoService.generateJitsiToken(
         requestingUserId,
         requestingUserRole,
         existingSession.roomId,
-        requestingUserRole === 'doctor' ? 'moderator' : 'participant'
+        requestingUserRole === "doctor" ? "moderator" : "participant",
       );
 
       return res.status(200).json({
@@ -32,12 +38,16 @@ const initializeSession = async (req, res, next) => {
           ? `${existingSession.roomUrl}?jwt=${jitsiToken}`
           : existingSession.roomUrl,
         message: safeAppointmentId
-          ? 'Existing appointment session retrieved'
-          : 'Active session already exists',
+          ? "Existing appointment session retrieved"
+          : "Active session already exists",
       });
     }
 
-    const sessionData = await videoService.generateNeuralLink(patientId, doctorId, safeAppointmentId);
+    const sessionData = await videoService.generateNeuralLink(
+      patientId,
+      doctorId,
+      safeAppointmentId,
+    );
 
     const newSession = new VideoSession({
       roomId: sessionData.roomId,
@@ -45,25 +55,23 @@ const initializeSession = async (req, res, next) => {
       appointmentId: safeAppointmentId,
       patientId,
       doctorId,
-      patientEmail: patientEmail ? String(patientEmail).trim() : '',
-      doctorEmail: doctorEmail ? String(doctorEmail).trim() : '',
-      patientPhone: patientPhone ? String(patientPhone).trim() : '',
-      status: 'ACTIVE',
+      patientEmail: patientEmail ? String(patientEmail).trim() : "",
+      doctorEmail: doctorEmail ? String(doctorEmail).trim() : "",
+      patientPhone: patientPhone ? String(patientPhone).trim() : "",
+      status: "ACTIVE",
       startedAt: new Date(),
     });
 
     await newSession.save();
-
-    // Generate Jitsi token — doctors get moderator role
     const jitsiToken = videoService.generateJitsiToken(
       requestingUserId,
       requestingUserRole,
       newSession.roomId,
-      requestingUserRole === 'doctor' ? 'moderator' : 'participant'
+      requestingUserRole === "doctor" ? "moderator" : "participant",
     );
 
     try {
-      await publishEvent('video', 'video.session.created', {
+      await publishEvent("video", "video.session.created", {
         appointmentId: newSession.appointmentId,
         roomId: newSession.roomId,
         roomUrl: newSession.roomUrl,
@@ -72,13 +80,16 @@ const initializeSession = async (req, res, next) => {
         patientEmail: newSession.patientEmail,
         doctorEmail: newSession.doctorEmail,
         patientPhone: newSession.patientPhone,
-        doctorPhone: newSession.doctorPhone || '',
+        doctorPhone: newSession.doctorPhone || "",
         appointmentType: newSession.appointmentType,
         status: newSession.status,
         startedAt: newSession.startedAt,
       });
     } catch (publishError) {
-      console.warn('⚠️ Failed to publish video.session.created event:', publishError.message || publishError);
+      console.warn(
+        "⚠️ Failed to publish video.session.created event:",
+        publishError.message || publishError,
+      );
     }
 
     return res.status(200).json({
@@ -97,20 +108,20 @@ const initializeSession = async (req, res, next) => {
 const endSession = async (req, res, next) => {
   try {
     const { roomId } = req.body;
-    const session = await VideoSession.findOne({ roomId, status: 'ACTIVE' });
+    const session = await VideoSession.findOne({ roomId, status: "ACTIVE" });
 
     if (!session) {
-      const error = new Error('Active session not found');
+      const error = new Error("Active session not found");
       error.statusCode = 404;
       throw error;
     }
 
-    session.status = 'COMPLETED';
+    session.status = "COMPLETED";
     session.endedAt = new Date();
     await session.save();
 
     try {
-      await publishEvent('video', 'video.session.ended', {
+      await publishEvent("video", "video.session.ended", {
         appointmentId: session.appointmentId,
         roomId: session.roomId,
         patientId: session.patientId,
@@ -118,15 +129,20 @@ const endSession = async (req, res, next) => {
         patientEmail: session.patientEmail,
         doctorEmail: session.doctorEmail,
         patientPhone: session.patientPhone,
-        doctorPhone: session.doctorPhone || '',
+        doctorPhone: session.doctorPhone || "",
         endedAt: session.endedAt,
         status: session.status,
       });
     } catch (publishError) {
-      console.warn('⚠️ Failed to publish video.session.ended event:', publishError.message || publishError);
+      console.warn(
+        "⚠️ Failed to publish video.session.ended event:",
+        publishError.message || publishError,
+      );
     }
 
-    return res.status(200).json({ success: true, message: 'Video session ended', data: session });
+    return res
+      .status(200)
+      .json({ success: true, message: "Video session ended", data: session });
   } catch (error) {
     next(error);
   }
@@ -135,19 +151,23 @@ const endSession = async (req, res, next) => {
 const terminateSession = async (req, res, next) => {
   try {
     const { roomId } = req.params;
-    const session = await VideoSession.findOne({ roomId, status: 'ACTIVE' });
+    const session = await VideoSession.findOne({ roomId, status: "ACTIVE" });
 
     if (!session) {
-      const error = new Error('Active session not found');
+      const error = new Error("Active session not found");
       error.statusCode = 404;
       throw error;
     }
 
-    session.status = 'CANCELLED';
+    session.status = "CANCELLED";
     session.endedAt = new Date();
     await session.save();
 
-    return res.status(200).json({ success: true, message: `Session ${roomId} cancelled`, data: session });
+    return res.status(200).json({
+      success: true,
+      message: `Session ${roomId} cancelled`,
+      data: session,
+    });
   } catch (error) {
     next(error);
   }
@@ -156,9 +176,14 @@ const terminateSession = async (req, res, next) => {
 const getSessionByAppointment = async (req, res, next) => {
   try {
     const { appointmentId } = req.params;
-    const session = await VideoSession.findOne({ appointmentId: String(appointmentId).trim(), status: 'ACTIVE' });
+    const session = await VideoSession.findOne({
+      appointmentId: String(appointmentId).trim(),
+      status: "ACTIVE",
+    });
     if (!session) {
-      return res.status(404).json({ success: false, message: 'Video session not found' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Video session not found" });
     }
     res.status(200).json({ success: true, data: session });
   } catch (error) {
@@ -171,12 +196,10 @@ const getSessions = async (req, res, next) => {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
     const skip = (page - 1) * limit;
-
-    // Admins see all sessions; doctors/patients only see their own
     const filter = {};
-    if (req.user?.role === 'doctor') {
+    if (req.user?.role === "doctor") {
       filter.doctorId = req.user.roleId || req.user.id;
-    } else if (req.user?.role === 'patient') {
+    } else if (req.user?.role === "patient") {
       filter.patientId = req.user.roleId || req.user.id;
     }
 
@@ -219,7 +242,7 @@ const healthCheck = async (req, res, next) => {
     const status = await videoService.getDoctorCatalogStatus();
     res.status(200).json({
       success: true,
-      service: 'video-service',
+      service: "video-service",
       doctorCatalog: status,
       timestamp: new Date().toISOString(),
     });

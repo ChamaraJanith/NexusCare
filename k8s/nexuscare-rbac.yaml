@@ -9,7 +9,6 @@ kind: ClusterRole
 metadata:
   name: nexuscare-role
 rules:
-  # Allow reading ConfigMaps and Secrets within the namespace
   - apiGroups: [""]
     resources: ["configmaps", "secrets"]
     verbs: ["get", "list", "watch"]
