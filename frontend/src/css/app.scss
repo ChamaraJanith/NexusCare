@@ -1,1 +1,31 @@
 // app global css in SCSS form
+
+@media print {
+  // Hide Quasar layout chrome — header, drawer, footer, FAB
+  .q-header,
+  .q-drawer,
+  .q-footer,
+  .q-page-sticky,
+  .q-fab,
+  header,
+  nav {
+    display: none !important;
+  }
+
+  // Remove layout padding so print-receipt fills the page
+  .q-page-container {
+    padding: 0 !important;
+  }
+
+  // Force single page — no browser-added margins
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+}

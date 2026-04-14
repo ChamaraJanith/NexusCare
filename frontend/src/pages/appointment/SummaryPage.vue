@@ -285,6 +285,10 @@ const proceedToRequest = async () => {
     localStorage.setItem("appointmentId", realId || "");
     localStorage.setItem("doctorName", doctor?.name || "");
     localStorage.setItem("amount", store.totalFee || 0);
+    localStorage.setItem("doctorFee", Number(store.fees.doctorFee) || 0);
+    localStorage.setItem("hospitalFee", Number(store.fees.hospitalFee) || 0);
+    localStorage.setItem("serviceFee", Number(store.fees.bookingFee) || 0);
+    localStorage.setItem("appointmentType", store.consultationType === 'Physical' ? 'PHYSICAL' : 'ONLINE');
     localStorage.setItem("date", formattedDate.value || "");
     localStorage.setItem("time", formattedTime.value || "");
     localStorage.setItem("patientName", patient.name || "");

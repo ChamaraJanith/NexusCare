@@ -1110,19 +1110,24 @@ onMounted(async () => {
 // (goToPayment + viewReceipt — the dashboard appt tab needs them)
  
 const goToPayment = (ap) => {
-  localStorage.setItem('appointmentId', ap._id)
-  localStorage.setItem('doctorName',    doctorNames.value[ap.doctorId] || ap.doctorId)
-  localStorage.setItem('amount',        ap.charges?.total || 0)
-  localStorage.setItem('date',          ap.date)
-  localStorage.setItem('time',          ap.time)
-  localStorage.setItem('queueNumber',   ap.queueNumber || '-')
+  const resolvedDoctorName = doctorNames.value[ap.doctorId] || ap.doctorName || ''
+  localStorage.setItem('appointmentId',   ap._id)
+  localStorage.setItem('doctorName',      resolvedDoctorName)
+  localStorage.setItem('amount',          ap.charges?.total || 0)
+  localStorage.setItem('doctorFee',       ap.charges?.doctorFee   || 0)
+  localStorage.setItem('hospitalFee',     ap.charges?.hospitalFee || 0)
+  localStorage.setItem('serviceFee',      ap.charges?.serviceFee  || 0)
+  localStorage.setItem('appointmentType', ap.appointmentType || 'PHYSICAL')
+  localStorage.setItem('date',            ap.date)
+  localStorage.setItem('time',            ap.time)
+  localStorage.setItem('queueNumber',     ap.queueNumber || '-')
  
   router.push({
     path: '/appointment/payment',
     query: {
       appointmentId: ap._id,
       doctorId:      ap.doctorId,
-      doctorName:    doctorNames.value[ap.doctorId] || ap.doctorId,
+      doctorName:    doctorNames.value[ap.doctorId] || ap.doctorName || '',
       doctorFee:     ap.charges?.doctorFee   || 0,
       hospitalFee:   ap.charges?.hospitalFee || 0,
       serviceFee:    ap.charges?.serviceFee  || 0,
