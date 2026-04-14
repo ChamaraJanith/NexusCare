@@ -8,6 +8,7 @@ const {
   getPaymentStatus,
   getAllPayments,
   getPaymentStats,
+  getPatientAppointmentsFallback,
 } = require("../controllers/paymentController");
 const { protect, restrictTo } = require("../middleware/auth");
 
@@ -22,6 +23,9 @@ router.get("/admin/all",   protect, restrictTo("admin"), getAllPayments);
 router.post("/initiate", protect, restrictTo("patient"), initiatePayment);
 router.post("/confirm",  protect, restrictTo("patient"), confirmPayment);
 router.get("/my",        protect, restrictTo("patient"), getMyPayments);
+
+// Fallback: serve patient appointments from local snapshot when appointment-service is down
+router.get("/fallback/appointments/patient/:patientId", protect, getPatientAppointmentsFallback);
 
 // Dynamic param LAST
 router.get("/:orderId", protect, getPaymentStatus);

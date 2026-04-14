@@ -7,8 +7,13 @@ require("dotenv").config();
 const connectDB = require("./src/config/db");
 const errorHandler = require("./src/middleware/errorHandler");
 const paymentRoutes = require("./src/routes/paymentRoutes");
+const { startConsumer } = require("./src/services/appointmentEventConsumer");
 
-connectDB();
+connectDB().then(() => {
+  startConsumer().catch((err) =>
+    console.warn("⚠️ Appointment event consumer failed to start:", err.message)
+  );
+});
 
 const app = express();
 

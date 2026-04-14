@@ -38,6 +38,7 @@ const buildAppointmentEventPayload = (appointment) => ({
   doctorName: appointment.doctorName,
   patientName: appointment.patientName,
   rejectionReason: appointment.rejectionReason,
+  charges: appointment.charges || null,
 });
 
 const router = express.Router();

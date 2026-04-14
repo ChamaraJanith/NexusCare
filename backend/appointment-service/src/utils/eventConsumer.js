@@ -1,6 +1,8 @@
 import amqplib from "amqplib";
 import AvailabilitySlot from "../models/AvailabilitySlot.js";
 import DoctorSnapshot from "../models/DoctorSnapshot.js";
+import Appointment from "../models/Appointment.js";
+import { publishEvent } from "../services/eventPublisher.js";
 
 let connection = null;
 let channel = null;
@@ -11,32 +13,45 @@ const EXCHANGE_NAME = "doctor_events";
 const CONSUMER_QUEUE_NAME = "appointment_service_slots";
 const ROUTING_PATTERN = "doctor.#";
 
+// Payment events
+const PAYMENT_EXCHANGE = "payments";
+const PAYMENT_QUEUE = "appointment_service_payments";
+const PAYMENT_ROUTING = "payment.#";
+
 /**
  * Initialize RabbitMQ consumer
  */
 export const initializeConsumer = async () => {
   try {
     connection = await amqplib.connect(RABBITMQ_URL);
-    channel = await connection.createChannel();
-
-    // Declare exchange (must match publisher)
-    await channel.assertExchange(EXCHANGE_NAME, "topic", { durable: true });
-
-    // Declare queue for appointment service
-    const queue = await channel.assertQueue(CONSUMER_QUEUE_NAME, {
-      durable: true,
+    connection.on("error", (err) => {
+      console.error("❌ RabbitMQ connection error:", err.message);
+      connection = null; channel = null;
+      setTimeout(initializeConsumer, 5000);
+    });
+    connection.on("close", () => {
+      console.warn("⚠️ RabbitMQ connection closed, reconnecting...");
+      connection = null; channel = null;
+      setTimeout(initializeConsumer, 5000);
     });
 
-    // Bind queue to exchange with routing pattern
-    await channel.bindQueue(queue.queue, EXCHANGE_NAME, ROUTING_PATTERN);
+    channel = await connection.createChannel();
 
-    // Consume messages
-    await channel.consume(queue.queue, handleEvent, { noAck: false });
+    // ── Doctor events (unchanged) ──────────────────────────────────────────────
+    await channel.assertExchange(EXCHANGE_NAME, "topic", { durable: true });
+    const doctorQueue = await channel.assertQueue(CONSUMER_QUEUE_NAME, { durable: true });
+    await channel.bindQueue(doctorQueue.queue, EXCHANGE_NAME, ROUTING_PATTERN);
+    await channel.consume(doctorQueue.queue, handleEvent, { noAck: false });
 
-    console.log("✅ Event consumer initialized - listening for doctor events");
+    // ── Payment events — update paymentStatus when appointment-service was down ─
+    await channel.assertExchange(PAYMENT_EXCHANGE, "topic", { durable: true });
+    const paymentQueue = await channel.assertQueue(PAYMENT_QUEUE, { durable: true });
+    await channel.bindQueue(paymentQueue.queue, PAYMENT_EXCHANGE, PAYMENT_ROUTING);
+    await channel.consume(paymentQueue.queue, handlePaymentEvent, { noAck: false });
+
+    console.log("✅ Event consumer initialized - listening for doctor + payment events");
   } catch (error) {
     console.error("❌ Failed to initialize event consumer:", error.message);
-    // Retry after 5 seconds
     setTimeout(initializeConsumer, 5000);
   }
 };
@@ -186,6 +201,53 @@ const handleSlotUpdateEvent = async (msg) => {
     console.error("❌ Error handling slot update event:", error.message);
     // Nack and requeue if there's an error
     channel.nack(msg, false, true);
+  }
+};
+
+/**
+ * Handle payment.appointment_status_update events.
+ * This fires when payment-service couldn't reach appointment-service via HTTP
+ * (e.g. appointment-service was down). Guarantees eventual consistency.
+ */
+const handlePaymentEvent = async (msg) => {
+  if (!msg) return;
+  try {
+    const payload = JSON.parse(msg.content.toString());
+    const routingKey = msg.fields?.routingKey || "";
+
+    if (routingKey === "payment.appointment_status_update") {
+      const { appointmentId, paymentStatus } = payload;
+      if (appointmentId && paymentStatus) {
+        const updated = await Appointment.findOneAndUpdate(
+          { $or: [{ _id: appointmentId }, { appointmentId }] },
+          { paymentStatus },
+          { new: true }
+        );
+        if (updated) {
+          console.log(`✅ [event] paymentStatus updated: ${appointmentId} → ${paymentStatus}`);
+          // Trigger online_confirmed if conditions met
+          if (
+            updated.paymentStatus === "PAID" &&
+            updated.status === "CONFIRMED" &&
+            updated.appointmentType === "ONLINE"
+          ) {
+            publishEvent("appointments", "appointment.online_confirmed", {
+              appointmentId: updated.appointmentId,
+              id: updated._id?.toString(),
+              patientId: updated.patientId,
+              doctorId: updated.doctorId,
+              appointmentType: updated.appointmentType,
+              status: updated.status,
+              paymentStatus: updated.paymentStatus,
+            }).catch((e) => console.warn("⚠️ Failed to publish online_confirmed:", e.message));
+          }
+        }
+      }
+    }
+    channel.ack(msg);
+  } catch (err) {
+    console.error("❌ Error handling payment event:", err.message);
+    channel.nack(msg, false, !msg.fields.redelivered);
   }
 };
 
