@@ -653,7 +653,7 @@ const submitPrescription = async () => {
   submitting.value = true;
 
   try {
-    const doctorName = doctor.value?.name || getDoctorName();
+    const doctorName = doctor.value?.name || localStorage.getItem('doctor_name') || getDoctorName();
     const doctorId = doctor.value?.doctorId || doctor.value?._id || null;
     const now = new Date().toISOString();
 
