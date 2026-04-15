@@ -212,28 +212,44 @@
               <div class="card-header">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
                 Recent Reports
+                <span class="ov-section-count" v-if="reports.length">{{ reports.length }}</span>
               </div>
-              <button class="view-all-btn" @click="activeTab = 'reports'">View all →</button>
+              <div class="ov-header-actions">
+                <button class="ov-upload-btn" @click="uploadDialog = true">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
+                  Upload
+                </button>
+                <button class="view-all-btn" @click="activeTab = 'reports'">View all →</button>
+              </div>
             </div>
-            <div v-if="!reports.length" class="mini-empty">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.25"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
-              <span>No reports uploaded</span>
+            <div v-if="!reports.length" class="ov-mini-empty">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+              <div>
+                <div class="ov-empty-title">No reports yet</div>
+                <div class="ov-empty-sub">Upload lab results, scans or documents</div>
+              </div>
             </div>
-            <div v-else class="report-mini-grid">
+            <div v-else class="ov-reports-list">
               <div
                 v-for="r in reports.slice(0, 4)"
                 :key="r.reportId"
-                class="report-mini-card"
+                class="ov-report-row"
                 @click="openFile(r.fileUrl)"
               >
-                <div class="report-mini-icon" :class="r.fileType === 'pdf' ? 'icon-red' : 'icon-blue'">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <div class="ov-report-icon" :class="r.fileType === 'pdf' ? 'ov-icon-pdf' : 'ov-icon-img'">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                     <path v-if="r.fileType === 'pdf'" d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z"/>
                     <path v-else d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
                   </svg>
                 </div>
-                <span class="report-mini-name">{{ r.title }}</span>
-                <span class="report-mini-date">{{ fmtDate(r.uploadedAt) }}</span>
+                <div class="ov-report-info">
+                  <span class="ov-report-name">{{ r.title }}</span>
+                  <span class="ov-report-meta">
+                    <span class="ov-report-type" :class="r.fileType === 'pdf' ? 'type-pdf' : 'type-img'">{{ (r.fileType || 'FILE').toUpperCase() }}</span>
+                    {{ fmtDate(r.uploadedAt) }}
+                  </span>
+                </div>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" class="ov-report-arrow"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
               </div>
             </div>
           </div>
@@ -244,24 +260,66 @@
               <div class="card-header">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
                 Upcoming Appointments
+                <span class="ov-section-count" v-if="upcomingAppointments.length">{{ upcomingAppointments.length }}</span>
               </div>
-              <button class="view-all-btn" @click="activeTab = 'appointments'">View all →</button>
+              <div class="ov-header-actions">
+                <button class="ov-book-btn" @click="$router.push('/appointment')">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zm-7-7h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4h-2v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z"/></svg>
+                  Book
+                </button>
+                <button class="view-all-btn" @click="activeTab = 'appointments'">View all →</button>
+              </div>
             </div>
-            <div v-if="!upcomingAppointments.length" class="mini-empty">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.25"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
-              <span>No upcoming appointments</span>
+            <div v-if="!upcomingAppointments.length" class="ov-mini-empty">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
+              <div>
+                <div class="ov-empty-title">No upcoming appointments</div>
+                <div class="ov-empty-sub">Book a consultation with a doctor</div>
+              </div>
             </div>
-            <div v-else class="upcoming-list">
-              <div v-for="ap in upcomingAppointments.slice(0, 3)" :key="ap._id" class="upcoming-item">
-                <div class="upcoming-date-box">
-                  <span class="up-day">{{ fmtDay(ap.date) }}</span>
-                  <span class="up-month">{{ fmtMonth(ap.date) }}</span>
+            <div v-else class="ov-appt-list">
+              <div v-for="ap in upcomingAppointments.slice(0, 3)" :key="ap._id" class="ov-appt-row" @click="activeTab = 'appointments'">
+                <!-- Date badge -->
+                <div class="ov-appt-date" :class="'ov-date-' + ap.status.toLowerCase()">
+                  <span class="ov-appt-day">{{ fmtDay(ap.date) }}</span>
+                  <span class="ov-appt-mon">{{ fmtMonth(ap.date) }}</span>
                 </div>
-                <div class="upcoming-detail">
-                  <span class="up-title">{{ ap.patientName || profileData.name }}</span>
-                  <span class="up-sub">{{ ap.time }} · {{ ap.appointmentType }} · Queue #{{ ap.queueNumber || '—' }}</span>
+                <!-- Info -->
+                <div class="ov-appt-info">
+                  <div class="ov-appt-doctor">
+                    <span class="ov-appt-doctor-name">Dr. {{ ap.doctorName || '—' }}</span>
+                    <span v-if="ap.doctorSpecialization" class="ov-appt-spec">{{ ap.doctorSpecialization }}</span>
+                  </div>
+                  <div class="ov-appt-meta">
+                    <span class="ov-appt-chip">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                      {{ ap.time }}
+                    </span>
+                    <span class="ov-appt-chip" :class="ap.appointmentType === 'ONLINE' ? 'chip-online' : 'chip-physical'">
+                      <svg v-if="ap.appointmentType === 'ONLINE'" width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+                      <svg v-else width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                      {{ ap.appointmentType === 'ONLINE' ? 'Online' : 'In-Person' }}
+                    </span>
+                    <span class="ov-appt-chip">Queue #{{ ap.queueNumber || '—' }}</span>
+                  </div>
                 </div>
-                <span class="status-pill" :class="statusClass(ap.status)">{{ ap.status }}</span>
+                <!-- Status + action -->
+                <div class="ov-appt-right">
+                  <span class="status-pill" :class="statusClass(ap.status)">{{ ap.status }}</span>
+                  <button
+                    v-if="ap.status === 'CONFIRMED' && ap.paymentStatus !== 'PAID'"
+                    class="ov-pay-btn"
+                    @click.stop="goToPayment(ap)"
+                  >Pay Now</button>
+                  <button
+                    v-else-if="ap.status === 'CONFIRMED' && ap.appointmentType === 'ONLINE' && ap.paymentStatus === 'PAID'"
+                    class="ov-join-btn"
+                    @click.stop="joinVideo(ap)"
+                  >
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+                    Join
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -517,63 +575,71 @@
       ───────────────────────────────────── -->
       <div v-show="activeTab === 'appointments'" class="tab-content">
         <div class="content-card">
-      
-          <div class="content-card-header">
-            <div>
+
+          <!-- Header -->
+          <div class="appt-tab-header">
+            <div class="appt-tab-title-group">
               <div class="content-card-title">My Appointments</div>
-              <div class="content-card-sub">{{ appointments.length }} total</div>
+              <div class="content-card-sub">{{ appointments.length }} total · {{ upcomingAppointments.length }} upcoming</div>
             </div>
-            <button class="btn-action" @click="$router.push('/appointment')">
-              Book New
+            <button class="btn-book-new" @click="$router.push('/appointment')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zm-7-7h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4h-2v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z"/></svg>
+              Book Appointment
             </button>
           </div>
-      
-          <!-- Filter row -->
-          <div class="filter-row">
+
+          <!-- Filter tabs -->
+          <div class="appt-filter-tabs">
             <button
               v-for="f in apptFiltersComputed"
               :key="f.value"
-              class="filter-btn"
-              :class="{ active: apptFilter === f.value }"
+              class="appt-filter-tab"
+              :class="{ active: apptFilter === f.value, ['tab-' + f.value.toLowerCase()]: true }"
               @click="apptFilter = f.value"
             >
               {{ f.label }}
-              <span v-if="f.count" class="filter-count">{{ f.count }}</span>
+              <span class="appt-filter-count">{{ f.count }}</span>
             </button>
           </div>
-      
+
           <!-- Loading -->
-          <div v-if="loadingAppts" class="empty-state">
-            <q-spinner-dots color="cyan-5" size="2.5em" />
+          <div v-if="loadingAppts" class="appt-loading">
+            <q-spinner-dots color="cyan-5" size="2em" />
+            <span>Loading appointments...</span>
           </div>
-      
+
           <!-- Empty -->
-          <div v-else-if="!filteredAppts.length" class="empty-state">
-            <div class="empty-title">No appointments found</div>
+          <div v-else-if="!filteredAppts.length" class="appt-empty">
+            <div class="appt-empty-icon">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
+            </div>
+            <div class="appt-empty-title">No {{ apptFilter === 'ALL' ? '' : apptFilter.toLowerCase() + ' ' }}appointments</div>
+            <div class="appt-empty-sub" v-if="apptFilter === 'ALL'">Book your first appointment to get started</div>
+            <button v-if="apptFilter === 'ALL'" class="btn-book-new" style="margin-top:12px" @click="$router.push('/appointment')">Book Now</button>
           </div>
-      
-          <!-- List -->
+
+          <!-- Appointment cards -->
           <div v-else class="appointments-list">
             <div
               v-for="ap in filteredAppts"
               :key="ap._id || ap.appointmentId"
               class="appt-card"
-              :class="'appt-status-' + ap.status.toLowerCase()"
+              :class="['appt-status-' + ap.status.toLowerCase(), { 'appt-cancelled-dim': ap.status === 'CANCELLED' }]"
             >
-              <!-- Left accent bar by status -->
+              <!-- Status accent bar -->
               <div class="appt-accent-bar" :class="'accent-' + ap.status.toLowerCase()"></div>
 
-              <!-- Date block -->
+              <!-- Date column -->
               <div class="appt-date-col">
                 <span class="appt-day">{{ fmtDay(ap.date) }}</span>
                 <span class="appt-month">{{ fmtMonth(ap.date) }}</span>
                 <span class="appt-year">{{ ap.date ? new Date(ap.date).getFullYear() : '' }}</span>
               </div>
 
-              <!-- Main info -->
+              <!-- Main content -->
               <div class="appt-body">
 
-                <!-- Row 1: Doctor avatar + name + type badge -->
+                <!-- Doctor info row -->
                 <div class="appt-row-top">
                   <div class="appt-doctor-avatar" v-if="ap.doctorProfileImage">
                     <img :src="ap.doctorProfileImage" :alt="ap.doctorName" @error="e => e.target.style.display='none'" />
@@ -582,42 +648,32 @@
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
                   </div>
                   <div class="appt-doctor-info">
-                    <div class="appt-doctor-name">
-                      Dr. {{ ap.doctorName || doctorNames[ap.doctorId] || 'Unknown Physician' }}
-                    </div>
-                    <div v-if="ap.doctorSpecialization" class="appt-specialization">
-                      {{ ap.doctorSpecialization }}
-                    </div>
+                    <div class="appt-doctor-name">Dr. {{ ap.doctorName || doctorNames[ap.doctorId] || 'Unknown Physician' }}</div>
+                    <div v-if="ap.doctorSpecialization" class="appt-specialization">{{ ap.doctorSpecialization }}</div>
                   </div>
                   <span class="appt-type-badge" :class="ap.appointmentType === 'ONLINE' ? 'type-online' : 'type-physical'">
-                    <span v-if="ap.appointmentType === 'ONLINE'">
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-1px;margin-right:3px"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>Online
-                    </span>
-                    <span v-else>
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-1px;margin-right:3px"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>Physical
-                    </span>
+                    <svg v-if="ap.appointmentType === 'ONLINE'" width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+                    <svg v-else width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                    {{ ap.appointmentType === 'ONLINE' ? 'Online' : 'In-Person' }}
                   </span>
                 </div>
 
-                <!-- Row 2: Hospital + venue info -->
-                <div class="appt-hospital-row">
-                  <div class="appt-hospital-chip" v-if="ap.appointmentType === 'PHYSICAL'">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
-                    <span class="hospital-label">Hospital</span>
-                    <span class="hospital-name">{{ ap.doctorHospital || ap.venue || 'Not specified' }}</span>
-                  </div>
-                  <div class="appt-hospital-chip appt-online-chip" v-else>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/></svg>
-                    <span class="hospital-label">Mode</span>
-                    <span class="hospital-name">Online Video Consultation</span>
-                  </div>
-                  <div class="appt-id-chip">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-9 4h2v2h-2V8zm0 4h2v4h-2v-4zm-4-4h2v6H7V8zm8 6v-2h2v2h-2z"/></svg>
-                    {{ ap.appointmentId || ap._id?.slice(-6)?.toUpperCase() || '—' }}
-                  </div>
+                <!-- Location / mode row -->
+                <div class="appt-location-row">
+                  <template v-if="ap.appointmentType === 'PHYSICAL'">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="color:#a78bfa;flex-shrink:0"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                    <span class="appt-location-text">{{ ap.doctorHospital || ap.venue || 'Hospital not specified' }}</span>
+                  </template>
+                  <template v-else>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="color:#60a5fa;flex-shrink:0"><path d="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/></svg>
+                    <span class="appt-location-text" style="color:#60a5fa">Video Consultation</span>
+                  </template>
+                  <span class="appt-id-chip">
+                    APT-{{ (ap.appointmentId || ap._id?.slice(-6) || '——').toUpperCase() }}
+                  </span>
                 </div>
 
-                <!-- Row 3: Time · Queue · Patient -->
+                <!-- Time · Queue · Patient chips -->
                 <div class="appt-meta-chips">
                   <span class="meta-chip">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -633,56 +689,71 @@
                   </span>
                 </div>
 
-                <!-- Row 4: Fee breakdown -->
+                <!-- Fee summary row -->
                 <div class="appt-fee-row" v-if="ap.charges?.total">
-                  <span class="fee-item">
-                    <span class="fee-label">Doctor</span>
-                    <span class="fee-val">LKR {{ (ap.charges.doctorFee || 0).toLocaleString() }}</span>
-                  </span>
-                  <span class="fee-sep">+</span>
-                  <span class="fee-item" v-if="ap.appointmentType === 'PHYSICAL'">
-                    <span class="fee-label">Hospital</span>
-                    <span class="fee-val">LKR {{ (ap.charges.hospitalFee || 0).toLocaleString() }}</span>
-                  </span>
-                  <span class="fee-sep" v-if="ap.appointmentType === 'PHYSICAL'">+</span>
-                  <span class="fee-item">
-                    <span class="fee-label">Service</span>
-                    <span class="fee-val">LKR {{ (ap.charges.serviceFee || 0).toLocaleString() }}</span>
-                  </span>
-                  <span class="fee-sep">=</span>
-                  <span class="fee-total">LKR {{ ap.charges.total.toLocaleString() }}</span>
-                  <span class="pay-badge" :class="ap.paymentStatus === 'PAID' ? 'pay-paid' : 'pay-pending'">
-                    {{ ap.paymentStatus || 'PENDING' }}
-                  </span>
+                  <div class="fee-breakdown">
+                    <span class="fee-item-sm">
+                      <span class="fee-lbl">Doctor</span>
+                      <span class="fee-amt">LKR {{ (ap.charges.doctorFee || 0).toLocaleString() }}</span>
+                    </span>
+                    <span class="fee-plus">+</span>
+                    <span class="fee-item-sm" v-if="ap.appointmentType === 'PHYSICAL' && ap.charges.hospitalFee">
+                      <span class="fee-lbl">Hospital</span>
+                      <span class="fee-amt">LKR {{ ap.charges.hospitalFee.toLocaleString() }}</span>
+                    </span>
+                    <span class="fee-plus" v-if="ap.appointmentType === 'PHYSICAL' && ap.charges.hospitalFee">+</span>
+                    <span class="fee-item-sm">
+                      <span class="fee-lbl">Service</span>
+                      <span class="fee-amt">LKR {{ (ap.charges.serviceFee || 0).toLocaleString() }}</span>
+                    </span>
+                  </div>
+                  <div class="fee-total-group">
+                    <span class="fee-total-label">Total</span>
+                    <span class="fee-total-amt">LKR {{ ap.charges.total.toLocaleString() }}</span>
+                    <span class="pay-badge" :class="ap.paymentStatus === 'PAID' ? 'pay-paid' : 'pay-pending'">
+                      {{ ap.paymentStatus === 'PAID' ? '✓ Paid' : 'Unpaid' }}
+                    </span>
+                  </div>
                 </div>
 
                 <!-- Cancellation reason -->
                 <div v-if="ap.status === 'CANCELLED' && ap.rejectionReason" class="appt-rejection">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                  {{ ap.rejectionReason }}
+                  Reason: {{ ap.rejectionReason }}
                 </div>
               </div>
 
-              <!-- Right: status + actions -->
+              <!-- Right: status badge + CTA buttons -->
               <div class="appt-right-col">
-                <span class="status-pill" :class="statusClass(ap.status)">{{ ap.status }}</span>
+                <span class="status-pill" :class="statusClass(ap.status)">
+                  {{ ap.status === 'CONFIRMED' ? 'Confirmed' : ap.status === 'PENDING' ? 'Pending' : ap.status === 'COMPLETED' ? 'Completed' : ap.status === 'CANCELLED' ? 'Cancelled' : ap.status }}
+                </span>
 
                 <div class="appt-actions">
+                  <!-- PENDING: waiting for doctor confirmation -->
                   <template v-if="ap.status === 'PENDING'">
-                    <span class="hint-text">Awaiting confirmation</span>
-                    <button class="btn-icon-cancel" @click="cancelAppt(ap._id || ap.appointmentId)" title="Cancel">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    <div class="appt-hint">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                      Awaiting confirmation
+                    </div>
+                    <button class="btn-cancel-appt" @click="cancelAppt(ap._id || ap.appointmentId)">
                       Cancel
                     </button>
                   </template>
 
+                  <!-- CONFIRMED + unpaid: prompt payment -->
                   <template v-else-if="ap.status === 'CONFIRMED' && ap.paymentStatus !== 'PAID'">
+                    <div class="appt-hint appt-hint-warn">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                      Payment required
+                    </div>
                     <button class="btn-pay" @click="goToPayment(ap)">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
                       Pay Now
                     </button>
                   </template>
 
+                  <!-- CONFIRMED + paid: receipt + join -->
                   <template v-else-if="ap.status === 'CONFIRMED' && ap.paymentStatus === 'PAID'">
                     <button class="btn-receipt" @click="viewReceipt(ap)">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -690,10 +761,11 @@
                     </button>
                     <button v-if="ap.appointmentType === 'ONLINE'" class="btn-join" @click="joinVideo(ap)">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-                      Join
+                      Join Call
                     </button>
                   </template>
 
+                  <!-- COMPLETED -->
                   <template v-else-if="ap.status === 'COMPLETED'">
                     <button class="btn-receipt" @click="viewReceipt(ap)">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -701,14 +773,15 @@
                     </button>
                   </template>
 
+                  <!-- CANCELLED -->
                   <template v-else-if="ap.status === 'CANCELLED'">
-                    <span class="hint-text cancelled-hint">Cancelled</span>
+                    <div class="appt-hint appt-hint-cancel">Appointment cancelled</div>
                   </template>
                 </div>
               </div>
             </div>
           </div>
-      
+
         </div>
       </div>
 
@@ -805,6 +878,40 @@
               Deleting...
             </span>
             <span v-else>Delete Report</span>
+          </button>
+        </div>
+      </div>
+    </q-dialog>
+
+    <!-- CANCEL APPOINTMENT DIALOG -->
+    <q-dialog v-model="cancelApptDialog" persistent>
+      <div class="dialog-box">
+        <div class="dialog-header">
+          <span>Cancel Appointment</span>
+          <button class="dialog-close" @click="cancelApptDialog = false">✕</button>
+        </div>
+        <div class="dialog-body">
+          <p style="color:#94a3b8; font-size:14px; margin:0;">
+            Are you sure you want to cancel this appointment? This action cannot be undone.
+          </p>
+        </div>
+        <div class="dialog-footer">
+          <button class="btn-ghost" @click="cancelApptDialog = false" :disabled="cancellingAppt">
+            Keep It
+          </button>
+          <button
+            class="btn-save"
+            style="background: linear-gradient(135deg, #dc2626, #ef4444); min-width: 140px;"
+            @click="confirmCancelAppt"
+            :disabled="cancellingAppt"
+          >
+            <span v-if="cancellingAppt" style="display:flex;align-items:center;gap:8px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="animation:spin 1s linear infinite">
+                <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
+              </svg>
+              Cancelling...
+            </span>
+            <span v-else>Yes, Cancel</span>
           </button>
         </div>
       </div>
@@ -1205,12 +1312,29 @@ const updateAppt = async () => {
   } finally { updatingAppt.value = false }
 }
 
+const cancelApptDialog = ref(false)
+const apptToCancel = ref(null)
+const cancellingAppt = ref(false)
+
 const cancelAppt = (id) => {
-  $q.dialog({ title: 'Cancel Appointment', message: 'Cancel this appointment?', ok: { label: 'Yes, Cancel', color: 'red', flat: true }, cancel: { label: 'Keep It', flat: true }, dark: true })
-    .onOk(async () => {
-      try { await apptApi.delete(`/api/appointments/${id}`); await loadAppointments(); notify('Appointment cancelled') }
-      catch (e) { notify(e.response?.data?.error || 'Cancel failed', 'negative') }
-    })
+  apptToCancel.value = id
+  cancelApptDialog.value = true
+}
+
+const confirmCancelAppt = async () => {
+  cancellingAppt.value = true
+  try {
+    await apptApi.delete(`/api/appointments/${apptToCancel.value}`)
+    cancelApptDialog.value = false
+    await loadAppointments()
+    notify('Appointment cancelled')
+  } catch (e) {
+    console.error('Cancel error:', e.response?.data || e.message)
+    notify(e.response?.data?.error || e.response?.data?.message || 'Cancel failed', 'negative')
+  } finally {
+    cancellingAppt.value = false
+    apptToCancel.value = null
+  }
 }
 
 onMounted(async () => {
@@ -1723,17 +1847,7 @@ const joinVideo = (ap) => {
 .chip-amber { background: rgba(245,158,11,0.12); color: #fcd34d; border: 1px solid rgba(245,158,11,0.2); }
 .cond-empty { font-size: 12px; color: #475569; font-style: italic; margin: 0; }
 
-/* Mini Lists */
-.mini-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 30px 20px;
-  gap: 8px;
-  color: #334155;
-  font-size: 13px;
-}
+/* Mini Lists — kept for prescriptions preview */
 .rx-list { display: flex; flex-direction: column; gap: 10px; }
 .rx-mini-item {
   display: flex;
@@ -1750,68 +1864,162 @@ const joinVideo = (ap) => {
 .rx-sub { display: block; font-size: 11px; color: #64748b; }
 .rx-count { font-size: 11px; font-weight: 700; color: #22d3ee; background: rgba(6,182,212,0.1); padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
 
-/* Report Mini Grid */
-.report-mini-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 10px;
-}
-.report-mini-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 16px 12px;
-  background: rgba(255,255,255,0.02);
-  border: 1px solid rgba(255,255,255,0.05);
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.25s;
-  text-align: center;
-}
-.report-mini-card:hover { background: rgba(6,182,212,0.08); border-color: rgba(6,182,212,0.2); transform: translateY(-2px); }
-.report-mini-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.icon-red { background: rgba(239,68,68,0.12); color: #f87171; }
-.icon-blue { background: rgba(6,182,212,0.12); color: #22d3ee; }
-.report-mini-name { font-size: 12px; font-weight: 600; color: #e2e8f0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; }
-.report-mini-date { font-size: 11px; color: #64748b; }
+/* Report Mini Grid — kept for reference, replaced by ov-reports-list */
 
-/* Upcoming */
-.upcoming-list { display: flex; flex-direction: column; gap: 10px; }
-.upcoming-item {
+/* ── Overview: shared header extras ── */
+.ov-section-count {
+  background: rgba(6,182,212,0.15);
+  color: #22d3ee;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 1px 7px;
+  border-radius: 10px;
+  margin-left: 4px;
+}
+.ov-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ov-upload-btn, .ov-book-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 11px;
+  border-radius: 7px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.ov-upload-btn {
+  background: rgba(6,182,212,0.1);
+  color: #22d3ee;
+  border: 1px solid rgba(6,182,212,0.2);
+}
+.ov-upload-btn:hover { background: rgba(6,182,212,0.2); }
+.ov-book-btn {
+  background: rgba(139,92,246,0.1);
+  color: #a78bfa;
+  border: 1px solid rgba(139,92,246,0.2);
+}
+.ov-book-btn:hover { background: rgba(139,92,246,0.2); }
+
+/* ── Overview: empty state ── */
+.ov-mini-empty {
   display: flex;
   align-items: center;
   gap: 14px;
-  background: rgba(255,255,255,0.02);
-  border: 1px solid rgba(255,255,255,0.04);
+  padding: 22px 8px;
+  color: #334155;
+}
+.ov-mini-empty svg { flex-shrink: 0; opacity: 0.3; }
+.ov-empty-title { font-size: 13px; font-weight: 600; color: #475569; }
+.ov-empty-sub { font-size: 11px; color: #334155; margin-top: 2px; }
+
+/* ── Overview: Reports list ── */
+.ov-reports-list { display: flex; flex-direction: column; gap: 2px; }
+.ov-report-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.18s;
+}
+.ov-report-row:hover { background: rgba(255,255,255,0.04); }
+.ov-report-icon {
+  width: 36px; height: 36px;
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.ov-icon-pdf { background: rgba(239,68,68,0.1); color: #f87171; }
+.ov-icon-img { background: rgba(6,182,212,0.1); color: #22d3ee; }
+.ov-report-info { flex: 1; min-width: 0; }
+.ov-report-name {
+  display: block;
+  font-size: 13px; font-weight: 600; color: #e2e8f0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ov-report-meta {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; color: #64748b; margin-top: 2px;
+}
+.ov-report-type {
+  font-size: 9px; font-weight: 800;
+  padding: 1px 6px; border-radius: 4px;
+}
+.type-pdf { background: rgba(239,68,68,0.1); color: #f87171; }
+.type-img { background: rgba(6,182,212,0.1); color: #22d3ee; }
+.ov-report-arrow { color: #1e293b; flex-shrink: 0; transition: color 0.2s; }
+.ov-report-row:hover .ov-report-arrow { color: #475569; }
+
+/* ── Overview: Upcoming Appointments list ── */
+.ov-appt-list { display: flex; flex-direction: column; gap: 6px; }
+.ov-appt-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 10px;
   border-radius: 12px;
-  padding: 12px 14px;
+  border: 1px solid rgba(255,255,255,0.04);
+  background: rgba(255,255,255,0.015);
+  cursor: pointer;
   transition: all 0.2s;
 }
-.upcoming-item:hover { background: rgba(255,255,255,0.04); }
-.upcoming-date-box {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: rgba(6,182,212,0.1);
-  border: 1px solid rgba(6,182,212,0.15);
+.ov-appt-row:hover { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08); }
+
+.ov-appt-date {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-width: 46px; padding: 8px 10px;
   border-radius: 10px;
-  padding: 8px 14px;
-  min-width: 52px;
+  flex-shrink: 0;
 }
-.up-day { font-size: 1.3rem; font-weight: 800; color: #f1f5f9; line-height: 1; }
-.up-month { font-size: 10px; font-weight: 700; color: #22d3ee; text-transform: uppercase; }
-.upcoming-detail { flex: 1; min-width: 0; }
-.up-title { display: block; font-size: 14px; font-weight: 600; color: #e2e8f0; }
-.up-sub { display: block; font-size: 12px; color: #64748b; margin-top: 3px; }
+.ov-date-pending   { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); }
+.ov-date-confirmed { background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2); }
+.ov-date-verified  { background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.2); }
+.ov-appt-day  { font-size: 1.25rem; font-weight: 900; color: #f1f5f9; line-height: 1; }
+.ov-appt-mon  { font-size: 9px; font-weight: 700; color: #818cf8; text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+
+.ov-appt-info { flex: 1; min-width: 0; }
+.ov-appt-doctor { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 5px; }
+.ov-appt-doctor-name { font-size: 13.5px; font-weight: 700; color: #e2e8f0; }
+.ov-appt-spec { font-size: 11px; color: #38bdf8; font-weight: 600; }
+.ov-appt-meta { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.ov-appt-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 600; color: #64748b;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  padding: 3px 8px; border-radius: 6px;
+}
+.chip-online   { color: #60a5fa; background: rgba(59,130,246,0.08); border-color: rgba(59,130,246,0.15); }
+.chip-physical { color: #a78bfa; background: rgba(139,92,246,0.08); border-color: rgba(139,92,246,0.15); }
+
+.ov-appt-right {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 6px;
+  flex-shrink: 0;
+}
+.ov-pay-btn {
+  font-size: 11px; font-weight: 700;
+  padding: 5px 12px; border-radius: 7px; border: none;
+  background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+  color: #fff; cursor: pointer; transition: all 0.2s;
+  white-space: nowrap;
+}
+.ov-pay-btn:hover { filter: brightness(1.1); }
+.ov-join-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 700;
+  padding: 5px 12px; border-radius: 7px; border: none;
+  background: linear-gradient(135deg, #059669, #10b981);
+  color: #fff; cursor: pointer; transition: all 0.2s;
+  white-space: nowrap;
+}
+.ov-join-btn:hover { filter: brightness(1.1); }
 
 /* Status Pills */
 .status-pill {
@@ -2137,18 +2345,52 @@ const joinVideo = (ap) => {
 .notes-text { font-size: 13px; color: #cbd5e1; }
 
 /* ════════════════════════════════════════════════════
-   APPOINTMENTS
+   APPOINTMENTS TAB
 ════════════════════════════════════════════════════ */
-.filter-row {
+
+/* Header */
+.appt-tab-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.btn-book-new {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: linear-gradient(135deg, #0891b2, #06b6d4);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.btn-book-new:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(6,182,212,0.35); }
+
+/* Filter tabs */
+.appt-filter-tabs {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
   margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
 }
-.filter-btn {
+.appt-filter-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 7px 14px;
-  border-radius: 20px;
-  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.07);
   background: transparent;
   color: #64748b;
   font-size: 12px;
@@ -2156,13 +2398,57 @@ const joinVideo = (ap) => {
   cursor: pointer;
   transition: all 0.2s;
 }
-.filter-btn:hover { color: #94a3b8; border-color: rgba(255,255,255,0.15); }
-.filter-btn.active {
-  background: rgba(6,182,212,0.12);
-  color: #22d3ee;
-  border-color: rgba(6,182,212,0.25);
-}
+.appt-filter-tab:hover { color: #94a3b8; border-color: rgba(255,255,255,0.14); background: rgba(255,255,255,0.03); }
+.appt-filter-tab.active { background: rgba(6,182,212,0.1); color: #22d3ee; border-color: rgba(6,182,212,0.25); }
+.appt-filter-tab.tab-pending.active  { background: rgba(245,158,11,0.1); color: #fbbf24; border-color: rgba(245,158,11,0.25); }
+.appt-filter-tab.tab-confirmed.active{ background: rgba(59,130,246,0.1); color: #60a5fa; border-color: rgba(59,130,246,0.25); }
+.appt-filter-tab.tab-completed.active{ background: rgba(16,185,129,0.1); color: #34d399; border-color: rgba(16,185,129,0.25); }
+.appt-filter-tab.tab-cancelled.active{ background: rgba(107,114,128,0.1); color: #9ca3af; border-color: rgba(107,114,128,0.2); }
 
+.appt-filter-count {
+  background: rgba(255,255,255,0.08);
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+}
+.appt-filter-tab.active .appt-filter-count { background: rgba(255,255,255,0.15); color: inherit; }
+
+/* Loading / Empty */
+.appt-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 50px 20px;
+  color: #475569;
+  font-size: 14px;
+}
+.appt-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 10px;
+  text-align: center;
+}
+.appt-empty-icon {
+  width: 72px; height: 72px;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  display: flex; align-items: center; justify-content: center;
+  color: #1e293b;
+  margin-bottom: 4px;
+}
+.appt-empty-title { font-size: 16px; font-weight: 700; color: #334155; }
+.appt-empty-sub { font-size: 13px; color: #1e293b; }
+
+/* List */
 .appointments-list { display: flex; flex-direction: column; gap: 12px; }
 
 /* ══════════════════════════════════════════
@@ -2171,57 +2457,58 @@ const joinVideo = (ap) => {
 .appt-card {
   display: flex;
   align-items: stretch;
-  background: rgba(10, 18, 40, 0.75);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(8, 15, 35, 0.7);
+  border: 1px solid rgba(255,255,255,0.07);
   border-radius: 16px;
   overflow: hidden;
   transition: all 0.22s ease;
   position: relative;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.2);
 }
 .appt-card:hover {
-  border-color: rgba(99,179,237,0.3);
-  background: rgba(10, 18, 40, 0.95);
+  border-color: rgba(99,179,237,0.25);
+  background: rgba(8, 15, 35, 0.9);
   transform: translateY(-2px);
-  box-shadow: 0 12px 40px rgba(0,0,0,0.35);
+  box-shadow: 0 10px 36px rgba(0,0,0,0.3);
 }
+.appt-cancelled-dim { opacity: 0.65; }
+.appt-cancelled-dim:hover { opacity: 0.85; }
 
-/* ── Left accent bar ── */
-.appt-accent-bar { width: 5px; flex-shrink: 0; }
+/* Accent bar */
+.appt-accent-bar { width: 4px; flex-shrink: 0; }
 .accent-pending   { background: linear-gradient(180deg, #f59e0b, #d97706); }
 .accent-confirmed { background: linear-gradient(180deg, #3b82f6, #2563eb); }
 .accent-completed { background: linear-gradient(180deg, #10b981, #059669); }
-.accent-cancelled { background: linear-gradient(180deg, #6b7280, #4b5563); }
+.accent-cancelled { background: #374151; }
 .accent-verified  { background: linear-gradient(180deg, #8b5cf6, #7c3aed); }
 
-/* ── Date column ── */
+/* Date column */
 .appt-date-col {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 18px 16px;
-  min-width: 68px;
-  background: rgba(255,255,255,0.025);
-  border-right: 1px solid rgba(255,255,255,0.06);
+  padding: 20px 14px;
+  min-width: 64px;
+  background: rgba(255,255,255,0.02);
+  border-right: 1px solid rgba(255,255,255,0.05);
   flex-shrink: 0;
   gap: 1px;
 }
-.appt-day   { font-size: 1.75rem; font-weight: 900; color: #f1f5f9; line-height: 1; }
-.appt-month { font-size: 10px; font-weight: 700; color: #818cf8; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 3px; }
-.appt-year  { font-size: 9px; color: #334155; margin-top: 1px; }
+.appt-day   { font-size: 1.8rem; font-weight: 900; color: #f1f5f9; line-height: 1; }
+.appt-month { font-size: 10px; font-weight: 700; color: #818cf8; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 4px; }
+.appt-year  { font-size: 9px; color: #334155; margin-top: 2px; }
 
-/* ── Body ── */
+/* Body */
 .appt-body {
   flex: 1;
-  padding: 16px 18px;
+  padding: 14px 16px;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
 }
 
-/* Row 1: Doctor avatar + name + type badge */
+/* Doctor row */
 .appt-row-top {
   display: flex;
   align-items: center;
@@ -2229,139 +2516,118 @@ const joinVideo = (ap) => {
   flex-wrap: wrap;
 }
 .appt-doctor-avatar {
-  width: 36px; height: 36px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
-  border: 2px solid rgba(99,179,237,0.25);
+  width: 38px; height: 38px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
+  border: 2px solid rgba(99,179,237,0.2);
 }
 .appt-doctor-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .appt-doctor-avatar-fallback {
-  background: rgba(99,179,237,0.1);
+  background: rgba(99,179,237,0.08);
   display: flex; align-items: center; justify-content: center;
   color: #60a5fa;
 }
-.appt-doctor-info { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+.appt-doctor-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 .appt-doctor-name {
-  font-size: 15px;
-  font-weight: 800;
-  color: #f1f5f9;
-  letter-spacing: -0.3px;
+  font-size: 15px; font-weight: 800; color: #f1f5f9;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.appt-specialization { font-size: 11.5px; color: #38bdf8; font-weight: 600; }
 .appt-type-badge {
-  font-size: 10px;
-  font-weight: 700;
-  padding: 3px 10px;
-  border-radius: 20px;
-  letter-spacing: 0.4px;
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; font-weight: 700;
+  padding: 3px 10px; border-radius: 20px;
   flex-shrink: 0;
-  display: inline-flex; align-items: center;
 }
-.type-online   { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
-.type-physical { background: rgba(139,92,246,0.15); color: #a78bfa; border: 1px solid rgba(139,92,246,0.3); }
+.type-online   { background: rgba(59,130,246,0.12); color: #60a5fa; border: 1px solid rgba(59,130,246,0.25); }
+.type-physical { background: rgba(139,92,246,0.12); color: #a78bfa; border: 1px solid rgba(139,92,246,0.25); }
 
-/* Row 2: Specialization */
-.appt-specialization {
-  font-size: 11.5px;
-  color: #38bdf8;
-  font-weight: 600;
-  letter-spacing: 0.1px;
-}
-
-/* Row 2: Hospital row */
-.appt-hospital-row {
+/* Location row */
+.appt-location-row {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  margin-top: 2px;
 }
-.appt-hospital-chip {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: 12px; font-weight: 600;
-  color: #a78bfa;
-  background: rgba(139,92,246,0.08);
-  border: 1px solid rgba(139,92,246,0.2);
-  border-radius: 7px; padding: 4px 10px;
+.appt-location-text {
+  font-size: 12px; font-weight: 600; color: #a78bfa;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 260px;
 }
-.appt-online-chip { color: #60a5fa; background: rgba(59,130,246,0.08); border-color: rgba(59,130,246,0.2); }
-.hospital-label {
-  font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;
-  color: #6b7280; padding-right: 6px; border-right: 1px solid rgba(255,255,255,0.08);
-}
-.hospital-name { color: inherit; }
 .appt-id-chip {
-  display: inline-flex; align-items: center; gap: 5px;
-  font-size: 10.5px; font-weight: 700; font-family: monospace;
+  font-size: 10px; font-weight: 700; font-family: monospace;
   color: #475569;
   background: rgba(255,255,255,0.03);
   border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 6px; padding: 3px 8px;
+  border-radius: 5px; padding: 2px 7px;
   letter-spacing: 0.5px;
+  margin-left: auto;
 }
 
-/* Row 3: Meta chips */
+/* Meta chips */
 .appt-meta-chips {
   display: flex;
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
-  margin-top: 2px;
 }
 .meta-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11.5px;
-  color: #94a3b8;
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11.5px; color: #94a3b8;
   background: rgba(255,255,255,0.04);
   border: 1px solid rgba(255,255,255,0.07);
-  padding: 4px 10px;
-  border-radius: 7px;
-  font-weight: 600;
+  padding: 4px 10px; border-radius: 7px; font-weight: 600;
 }
 .meta-chip svg { color: #64748b; }
-.chip-amount { color: #cbd5e1; font-weight: 700; background: rgba(255,255,255,0.06); }
 
+/* Fee row */
+.appt-fee-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 9px;
+  padding: 8px 12px;
+  flex-wrap: wrap;
+}
+.fee-breakdown {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+.fee-item-sm { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.fee-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; }
+.fee-amt { font-size: 11px; font-weight: 700; color: #94a3b8; }
+.fee-plus { font-size: 11px; color: #334155; font-weight: 700; }
+.fee-total-group { display: flex; align-items: center; gap: 8px; }
+.fee-total-label { font-size: 9px; font-weight: 700; text-transform: uppercase; color: #475569; }
+.fee-total-amt { font-size: 14px; font-weight: 900; color: #e2e8f0; }
 .pay-badge {
   font-size: 10px; font-weight: 800;
-  padding: 4px 10px; border-radius: 7px; letter-spacing: 0.6px;
+  padding: 3px 9px; border-radius: 6px; letter-spacing: 0.5px;
 }
-.pay-paid    { background: rgba(16,185,129,0.12); color: #34d399; border: 1px solid rgba(16,185,129,0.25); }
-.pay-pending { background: rgba(245,158,11,0.12); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); }
+.pay-paid    { background: rgba(16,185,129,0.12); color: #34d399; border: 1px solid rgba(16,185,129,0.2); }
+.pay-pending { background: rgba(245,158,11,0.12); color: #fbbf24; border: 1px solid rgba(245,158,11,0.2); }
 
-/* Fee breakdown row */
-.appt-fee-row {
-  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
-  background: rgba(255,255,255,0.025);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 8px; padding: 6px 12px;
-  margin-top: 2px;
-}
-.fee-item { display: flex; flex-direction: column; align-items: center; gap: 1px; }
-.fee-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; }
-.fee-val { font-size: 11.5px; font-weight: 700; color: #94a3b8; }
-.fee-sep { font-size: 11px; color: #334155; font-weight: 700; }
-.fee-total { font-size: 13px; font-weight: 900; color: #e2e8f0; margin-left: 2px; }
-
-/* Cancellation reason */
+/* Rejection */
 .appt-rejection {
-  display: flex; align-items: center; gap: 5px;
-  font-size: 11px; color: #f87171; margin-top: 4px;
-  background: rgba(239,68,68,0.07);
-  border: 1px solid rgba(239,68,68,0.15);
-  border-radius: 6px; padding: 5px 10px;
+  display: flex; align-items: flex-start; gap: 6px;
+  font-size: 11.5px; color: #f87171;
+  background: rgba(239,68,68,0.06);
+  border: 1px solid rgba(239,68,68,0.12);
+  border-radius: 7px; padding: 6px 10px;
 }
+.appt-rejection svg { flex-shrink: 0; margin-top: 1px; }
 
-/* ── Right column ── */
+/* Right column */
 .appt-right-col {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   justify-content: space-between;
-  padding: 16px 18px;
+  padding: 14px 16px;
   gap: 10px;
   flex-shrink: 0;
-  min-width: 130px;
-  border-left: 1px solid rgba(255,255,255,0.05);
+  min-width: 128px;
+  border-left: 1px solid rgba(255,255,255,0.04);
   background: rgba(255,255,255,0.01);
 }
 .appt-actions {
@@ -2369,43 +2635,47 @@ const joinVideo = (ap) => {
   flex-direction: column;
   align-items: flex-end;
   gap: 7px;
+  width: 100%;
 }
-.hint-text { font-size: 11px; color: #475569; font-style: italic; }
-.cancelled-hint { color: #6b7280; }
+.appt-hint {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; color: #475569; font-style: italic;
+}
+.appt-hint-warn { color: #f59e0b; font-style: normal; font-weight: 600; }
+.appt-hint-cancel { color: #6b7280; }
 
-/* ── Action buttons ── */
-.btn-pay, .btn-receipt, .btn-join, .btn-icon-cancel {
-  display: inline-flex; align-items: center; gap: 5px;
+/* Action buttons */
+.btn-pay, .btn-receipt, .btn-join, .btn-cancel-appt {
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
   font-size: 12px; font-weight: 700;
-  padding: 7px 15px; border-radius: 9px; border: none;
+  padding: 8px 14px; border-radius: 9px; border: none;
   cursor: pointer; transition: all 0.2s;
-  letter-spacing: 0.3px; white-space: nowrap;
+  white-space: nowrap; width: 100%;
 }
 .btn-pay {
   background: linear-gradient(135deg, #1d4ed8, #3b82f6);
   color: #fff;
-  box-shadow: 0 3px 14px rgba(37,99,235,0.35);
+  box-shadow: 0 3px 12px rgba(37,99,235,0.3);
 }
 .btn-pay:hover { filter: brightness(1.1); transform: translateY(-1px); }
 .btn-receipt {
   background: rgba(255,255,255,0.05);
   color: #94a3b8;
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.09);
 }
-.btn-receipt:hover { background: rgba(255,255,255,0.1); color: #e2e8f0; }
+.btn-receipt:hover { background: rgba(255,255,255,0.09); color: #e2e8f0; }
 .btn-join {
   background: linear-gradient(135deg, #059669, #10b981);
   color: #fff;
-  box-shadow: 0 3px 14px rgba(16,185,129,0.3);
+  box-shadow: 0 3px 12px rgba(16,185,129,0.28);
 }
 .btn-join:hover { filter: brightness(1.1); transform: translateY(-1px); }
-.btn-icon-cancel {
-  background: rgba(239,68,68,0.08);
+.btn-cancel-appt {
+  background: rgba(239,68,68,0.07);
   color: #f87171;
-  border: 1px solid rgba(239,68,68,0.15);
-  padding: 7px 12px;
+  border: 1px solid rgba(239,68,68,0.14);
 }
-.btn-icon-cancel:hover { background: rgba(239,68,68,0.18); }
+.btn-cancel-appt:hover { background: rgba(239,68,68,0.15); }
 
 /* ════════════════════════════════════════════════════
    DIALOGS
@@ -2479,18 +2749,10 @@ const joinVideo = (ap) => {
   .header-left { flex-direction: column; align-items: flex-start; gap: 12px; }
 }
 
-.filter-count {
-  display: inline-flex; align-items: center; justify-content: center;
-  background: rgba(6,182,212,0.15); color: #22d3ee;
-  font-size: 10px; font-weight: 700;
-  min-width: 18px; height: 18px; border-radius: 9px;
-  padding: 0 5px; margin-left: 4px;
-}
-
-/* old status border overrides — now handled by accent bar */
+/* old status border overrides — handled by accent bar */
 .appt-status-pending   { opacity: 1; }
 .appt-status-confirmed { opacity: 1; }
 .appt-status-completed { opacity: 1; }
-.appt-status-cancelled { opacity: 0.7; }
+.appt-status-cancelled { opacity: 1; }
 
 </style>
