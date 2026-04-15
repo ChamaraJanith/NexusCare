@@ -125,7 +125,7 @@
                     label="Records"
                     size="sm"
                     class="q-px-sm bg-white"
-                    @click.stop="openPrescriptionsModal(props.row.patientId)"
+                    @click.stop="openPrescriptionsModal(props.row)"
                   >
                     <q-tooltip>Past Prescriptions</q-tooltip>
                   </q-btn>
@@ -153,76 +153,183 @@
       </q-card>
     </div>
 
-    <!-- Prescriptions Deep Dive Modal -->
+    <!-- ══════════════════════════════════════════════════════════════════
+         CLINICAL RECORDS MODAL — Hospital-Grade Prescription Timeline
+         ══════════════════════════════════════════════════════════════════ -->
     <q-dialog v-model="modalOpen" maximized transition-show="slide-up" transition-hide="slide-down">
-      <q-card class="column bg-grey-1">
-        <q-card-section class="row items-center q-pb-sm bg-white shadow-1 z-top">
-          <q-avatar icon="folder_shared" color="primary" text-color="white" class="q-mr-md" />
-          <div class="text-h6 text-weight-bold text-dark">Clinical Records Overview</div>
+      <q-card class="column" style="background: #f0f2f5;">
+        <!-- Modal Header -->
+        <q-card-section class="row items-center q-py-md q-px-lg" style="background: #1e293b;">
+          <q-avatar icon="folder_shared" color="blue-8" text-color="white" size="42px" class="q-mr-md" />
+          <div>
+            <div style="color: #ffffff; font-size: 17px; font-weight: 700;">Patient Clinical Prescription History</div>
+            <div style="color: #94a3b8; font-size: 12px;">Securely generated and maintained by NexusCare EMR system</div>
+          </div>
           <q-space />
-          <q-btn icon="close" flat round dense v-close-popup color="grey-8" />
+          <q-btn icon="close" flat round dense v-close-popup style="color: #94a3b8;" />
         </q-card-section>
 
-        <q-separator />
-
-        <q-card-section class="col scroll q-pa-lg clinical-records-container">
+        <!-- Modal Body -->
+        <q-card-section class="col scroll q-pa-lg">
+          <!-- Loading -->
           <div v-if="loadingModal" class="flex flex-center q-pa-xl column">
             <q-spinner-dots color="primary" size="50px" />
-            <div class="q-mt-md text-grey-6">Retrieving historical diagnoses...</div>
+            <div class="q-mt-md" style="color: #6b7280;">Retrieving historical diagnoses...</div>
           </div>
           
-          <div v-else-if="modalPrescriptions.length === 0" class="flex flex-center column q-pa-xl bg-white shadow-1" style="border-radius: 12px;">
-             <q-icon name="history" size="64px" color="grey-4" class="q-mb-md" />
-             <div class="text-h6 text-dark text-weight-bold">No clinical history</div>
-             <div class="text-grey-6 text-center">There are no documented prescriptions or clinical visits for this internal ID.</div>
+          <!-- Empty State -->
+          <div v-else-if="modalPrescriptions.length === 0" class="flex flex-center column q-pa-xl" style="background: #ffffff; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06);">
+             <q-icon name="medication" size="56px" color="grey-4" />
+             <div style="font-size: 16px; font-weight: 600; color: #6b7280; margin-top: 12px;">No prescriptions yet</div>
+             <div style="font-size: 13px; color: #9ca3af; margin-top: 4px;">Prescriptions will appear here once created for this patient.</div>
           </div>
           
+          <!-- Timeline Layout -->
           <div v-else class="row q-col-gutter-lg justify-center">
             <div class="col-12 col-md-10 col-lg-8">
-              <q-timeline color="primary" layout="dense">
-                <q-timeline-entry 
-                  v-for="(rx, index) in modalPrescriptions" 
+              <div class="crm-timeline">
+                <div
+                  v-for="(rx, index) in modalPrescriptions"
                   :key="rx._id"
-                  :title="rx.diagnosis || 'General Consultation'"
-                  :subtitle="formatDateDetailed(rx.createdAt)"
-                  icon="medical_information"
-                  :color="index === 0 ? 'primary' : 'grey-5'"
+                  class="crm-timeline-entry"
                 >
-                  <q-card flat bordered class="q-mt-sm shadow-1 bg-white" style="border-radius: 8px;">
-                    <q-card-section>
-                      <q-badge v-if="index === 0" color="red-2" text-color="red-9" class="q-mb-sm rounded-borders text-caption text-weight-bold">LATEST RECORD</q-badge>
-                      
-                      <div class="text-body2 text-grey-8 q-mb-md" v-if="rx.symptoms">
-                         <span class="text-weight-bold text-dark">Symptoms reported:</span> 
-                         {{ Array.isArray(rx.symptoms) ? rx.symptoms.join(', ') : rx.symptoms }}
+                  <!-- Timeline Rail -->
+                  <div class="crm-rail">
+                    <div class="crm-dot" :class="{ 'crm-dot-latest': index === 0 }"></div>
+                    <div v-if="index < modalPrescriptions.length - 1" class="crm-line"></div>
+                  </div>
+
+                  <!-- Prescription Document Card -->
+                  <div class="crm-content">
+                    <div class="crm-card">
+
+                      <!-- HEADER: Diagnosis + Status + Date -->
+                      <div class="crm-card-header">
+                        <div class="row items-center" style="gap: 8px; flex-wrap: wrap;">
+                          <q-badge v-if="index === 0" color="green-2" text-color="green-9" label="LATEST" class="text-weight-bold" rounded />
+                          <div class="crm-diagnosis">{{ rx.diagnosis || 'General Consultation' }}</div>
+                        </div>
+                        <div class="row items-center" style="gap: 8px; flex-shrink: 0;">
+                          <q-badge
+                            :color="rx.status === 'completed' ? 'green-1' : (index === 0 ? 'blue-1' : 'grey-3')"
+                            :text-color="rx.status === 'completed' ? 'green-9' : (index === 0 ? 'blue-9' : 'grey-8')"
+                            :label="rx.status || 'Active'"
+                            class="text-weight-bold text-uppercase"
+                          />
+                          <span class="crm-date-chip">{{ formatDateDetailed(rx.createdAt) }}</span>
+                        </div>
                       </div>
 
-                      <q-markup-table flat bordered dense separator="cell" class="text-caption shadow-0">
-                        <thead class="bg-grey-2">
-                          <tr>
-                            <th class="text-left text-dark">Medicine</th>
-                            <th class="text-left text-dark">Dosage</th>
-                            <th class="text-left text-dark">Freq</th>
-                            <th class="text-left text-dark">Dur</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr v-for="(med, i) in rx.medicines" :key="i">
-                            <td class="text-dark text-weight-medium">{{ typeof med === 'string' ? med : (med.name || '—') }}</td>
-                            <td class="text-dark">{{ typeof med === 'string' ? '—' : (med.dosage || '—') }}</td>
-                            <td class="text-dark">{{ typeof med === 'string' ? '—' : (med.frequency || '—') }}</td>
-                            <td class="text-dark">{{ typeof med === 'string' ? '—' : (med.duration || '—') }}</td>
-                          </tr>
-                        </tbody>
-                      </q-markup-table>
+                      <!-- BODY -->
+                      <div class="crm-card-body">
 
-                       <div class="text-body2 text-grey-8 q-mt-md" v-if="rx.advice">
-                         <span class="text-weight-bold text-dark">Doctor's Advice:</span> {{ rx.advice }}
+                        
+                        <div class="crm-meta-block">
+
+                        <!-- LEFT COLUMN -->
+                        <div class="crm-meta-col">
+
+                          <div class="crm-meta-row">
+                            <span class="crm-meta-label">Patient:</span>
+                            <span class="crm-meta-value">
+                              {{ rx.patientName || 'Unknown Patient' }}
+                              <span v-if="rx.patientAge">({{ rx.patientAge }} yrs)</span>
+                            </span>
+                          </div>
+
+                          <div class="crm-meta-row">
+                            <span class="crm-meta-value">
+                              {{ rx.doctorName || 'Dr. Not Available' }}
+                            </span>
+                          </div>
+
+                        </div>
+
+                        <!-- RIGHT COLUMN -->
+                        <div class="crm-meta-col">
+
+                          <div class="crm-meta-row">
+                            <span class="crm-meta-label">Patient ID:</span>
+                            <span class="crm-meta-value">
+                              {{ rx.patientId || '—' }}
+                            </span>
+                          </div>
+
+                          <div class="crm-meta-row">
+                            <span class="crm-meta-label">Date:</span>
+                            <span class="crm-meta-value">
+                              {{ formatDateDetailed(rx.createdAt) }}
+                            </span>
+                          </div>
+
+                        </div>
+
                       </div>
-                    </q-card-section>
-                  </q-card>
-                </q-timeline-entry>
-              </q-timeline>
+
+                        <!-- Symptoms -->
+                        <div v-if="rx.symptoms && rx.symptoms.length > 0" class="crm-section">
+                          <div class="crm-section-label">Symptoms</div>
+                          <div class="crm-symptom-chips">
+                            <span
+                              v-for="(s, si) in parseModalSymptoms(rx.symptoms)"
+                              :key="si"
+                              class="crm-chip"
+                            >{{ s }}</span>
+                          </div>
+                        </div>
+
+                        <!-- Medicines Table -->
+                        <div class="crm-section">
+                          <div class="crm-section-label">Prescribed Medicines</div>
+                          <div class="crm-table-wrap">
+                            <table class="crm-med-table">
+                              <thead>
+                                <tr>
+                                  <th>Medicine</th>
+                                  <th>Dosage</th>
+                                  <th>Frequency</th>
+                                  <th>Duration</th>
+                                  <th>Instructions</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <tr v-for="(med, i) in rx.medicines" :key="i">
+                                  <td class="crm-med-name">{{ typeof med === 'string' ? med : (med.name || '—') }}</td>
+                                  <td>{{ typeof med === 'string' ? '—' : (med.dosage || '—') }}</td>
+                                  <td>{{ typeof med === 'string' ? '—' : (med.frequency || '—') }}</td>
+                                  <td>{{ typeof med === 'string' ? '—' : (med.duration || '—') }}</td>
+                                  <td>{{ typeof med === 'string' ? '—' : (med.instructions || '—') }}</td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+
+                        <!-- Doctor's Advice -->
+                        <div v-if="rx.advice" class="crm-section">
+                          <div class="crm-section-label">Doctor's Advice</div>
+                          <div class="crm-advice-box">{{ rx.advice }}</div>
+                        </div>
+
+                        <!-- Follow-up -->
+                        <div v-if="rx.followUpDate" class="crm-section">
+                          <div class="crm-section-label">Follow-up</div>
+                          <div class="crm-followup-box">
+                            <q-icon name="event" size="xs" class="q-mr-xs" style="color: #6b7280;" />
+                            {{ formatDateDetailed(rx.followUpDate) }}
+                          </div>
+                        </div>
+
+                        <!-- Digital Footer -->
+                        <div class="crm-footer">
+                          Digitally generated prescription — NexusCare EMR
+                        </div>
+
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </q-card-section>
@@ -296,6 +403,7 @@ onMounted(async () => {
             patientName: pt.patientName || 'Unknown Patient',
             patientId: pid,
             appointmentId: pt._id,
+            age: pt.age || pt.patientAge || null,
             status: pt.status,
             rawLastVisit: 0,
             lastVisit: 'No visits yet',
@@ -340,37 +448,77 @@ const filteredPatients = computed(() => {
   return res;
 });
 
-const openPrescriptionsModal = async (targetPatientId) => {
-  if (!targetPatientId) {
-    $q.notify({ type: 'warning', message: 'Unable to identify clinical profile ID strictly.' });
+const openPrescriptionsModal = async (patient) => {
+  if (!patient?.patientId) {
+    $q.notify({ type: 'warning', message: 'Invalid patient data.' });
     return;
   }
-  
+
   modalOpen.value = true;
   loadingModal.value = true;
   modalPrescriptions.value = [];
 
   try {
-    const res = await axios.get(`${API_URL}/api/prescriptions/${targetPatientId}`, {
+    const res = await axios.get(`${API_URL}/api/prescriptions/${patient.patientId}`, {
       headers: { Authorization: `Bearer ${getToken()}` }
     });
-    
+
     const data = res.data?.success ? res.data.data : res.data;
+
     if (Array.isArray(data)) {
-       modalPrescriptions.value = data;
+      let patientAge = patient.age;
+
+      // 🔥 fallback: fetch from patient service if missing
+      if (!patientAge) {
+        try {
+          const res = await axios.get(`${API_URL}/api/patient/doctor/${patient.patientId}`, {
+            headers: { Authorization: `Bearer ${getToken()}` }
+          });
+
+          patientAge = res.data?.data?.age || null;
+
+        } catch (err) {
+          console.warn("Patient age fetch failed", err);
+        }
+      }
+
+      modalPrescriptions.value = data.map(rx => ({
+        ...rx,
+        patientName: patient.patientName,
+        patientAge
+      }));
     }
+
   } catch (error) {
-    console.error("Gateway load failed isolated", error);
-    $q.notify({ type: 'negative', message: error.response?.status === 502 ? 'Bad Gateway (Service Down)' : 'Could not fetch prescriptions reliably.' });
+    console.error(error);
+    $q.notify({ type: 'negative', message: 'Failed to load prescriptions' });
   } finally {
     loadingModal.value = false;
   }
 };
 
+// Parse symptoms for chip display
+const parseModalSymptoms = (symptoms) => {
+  if (!symptoms) return [];
+  if (Array.isArray(symptoms)) return symptoms;
+  return symptoms.split(',').map(s => s.trim()).filter(Boolean);
+};
+
 const formatDateDetailed = (dateString) => {
   if (!dateString) return '—';
-  const d = new Date(dateString);
-  return d.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) + ' at ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute:'2-digit' });
+  try {
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch {
+    return '—';
+  }
 };
 
 const getRelativeTime = (timestampMs) => {
@@ -382,6 +530,7 @@ const getRelativeTime = (timestampMs) => {
 </script>
 
 <style scoped>
+/* ── Table row hover ─────────────────────────────────────────────────────── */
 .hover-shadow:hover {
   background: #fdfdfd !important;
   box-shadow: 0 4px 15px rgba(0,0,0,0.05) !important;
@@ -391,32 +540,246 @@ const getRelativeTime = (timestampMs) => {
   transition: all 0.2s ease-in-out;
 }
 
-/* 🔥 FIX CLINICAL RECORD TEXT VISIBILITY */
-.clinical-records-container {
-  color: #1f2937 !important; /* dark readable */
+/* ══════════════════════════════════════════════════════════════════════════
+   CLINICAL RECORDS MODAL — Hospital-grade prescription timeline
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Timeline scaffold ───────────────────────────────────────────────────── */
+.crm-timeline {
+  display: flex;
+  flex-direction: column;
+}
+.crm-timeline-entry {
+  display: flex;
+  gap: 16px;
+}
+.crm-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 20px;
+  flex-shrink: 0;
+}
+.crm-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #cbd5e1;
+  border: 2px solid #e2e8f0;
+  margin-top: 20px;
+  flex-shrink: 0;
+  z-index: 1;
+}
+.crm-dot-latest {
+  background: #1976D2;
+  border-color: #bbdefb;
+  width: 14px;
+  height: 14px;
+  box-shadow: 0 0 0 4px rgba(25, 118, 210, 0.15);
+}
+.crm-line {
+  width: 2px;
+  flex: 1;
+  background: #e2e8f0;
+  min-height: 20px;
+}
+.crm-content {
+  flex: 1;
+  padding-bottom: 20px;
+  min-width: 0;
 }
 
-/* timeline title */
-.clinical-records-container .record-title {
-  color: #111827 !important;
+/* ── Prescription card ───────────────────────────────────────────────────── */
+.crm-card {
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+/* ── Card header ─────────────────────────────────────────────────────────── */
+.crm-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 16px 20px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e5e7eb;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.crm-diagnosis {
+  font-size: 17px;
   font-weight: 700;
+  color: #1f2937;
+  line-height: 1.3;
+}
+.crm-date-chip {
+  font-size: 12px;
+  color: #6b7280;
+  white-space: nowrap;
 }
 
-/* date text */
-.clinical-records-container .record-date {
-  color: #374151 !important;
+/* ── Card body ───────────────────────────────────────────────────────────── */
+.crm-card-body {
+  padding: 16px 20px;
 }
 
-/* body text */
-.clinical-records-container .record-text {
-  color: #4b5563 !important;
+/* ── Doctor meta block ───────────────────────────────────────────────────── */
+.crm-meta-block {
+  background: #f9fafb;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.crm-meta-row {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+}
+.crm-meta-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  white-space: nowrap;
+}
+.crm-meta-value {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1f2937;
 }
 
-/* table text fix */
-.clinical-records-container table,
-.clinical-records-container td,
-.clinical-records-container th {
-  color: #1f2937 !important;
+/* ── Section labels ──────────────────────────────────────────────────────── */
+.crm-section {
+  margin-bottom: 16px;
+}
+.crm-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #6b7280;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+/* ── Symptom chips ───────────────────────────────────────────────────────── */
+.crm-symptom-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.crm-chip {
+  display: inline-block;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 12px;
+  border: 1px solid #fde68a;
+}
+
+/* ── Medicine table ──────────────────────────────────────────────────────── */
+.crm-table-wrap {
+  overflow-x: auto;
+}
+.crm-med-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+.crm-med-table th {
+  background: #f1f5f9;
+  color: #374151;
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 2px solid #e5e7eb;
+}
+.crm-med-table td {
+  padding: 10px 12px;
+  color: #1f2937;
+  border-bottom: 1px solid #f3f4f6;
+}
+.crm-med-table tbody tr:nth-child(even) {
+  background: #f9fafb;
+}
+.crm-med-table tbody tr:hover {
+  background: #eff6ff;
+}
+.crm-med-name {
+  font-weight: 600;
+}
+
+/* ── Advice box ──────────────────────────────────────────────────────────── */
+.crm-advice-box {
+  background: #eff6ff;
+  border-left: 3px solid #1976D2;
+  border-radius: 4px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #1f2937;
+  line-height: 1.5;
+}
+
+/* ── Follow-up box ───────────────────────────────────────────────────────── */
+.crm-followup-box {
+  display: inline-flex;
+  align-items: center;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #374151;
+  font-weight: 500;
+}
+
+/* ── Digital footer ──────────────────────────────────────────────────────── */
+.crm-footer {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dashed #e5e7eb;
+  text-align: center;
+  font-size: 11px;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .crm-card-header {
+    flex-direction: column;
+  }
+  .crm-meta-block {
+    flex-direction: column;
+    gap: 6px;
+  }
+}
+
+.crm-meta-block {
+  display: flex;
+  justify-content: space-between;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+
+.crm-meta-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 </style>
