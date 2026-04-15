@@ -257,7 +257,9 @@ const proceedToRequest = async () => {
       doctorId: doctor.doctorId,
       doctorName: doctor.name,
       doctorSpecialization: doctor.specialization || doctor.specialty,
-      doctorHospital: doctor.hospital,
+      doctorHospital: store.consultationType === 'Physical'
+        ? (slot.hospital || doctor.hospital)
+        : doctor.hospital,
       doctorProfileImage: doctor.profileImage || doctor.image || doctor.profilePicture || '',
       doctorConsultationFee: Number(store.fees.doctorFee) || 0,
       date: slot.date
