@@ -199,9 +199,9 @@
                 <div class="rx-dot"></div>
                 <div class="rx-info">
                   <span class="rx-title">{{ rx.diagnosis || 'Prescription' }}</span>
-                  <span class="rx-sub">Dr. {{ rx.doctorName || '—' }} · {{ fmtDate(rx.issuedAt) }}</span>
+                  <span class="rx-sub">Dr. {{ rx.doctorName || '—' }} · {{ fmtDate(rx.createdAt || rx.issuedAt) }}</span>
                 </div>
-                <span class="rx-count">{{ rx.medications?.length || 0 }} meds</span>
+                <span class="rx-count">{{ (rx._meds || rx.medicines || rx.medications || []).length }} meds</span>
               </div>
             </div>
           </div>
@@ -519,52 +519,161 @@
            TAB: PRESCRIPTIONS
       ───────────────────────────────────── -->
       <div v-show="activeTab === 'prescriptions'" class="tab-content">
-        <div class="content-card">
-          <div class="content-card-header">
-            <div>
-              <div class="content-card-title">Prescriptions</div>
-              <div class="content-card-sub">{{ prescriptions.length }} prescription{{ prescriptions.length !== 1 ? 's' : '' }}</div>
-            </div>
+
+        <!-- Section header -->
+        <div class="rx-section-header">
+          <div>
+            <h2 class="rx-section-title">Prescription History</h2>
+            <p class="rx-section-sub">{{ prescriptions.length }} prescription{{ prescriptions.length !== 1 ? 's' : '' }} on record</p>
           </div>
-
-          <div v-if="!prescriptions.length" class="empty-state">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M20 3H4v10c0 2.21 1.79 4 4 4h6c2.21 0 4-1.79 4-4v-3h2c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 5h-2V5h2v3zM4 19h16v2H4z"/></svg>
-            <div class="empty-title">No prescriptions yet</div>
-            <div class="empty-sub">Prescriptions issued by your doctors will appear here</div>
+          <div class="rx-header-pills">
+            <span class="rx-pill-active"><span class="rx-pill-dot"></span>{{ prescriptions.filter(r => r.status === 'active').length }} Active</span>
+            <span class="rx-pill-total">{{ prescriptions.length }} Total</span>
           </div>
+        </div>
 
-          <div v-else class="prescriptions-list">
-            <div v-for="rx in prescriptions" :key="rx.prescriptionId || rx._id" class="rx-accordion" :class="{ expanded: expandedRx === (rx.prescriptionId || rx._id) }">
-              <div class="rx-accordion-header" @click="toggleRx(rx.prescriptionId || rx._id)">
-                <div class="rx-header-icon">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-2.18c.07-.44.18-.88.18-1.35C18 2.53 15.48 0 12.35 0c-1.7 0-3.23.72-4.35 1.85C6.98.72 5.45 0 3.75 0 .62 0-1.9 2.53-1.9 4.65c0 .47.11.91.18 1.35H-2v2h2v10h16V8h2V6zm-7.65-4c1.03 0 1.65.62 1.65 1.65S13.38 5.3 12.35 5.3c-1.03 0-1.65-.62-1.65-1.65S11.32 2 12.35 2zM6 16H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V6h2v2zm8 8h-6v-2h6v2zm0-4h-6v-2h6v2zm0-4h-6V6h6v2z"/></svg>
-                </div>
-                <div class="rx-header-info">
-                  <span class="rx-h-title">{{ rx.diagnosis || 'Prescription' }}</span>
-                  <span class="rx-h-sub">Dr. {{ rx.doctorName || '—' }} · {{ fmtDate(rx.issuedAt) }}</span>
-                </div>
-                <span class="rx-count-badge">{{ rx.medications?.length || 0 }} meds</span>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" class="rx-chevron"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
-              </div>
+        <!-- Empty -->
+        <div v-if="!prescriptions.length" class="rx-empty-state">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
+          <p class="rx-empty-title">No prescriptions yet</p>
+          <p class="rx-empty-sub">Your doctor's prescriptions will appear here after consultations</p>
+        </div>
 
-              <div class="rx-accordion-body" v-if="expandedRx === (rx.prescriptionId || rx._id)">
-                <div class="meds-label">Medications</div>
-                <div class="meds-grid">
-                  <div v-for="(med, i) in rx.medications" :key="i" class="med-card">
-                    <div class="med-name">{{ med.name }}</div>
-                    <div class="med-chips">
-                      <span v-if="med.dosage" class="med-chip">{{ med.dosage }}</span>
-                      <span v-if="med.frequency" class="med-chip">{{ med.frequency }}</span>
-                      <span v-if="med.duration" class="med-chip">{{ med.duration }}</span>
-                    </div>
-                    <div v-if="med.notes" class="med-notes">{{ med.notes }}</div>
+        <!-- Prescription documents -->
+        <div v-else class="rx-doc-list">
+          <div
+            v-for="rx in prescriptions"
+            :key="rx._id || rx.prescriptionId"
+            class="rx-doc"
+          >
+            <!-- ── Prescription document card ── -->
+            <div class="rx-doc-inner">
+
+              <!-- Clinic letterhead -->
+              <div class="rx-letterhead">
+                <div class="rx-letterhead-left">
+                  <div class="rx-clinic-logo">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
+                  </div>
+                  <div>
+                    <div class="rx-clinic-name">NexusCare</div>
+                    <div class="rx-clinic-sub">Electronic Medical Record System</div>
                   </div>
                 </div>
-                <div v-if="rx.notes" class="rx-notes-box">
-                  <div class="notes-label">Doctor's Notes</div>
-                  <div class="notes-text">{{ rx.notes }}</div>
+                <div class="rx-letterhead-right">
+                  <div class="rx-rx-symbol">℞</div>
+                  <div class="rx-doc-meta">
+                    <span>Ref: {{ String(rx._id || rx.prescriptionId || '').slice(-8).toUpperCase() || 'N/A' }}</span>
+                    <span>{{ fmtDate(rx.createdAt) }}</span>
+                  </div>
                 </div>
               </div>
+
+              <div class="rx-letterhead-rule"></div>
+
+              <!-- Patient + Doctor strip -->
+              <div class="rx-info-strip">
+                <div class="rx-info-strip-col">
+                  <span class="rx-strip-label">Patient</span>
+                  <span class="rx-strip-name">{{ profileData.name || '—' }}</span>
+                  <span class="rx-strip-detail">{{ profileData.patientId || '—' }} &nbsp;·&nbsp; {{ profileData.gender || '—' }} &nbsp;·&nbsp; {{ profileData.bloodGroup || '—' }}</span>
+                </div>
+                <div class="rx-info-strip-divider"></div>
+                <div class="rx-info-strip-col">
+                  <span class="rx-strip-label">Physician</span>
+                  <span class="rx-strip-name">{{ rx.doctorName || 'Dr. Unknown' }}</span>
+                  <span class="rx-strip-detail">NexusCare Registered Physician</span>
+                </div>
+                <div class="rx-info-strip-divider"></div>
+                <div class="rx-info-strip-col">
+                  <span class="rx-strip-label">Status</span>
+                  <span class="rx-strip-status" :class="rx.status === 'active' ? 'strip-active' : rx.status === 'cancelled' ? 'strip-cancelled' : 'strip-done'">
+                    <span class="strip-dot"></span>{{ rx.status || 'active' }}
+                  </span>
+                  <span v-if="rx.followUpDate" class="rx-strip-detail">Follow-up: {{ fmtDate(rx.followUpDate) }}</span>
+                </div>
+              </div>
+
+              <!-- Diagnosis -->
+              <div class="rx-diagnosis-block">
+                <span class="rx-diag-label">Diagnosis</span>
+                <span class="rx-diag-text">{{ rx.diagnosis || 'General Prescription' }}</span>
+              </div>
+
+              <!-- Symptoms -->
+              <div v-if="rx.symptoms && (Array.isArray(rx.symptoms) ? rx.symptoms.length : rx.symptoms)" class="rx-symptoms-block">
+                <span class="rx-block-label">Presenting Symptoms</span>
+                <div class="rx-sym-tags">
+                  <template v-if="Array.isArray(rx.symptoms)">
+                    <span v-for="s in rx.symptoms" :key="s" class="rx-sym-tag">{{ s }}</span>
+                  </template>
+                  <template v-else>
+                    <span v-for="s in rx.symptoms.split(',')" :key="s" class="rx-sym-tag">{{ s.trim() }}</span>
+                  </template>
+                </div>
+              </div>
+
+              <!-- Medicines table -->
+              <div class="rx-meds-block">
+                <span class="rx-block-label">Prescribed Medications</span>
+                <div class="rx-meds-table">
+                  <!-- Header -->
+                  <div class="rx-meds-thead">
+                    <span class="rxt-num">#</span>
+                    <span class="rxt-name">Medicine</span>
+                    <span class="rxt-dose">Dosage</span>
+                    <span class="rxt-freq">Frequency</span>
+                    <span class="rxt-dur">Duration</span>
+                    <span class="rxt-inst">Instructions</span>
+                  </div>
+                  <!-- Rows -->
+                  <div
+                    v-for="(med, mi) in rx._meds"
+                    :key="mi"
+                    class="rx-meds-row"
+                    :class="{ 'rx-meds-row--alt': mi % 2 !== 0 }"
+                  >
+                    <span class="rxt-num">{{ mi + 1 }}</span>
+                    <span class="rxt-name rxt-name--val">{{ typeof med === 'string' ? med : (med.name || '—') }}</span>
+                    <span class="rxt-dose">{{ typeof med === 'string' ? '—' : (med.dosage || '—') }}</span>
+                    <span class="rxt-freq">{{ typeof med === 'string' ? '—' : (med.frequency || '—') }}</span>
+                    <span class="rxt-dur rxt-dur--val">{{ typeof med === 'string' ? '—' : (med.duration || '—') }}</span>
+                    <span class="rxt-inst">{{ typeof med === 'string' ? '—' : (med.instructions || med.notes || '—') }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Advice + Notes -->
+              <div class="rx-notes-strip" v-if="rx.advice || rx.notes">
+                <div v-if="rx.advice" class="rx-notes-box rx-notes-box--advice">
+                  <div class="rx-notes-label">Doctor's Advice</div>
+                  <p class="rx-notes-text">{{ rx.advice }}</p>
+                </div>
+                <div v-if="rx.notes" class="rx-notes-box rx-notes-box--notes">
+                  <div class="rx-notes-label">Clinical Notes</div>
+                  <p class="rx-notes-text">{{ rx.notes }}</p>
+                </div>
+              </div>
+
+              <!-- Signature + actions row -->
+              <div class="rx-doc-footer">
+                <div class="rx-sig-area">
+                  <div class="rx-sig-line"></div>
+                  <div class="rx-sig-name">{{ rx.doctorName || 'Physician' }}</div>
+                  <div class="rx-sig-sub">Authorized Signature</div>
+                </div>
+                <div class="rx-doc-footer-right">
+                  <span class="rx-emr-stamp">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+                    Digitally issued · NexusCare EMR
+                  </span>
+                  <button class="rx-dl-btn" @click="downloadRx(rx)">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                    Download PDF
+                  </button>
+                </div>
+              </div>
+
             </div>
           </div>
         </div>
@@ -1114,7 +1223,13 @@ const openFile = (url, download = false, title = '') => {
   }
 }
 const resetRForm = () => { rForm.title = ''; rForm.description = ''; rForm.file = null }
-const toggleRx = (id) => { expandedRx.value = expandedRx.value === id ? null : id }
+
+/* ── PDF Download ── */
+const downloadRx = async (rx) => {
+  const { generatePrescriptionPDF } = await import('../utils/generatePrescriptionPDF.js')
+  await generatePrescriptionPDF(rx, profileData.value, calcAge, fmtDate)
+}
+
 const statusClass = (s) => ({
   PENDING: 'status-pending', VERIFIED: 'status-verified',
   CONFIRMED: 'status-confirmed', COMPLETED: 'status-completed', CANCELLED: 'status-cancelled'
@@ -1153,7 +1268,17 @@ const loadReports = async () => {
   }
 }
 const loadPrescriptions = async () => {
-  try { const { data } = await api.get('/api/patient/prescriptions'); prescriptions.value = data.data } catch (e) {
+  try {
+    const patId = profileData.value.patientId || storedUser.roleId || ''
+    if (!patId) return
+    // Use doctor-service endpoint — has medicines, symptoms, advice, followUpDate
+    const { data } = await api.get(`/api/prescriptions/${patId}`)
+    prescriptions.value = (data.data || []).map(rx => ({
+      ...rx,
+      // normalise: both 'medicines' (doctor-service) and 'medications' (patient-service)
+      _meds: rx.medicines || rx.medications || []
+    }))
+  } catch (e) {
     console.error(e)
     notify('Failed to load prescriptions', 'negative')
   }
@@ -2754,5 +2879,620 @@ const joinVideo = (ap) => {
 .appt-status-confirmed { opacity: 1; }
 .appt-status-completed { opacity: 1; }
 .appt-status-cancelled { opacity: 1; }
+
+/* ════════════════════════════════════════════════════
+   PRESCRIPTIONS TAB
+════════════════════════════════════════════════════ */
+
+/* ── Page header ── */
+.rx-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 28px;
+  padding: 22px 24px;
+  background: linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(139,92,246,0.05) 100%);
+  border: 1px solid rgba(99,102,241,0.15);
+  border-radius: 16px;
+}
+.rx-page-header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.rx-page-icon {
+  width: 42px; height: 42px;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; flex-shrink: 0;
+}
+.rx-page-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  letter-spacing: -0.01em;
+}
+.rx-page-sub {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin-top: 3px;
+}
+.rx-page-stats { display: flex; gap: 8px; }
+.rx-stat-pill {
+  display: flex; align-items: center; gap: 7px;
+  padding: 7px 14px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.rx-stat-active {
+  background: rgba(16,185,129,0.1);
+  color: #34d399;
+  border: 1px solid rgba(16,185,129,0.22);
+}
+.rx-stat-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  animation: rx-pulse 2s infinite;
+}
+@keyframes rx-pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+.rx-stat-total {
+  background: rgba(99,102,241,0.1);
+  color: #a5b4fc;
+  border: 1px solid rgba(99,102,241,0.2);
+}
+
+/* ── Empty state ── */
+.rx-empty {
+  text-align: center;
+  padding: 64px 24px;
+  background: rgba(255,255,255,0.02);
+  border: 1px dashed rgba(255,255,255,0.08);
+  border-radius: 16px;
+}
+.rx-empty-icon {
+  width: 72px; height: 72px;
+  margin: 0 auto 18px;
+  border-radius: 18px;
+  background: rgba(99,102,241,0.08);
+  border: 1px solid rgba(99,102,241,0.15);
+  display: flex; align-items: center; justify-content: center;
+  color: #4f46e5;
+  opacity: 0.6;
+}
+.rx-empty-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #94a3b8;
+  margin-bottom: 6px;
+}
+.rx-empty-sub {
+  font-size: 0.82rem;
+  color: #475569;
+  max-width: 320px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* ── Cards list ── */
+.rx-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── Individual card ── */
+.rx-card {
+  background: rgba(15,23,42,0.7);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+  backdrop-filter: blur(4px);
+}
+.rx-card:hover {
+  border-color: rgba(99,102,241,0.28);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(0,0,0,0.25);
+}
+.rx-card--open {
+  border-color: rgba(99,102,241,0.4);
+  box-shadow: 0 0 0 1px rgba(99,102,241,0.12), 0 8px 32px rgba(0,0,0,0.3);
+  transform: none;
+}
+
+/* ── Card top (header row) ── */
+.rx-card-top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+.rx-card-top:hover { background: rgba(255,255,255,0.015); }
+
+.rx-index-badge {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #312e81, #4c1d95);
+  border: 1px solid rgba(99,102,241,0.3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #a5b4fc;
+  flex-shrink: 0;
+  letter-spacing: 0.5px;
+}
+
+.rx-card-main {
+  flex: 1;
+  min-width: 0;
+}
+.rx-diagnosis {
+  font-size: 1.02rem;
+  font-weight: 650;
+  color: #e2e8f0;
+  line-height: 1.3;
+  margin-bottom: 5px;
+}
+.rx-card-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.rx-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.77rem;
+  color: #64748b;
+}
+.rx-meta-item svg { color: #475569; flex-shrink: 0; }
+.rx-meta-dot {
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  background: #334155;
+  flex-shrink: 0;
+}
+.rx-followup-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #fbbf24;
+  background: rgba(251,191,36,0.08);
+  border: 1px solid rgba(251,191,36,0.2);
+  padding: 2px 9px;
+  border-radius: 20px;
+}
+
+.rx-card-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.rx-med-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #818cf8;
+  background: rgba(99,102,241,0.1);
+  border: 1px solid rgba(99,102,241,0.2);
+  padding: 5px 11px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.rx-med-pill svg { color: #6366f1; }
+
+.rx-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: capitalize;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.rx-status-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.rx-status-active {
+  background: rgba(16,185,129,0.1);
+  color: #34d399;
+  border: 1px solid rgba(16,185,129,0.22);
+}
+.rx-status-active .rx-status-dot { background: #10b981; }
+.rx-status-done {
+  background: rgba(100,116,139,0.1);
+  color: #94a3b8;
+  border: 1px solid rgba(100,116,139,0.18);
+}
+.rx-status-done .rx-status-dot { background: #64748b; }
+.rx-status-cancelled {
+  background: rgba(239,68,68,0.08);
+  color: #f87171;
+  border: 1px solid rgba(239,68,68,0.18);
+}
+.rx-status-cancelled .rx-status-dot { background: #ef4444; }
+
+.rx-chevron-wrap {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  display: flex; align-items: center; justify-content: center;
+  color: #475569;
+  transition: all 0.25s ease;
+  flex-shrink: 0;
+}
+.rx-chevron-wrap--open {
+  background: rgba(99,102,241,0.12);
+  border-color: rgba(99,102,241,0.3);
+  color: #818cf8;
+  transform: rotate(180deg);
+}
+
+/* ── Expanded body ── */
+.rx-card-body {
+  border-top: 1px solid rgba(255,255,255,0.06);
+  padding: 22px 22px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  background: rgba(0,0,0,0.18);
+}
+
+/* ── Section label ── */
+.rx-section-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #475569;
+  margin-bottom: 12px;
+}
+.rx-section-label svg { color: #6366f1; flex-shrink: 0; }
+
+/* ── Symptom tags ── */
+.rx-symptom-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.rx-symptom-tag {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #fca5a5;
+  background: rgba(239,68,68,0.07);
+  border: 1px solid rgba(239,68,68,0.16);
+  padding: 5px 12px;
+  border-radius: 20px;
+}
+
+/* ── Medicine list ── */
+.rx-med-list { display: flex; flex-direction: column; gap: 8px; }
+.rx-med-row {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px; overflow: hidden;
+  transition: border-color 0.15s;
+}
+.rx-med-row:hover { border-color: rgba(99,102,241,0.2); }
+.rx-med-row-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 14px;
+  background: rgba(99,102,241,0.05);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.rx-med-num {
+  width: 22px; height: 22px; border-radius: 6px;
+  background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.25);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.65rem; font-weight: 800; color: #818cf8; flex-shrink: 0;
+}
+.rx-med-name { font-size: 0.92rem; font-weight: 650; color: #e2e8f0; }
+.rx-med-row-details { display: flex; flex-wrap: wrap; padding: 2px 0; }
+.rx-detail-chip {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 9px 14px;
+  border-right: 1px solid rgba(255,255,255,0.05);
+  min-width: 100px;
+}
+.rx-detail-chip:last-child { border-right: none; }
+.rx-detail-chip--note { flex: 1; min-width: 180px; border-right: none; }
+.rx-detail-chip-label {
+  font-size: 0.62rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.07em; color: #475569;
+}
+.rx-detail-chip-val { font-size: 0.83rem; font-weight: 500; color: #cbd5e1; margin-top: 1px; }
+.rx-detail-chip--duration .rx-detail-chip-val { color: #6ee7b7; font-weight: 600; }
+.rx-detail-chip--note .rx-detail-chip-val { color: #94a3b8; font-style: italic; line-height: 1.5; }
+
+/* ── Advice + Notes ── */
+.rx-info-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.rx-info-box {
+  border-radius: 10px; padding: 14px 16px;
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.07);
+}
+.rx-info-box--advice { border-left: 3px solid #10b981; }
+.rx-info-box--notes  { border-left: 3px solid #6366f1; }
+.rx-info-label {
+  font-size: 0.65rem; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 0.09em;
+  margin-bottom: 8px;
+}
+.rx-info-box--advice .rx-info-label { color: #059669; }
+.rx-info-box--notes  .rx-info-label { color: #6366f1; }
+.rx-info-text { font-size: 0.84rem; color: #94a3b8; line-height: 1.65; margin: 0; }
+
+/* ── Footer stamp ── */
+.rx-card-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+.rx-footer-stamp {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 0.67rem; color: #475569;
+}
+.rx-footer-stamp svg { color: #475569; }
+.rx-download-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.rx-download-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+/* ════════════════════════════════════════════════════
+   PRESCRIPTIONS TAB
+════════════════════════════════════════════════════ */
+
+/* Section header */
+.rx-section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 12px; margin-bottom: 24px;
+}
+.rx-section-title { font-size: 1.15rem; font-weight: 700; color: #f1f5f9; margin: 0; }
+.rx-section-sub { font-size: 0.78rem; color: #64748b; margin: 3px 0 0; }
+.rx-header-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+.rx-pill-active {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border-radius: 20px; font-size: 0.74rem; font-weight: 600;
+  background: rgba(16,185,129,0.1); color: #34d399; border: 1px solid rgba(16,185,129,0.2);
+}
+.rx-pill-dot { width: 7px; height: 7px; border-radius: 50%; background: #10b981; animation: rx-pulse 2s infinite; }
+@keyframes rx-pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.rx-pill-total {
+  padding: 5px 12px; border-radius: 20px; font-size: 0.74rem; font-weight: 600;
+  background: rgba(99,102,241,0.1); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.2);
+}
+
+/* Empty */
+.rx-empty-state {
+  text-align: center; padding: 60px 24px;
+  background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.08); border-radius: 16px;
+}
+.rx-empty-state svg { opacity: 0.3; color: #64748b; margin-bottom: 14px; }
+.rx-empty-title { font-size: 1rem; font-weight: 600; color: #64748b; margin: 0 0 6px; }
+.rx-empty-sub { font-size: 0.8rem; color: #475569; margin: 0; }
+
+/* Document list */
+.rx-doc-list { display: flex; flex-direction: column; gap: 20px; }
+
+/* Prescription document */
+.rx-doc-inner {
+  background: #0d1117;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+/* Letterhead */
+.rx-letterhead {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 22px 16px; gap: 16px;
+  background: linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(139,92,246,0.1) 100%);
+  border-bottom: 1px solid rgba(99,102,241,0.2);
+}
+.rx-letterhead-left { display: flex; align-items: center; gap: 12px; }
+.rx-clinic-logo {
+  width: 42px; height: 42px; border-radius: 10px;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(99,102,241,0.4);
+}
+.rx-clinic-name { font-size: 1.15rem; font-weight: 800; color: #f1f5f9; letter-spacing: -0.01em; }
+.rx-clinic-sub { font-size: 0.7rem; color: #64748b; margin-top: 2px; }
+.rx-letterhead-right { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+.rx-rx-symbol { font-size: 2.2rem; font-weight: 900; color: rgba(99,102,241,0.3); line-height: 1; font-style: italic; }
+.rx-doc-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.rx-doc-meta span { font-size: 0.7rem; color: #64748b; }
+.rx-letterhead-rule { height: 2px; background: linear-gradient(90deg, #4f46e5, #7c3aed, #06b6d4); opacity: 0.6; }
+
+/* Patient + Doctor strip */
+.rx-info-strip {
+  display: flex; align-items: stretch; gap: 0;
+  padding: 16px 22px;
+  background: rgba(255,255,255,0.02);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.rx-info-strip-col { display: flex; flex-direction: column; gap: 3px; flex: 1; padding: 0 18px; }
+.rx-info-strip-col:first-child { padding-left: 0; }
+.rx-info-strip-col:last-child { padding-right: 0; }
+.rx-info-strip-divider { width: 1px; background: rgba(255,255,255,0.07); flex-shrink: 0; }
+.rx-strip-label { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #475569; }
+.rx-strip-name { font-size: 0.92rem; font-weight: 700; color: #e2e8f0; }
+.rx-strip-detail { font-size: 0.73rem; color: #64748b; }
+.rx-strip-status {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 0.72rem; font-weight: 700; text-transform: capitalize;
+  padding: 3px 9px; border-radius: 20px; width: fit-content; margin-top: 2px;
+}
+.strip-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.strip-active { background: rgba(16,185,129,0.12); color: #34d399; border: 1px solid rgba(16,185,129,0.2); }
+.strip-active .strip-dot { background: #10b981; }
+.strip-done { background: rgba(100,116,139,0.1); color: #94a3b8; border: 1px solid rgba(100,116,139,0.18); }
+.strip-done .strip-dot { background: #64748b; }
+.strip-cancelled { background: rgba(239,68,68,0.1); color: #f87171; border: 1px solid rgba(239,68,68,0.18); }
+.strip-cancelled .strip-dot { background: #ef4444; }
+
+/* Diagnosis */
+.rx-diagnosis-block {
+  display: flex; align-items: baseline; gap: 14px;
+  padding: 14px 22px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  background: rgba(99,102,241,0.04);
+}
+.rx-diag-label {
+  font-size: 0.6rem; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 0.1em; color: #6366f1; white-space: nowrap; flex-shrink: 0;
+}
+.rx-diag-text { font-size: 1rem; font-weight: 700; color: #f1f5f9; }
+
+/* Symptoms */
+.rx-symptoms-block {
+  padding: 12px 22px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.rx-block-label {
+  display: block; font-size: 0.6rem; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 0.1em; color: #475569; margin-bottom: 8px;
+}
+.rx-sym-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.rx-sym-tag {
+  font-size: 0.76rem; font-weight: 500; color: #fca5a5;
+  background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.18);
+  padding: 3px 10px; border-radius: 20px;
+}
+
+/* Medicines table */
+.rx-meds-block { padding: 16px 22px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.rx-meds-table { width: 100%; border-radius: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.07); }
+.rx-meds-thead {
+  display: grid;
+  grid-template-columns: 32px 1fr 80px 110px 80px 1fr;
+  background: rgba(99,102,241,0.15);
+  padding: 9px 12px; gap: 8px;
+  border-bottom: 1px solid rgba(99,102,241,0.2);
+}
+.rx-meds-thead span {
+  font-size: 0.6rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.08em; color: #818cf8;
+}
+.rx-meds-row {
+  display: grid;
+  grid-template-columns: 32px 1fr 80px 110px 80px 1fr;
+  padding: 10px 12px; gap: 8px;
+  border-top: 1px solid rgba(255,255,255,0.04);
+  align-items: center;
+  transition: background 0.15s;
+}
+.rx-meds-row:hover { background: rgba(255,255,255,0.02); }
+.rx-meds-row--alt { background: rgba(255,255,255,0.015); }
+.rxt-num { font-size: 0.75rem; font-weight: 700; color: #475569; }
+.rxt-name { font-size: 0.78rem; color: #94a3b8; }
+.rxt-name--val { font-size: 0.88rem; font-weight: 700; color: #e2e8f0; }
+.rxt-dose { font-size: 0.82rem; color: #cbd5e1; }
+.rxt-freq { font-size: 0.82rem; color: #cbd5e1; }
+.rxt-dur { font-size: 0.82rem; color: #cbd5e1; }
+.rxt-dur--val { font-weight: 700; color: #6ee7b7; }
+.rxt-inst { font-size: 0.76rem; color: #64748b; font-style: italic; }
+
+/* Advice + Notes */
+.rx-notes-strip {
+  display: grid; grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.rx-notes-box { padding: 14px 22px; }
+.rx-notes-box--advice {
+  border-right: 1px solid rgba(255,255,255,0.05);
+  border-left: 3px solid #10b981;
+  background: rgba(16,185,129,0.04);
+}
+.rx-notes-box--notes {
+  border-left: 3px solid #6366f1;
+  background: rgba(99,102,241,0.04);
+}
+.rx-notes-label {
+  font-size: 0.6rem; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 0.1em; margin-bottom: 7px;
+}
+.rx-notes-box--advice .rx-notes-label { color: #10b981; }
+.rx-notes-box--notes  .rx-notes-label { color: #818cf8; }
+.rx-notes-text { font-size: 0.83rem; line-height: 1.65; margin: 0; }
+.rx-notes-box--advice .rx-notes-text { color: #a7f3d0; }
+.rx-notes-box--notes  .rx-notes-text { color: #c7d2fe; }
+
+/* Signature + footer */
+.rx-doc-footer {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  padding: 14px 22px; gap: 16px; flex-wrap: wrap;
+  background: rgba(255,255,255,0.02);
+}
+.rx-sig-area { display: flex; flex-direction: column; gap: 4px; }
+.rx-sig-line { width: 130px; height: 1px; background: rgba(255,255,255,0.15); margin-bottom: 4px; }
+.rx-sig-name { font-size: 0.82rem; font-weight: 700; color: #e2e8f0; }
+.rx-sig-sub { font-size: 0.65rem; color: #475569; }
+.rx-doc-footer-right { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.rx-emr-stamp {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 0.65rem; color: #334155;
+}
+.rx-emr-stamp svg { color: #334155; }
+.rx-dl-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: 8px;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  color: #fff; font-size: 0.76rem; font-weight: 600;
+  border: none; cursor: pointer;
+  transition: opacity 0.2s, transform 0.15s;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(99,102,241,0.3);
+}
+.rx-dl-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+.rx-dl-btn:active { transform: translateY(0); }
+
+/* Responsive */
+@media (max-width: 700px) {
+  .rx-meds-thead, .rx-meds-row { grid-template-columns: 28px 1fr 70px 90px; }
+  .rxt-dur, .rxt-inst { display: none; }
+  .rx-notes-strip { grid-template-columns: 1fr; }
+  .rx-notes-box--advice { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .rx-info-strip { flex-direction: column; gap: 12px; }
+  .rx-info-strip-divider { width: 100%; height: 1px; }
+  .rx-info-strip-col { padding: 0; }
+  .rx-letterhead { flex-direction: column; align-items: flex-start; gap: 10px; }
+}
 
 </style>
