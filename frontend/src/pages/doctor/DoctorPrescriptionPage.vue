@@ -151,7 +151,8 @@
               No reports available for this patient.
             </div>
             <q-list v-else separator>
-              <q-item v-for="report in reports" :key="report.reportId" clickable v-ripple @click="openReport(report.fileUrl)">
+              <q-item v-for="report in reports" :key="report.reportId" clickable v-ripple @click="openReport(report)" class="cursor-pointer">
+                <q-tooltip>View Report</q-tooltip>
                 <q-item-section avatar>
                   <q-icon :name="report.fileType === 'pdf' ? 'picture_as_pdf' : 'image'" :color="report.fileType === 'pdf' ? 'red' : 'blue'" />
                 </q-item-section>
@@ -160,12 +161,31 @@
                   <q-item-label caption lines="1" class="text-grey-7">{{ report.description || 'No description' }}</q-item-label>
                 </q-item-section>
                 <q-item-section side>
-                  <q-icon name="open_in_new" color="grey" size="xs" />
+                  <q-btn flat round dense icon="download" color="primary" @click.stop="downloadReport(report)">
+                     <q-tooltip>Download</q-tooltip>
+                  </q-btn>
                 </q-item-section>
               </q-item>
             </q-list>
           </q-card-section>
         </q-card>
+
+        <!-- Preview Modal -->
+        <q-dialog v-model="previewOpen" maximized transition-show="slide-up" transition-hide="slide-down">
+          <q-card class="bg-dark text-white column">
+            <q-card-section class="row items-center q-pb-none">
+              <div class="text-h6">Report Preview</div>
+              <q-space />
+              <q-btn icon="close" flat round dense v-close-popup />
+            </q-card-section>
+
+            <q-card-section class="col flex flex-center q-pa-none bg-grey-10">
+              <iframe v-if="previewType === 'pdf'" :src="previewUrl" class="full-width full-height" style="border: none;"></iframe>
+              <img v-else-if="previewType === 'image'" :src="previewUrl" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
+              <div v-else class="text-h6 text-grey-5">Preview not available</div>
+            </q-card-section>
+          </q-card>
+        </q-dialog>
 
       </div>
 
@@ -368,6 +388,10 @@ const patient = ref(null);
 const reports = ref([]);
 const prescriptionHistory = ref([]);
 
+const previewOpen = ref(false);
+const previewUrl = ref('');
+const previewType = ref('');
+
 const frequencyOptions = [
   { label: 'Once daily', value: 'Once daily' },
   { label: 'Twice daily', value: 'Twice daily' },
@@ -444,8 +468,52 @@ const formatDate = (date) => {
   return new Date(date).toLocaleDateString();
 };
 
-const openReport = (url) => {
-  if (url) window.open(url, '_blank');
+const openReport = (report) => {
+  if (!report?.fileUrl) {
+    $q.notify({ type: 'warning', message: 'File URL is missing.' });
+    return;
+  }
+
+  // 🔥 FIX HERE
+  if (report.fileType === 'pdf') {
+    previewUrl.value = `https://docs.google.com/gview?url=${encodeURIComponent(report.fileUrl)}&embedded=true`;
+    previewType.value = 'pdf';
+  } else {
+    previewUrl.value = report.fileUrl;
+    previewType.value = 'image';
+  }
+
+  previewOpen.value = true;
+};
+
+const downloadReport = async (report) => {
+  if (!report?.fileUrl) {
+     $q.notify({ type: 'warning', message: 'No file available to download.' });
+     return;
+  }
+  try {
+    const res = await fetch(report.fileUrl);
+    if (!res.ok) throw new Error('Network response was not ok');
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    
+    const ext = report.fileType === 'pdf' ? 'pdf' : (report.fileType || 'png');
+    const safeTitle = (report.title || 'Medical_Report').replace(/\s+/g, '_');
+    link.download = `${safeTitle}.${ext}`;
+    
+    document.body.appendChild(link);
+    link.click();
+    
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(link);
+    
+    $q.notify({ type: 'positive', message: 'Download started successfully.' });
+  } catch (error) {
+    console.error('Download failed', error);
+    $q.notify({ type: 'negative', message: 'Failed to securely download report.' });
+  }
 };
 
 const addMedication = () => {
