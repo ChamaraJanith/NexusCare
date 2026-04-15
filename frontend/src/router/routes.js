@@ -121,18 +121,25 @@ const routes = [
         component: () => import('pages/admin/AdminFeesPage.vue')
       },
 
-      // Hospitals (also accessible from fees page)
+      // Hospitals (dedicated page)
       {
         path: 'hospitals',
         name: 'AdminHospitals',
-        component: () => import('pages/admin/AdminFeesPage.vue')   // hospitals section is inside fees page
+        component: () => import('pages/admin/AdminHospitalsPage.vue')
       },
 
-      // Reports & Analytics (placeholder — extend as needed)
+      // Appointments Overview
+      {
+        path: 'appointments',
+        name: 'AdminAppointments',
+        component: () => import('pages/admin/AdminAppointmentsPage.vue')
+      },
+
+      // Reports & Analytics
       {
         path: 'reports',
         name: 'AdminReports',
-        component: () => import('pages/admin/AdminDashboardHome.vue')  // reuse dashboard until reports page built
+        component: () => import('pages/admin/AdminReportsPage.vue')
       },
 
       // Settings (placeholder)
