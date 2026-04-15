@@ -96,7 +96,16 @@
 
             <q-td key="patient" :props="props">
               <div class="user-cell">
-                <div class="user-avatar user-avatar--patient">{{ getInitials(props.row.patientName) }}</div>
+                <div class="avatar-wrap">
+                  <img
+                    v-if="patientImages[props.row.patientId]"
+                    :src="patientImages[props.row.patientId]"
+                    class="user-avatar user-avatar--img"
+                    :alt="props.row.patientName"
+                    @error="e => e.target.style.display='none'"
+                  />
+                  <div v-else class="user-avatar user-avatar--patient">{{ getInitials(props.row.patientName) }}</div>
+                </div>
                 <div>
                   <div class="user-cell-name">{{ props.row.patientName || '—' }}</div>
                   <div class="user-cell-sub">{{ props.row.patientId }}</div>
@@ -106,7 +115,16 @@
 
             <q-td key="doctor" :props="props">
               <div class="user-cell">
-                <div class="user-avatar user-avatar--doctor">{{ getInitials(props.row.doctorName) }}</div>
+                <div class="avatar-wrap">
+                  <img
+                    v-if="doctorImages[props.row.doctorId]"
+                    :src="doctorImages[props.row.doctorId]"
+                    class="user-avatar user-avatar--img"
+                    :alt="props.row.doctorName"
+                    @error="e => e.target.style.display='none'"
+                  />
+                  <div v-else class="user-avatar user-avatar--doctor">{{ getInitials(props.row.doctorName) }}</div>
+                </div>
                 <div>
                   <div class="user-cell-name">{{ props.row.doctorName ? 'Dr. ' + props.row.doctorName : '—' }}</div>
                   <div class="user-cell-sub">{{ props.row.doctorSpecialization || '' }}</div>
@@ -262,6 +280,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
+import { getDoctorPublicProfile } from '../../services/doctorApi'
+import { adminApi } from '../../services/adminApi'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 const getHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token') || ''}` })
@@ -272,6 +292,10 @@ const search       = ref('')
 const statusFilter = ref(null)
 const typeFilter   = ref(null)
 const paymentFilter = ref(null)
+
+// Image caches: patientId → imageUrl, doctorId → imageUrl
+const patientImages = ref({})
+const doctorImages  = ref({})
 
 const detailDialog = ref(false)
 const selectedAppt = ref(null)
@@ -346,30 +370,64 @@ const filteredAppointments = computed(() => {
 const getInitials    = (n = '') => (n || '').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 const formatCurrency = (n) => (n || 0).toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
+// Resolve profileImage object or string to URL
+const resolveImg = (img) => {
+  if (!img) return null
+  if (typeof img === 'string' && img.trim()) return img
+  if (img?.url && img.url.trim()) return img.url
+  return null
+}
+
 let searchTimer
-const debouncedSearch = () => { clearTimeout(searchTimer); searchTimer = setTimeout(applyFilters, 300) }
+const debouncedSearch = () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => {}, 300) }
 function applyFilters() { /* reactive computed handles it */ }
 
 async function loadAppointments() {
   loading.value = true
   try {
-    // Fetch all appointments by getting a broad list — use admin verify endpoint as a proxy
-    // Since there's no dedicated admin GET all appointments endpoint, we fetch from multiple doctors
-    // The cleanest approach: fetch all users (doctors), then get their appointments
-    // For now, use the available admin stats + a broad patient fetch approach
-    // We'll use the appointment service directly via the API gateway
-    const { data } = await axios.get(`${API}/api/appointments/admin/all`, { headers: getHeaders() }).catch(() => ({ data: [] }))
-    if (Array.isArray(data)) {
-      appointments.value = data
-    } else {
-      // Fallback: try fetching via a different approach
-      appointments.value = []
-    }
-  } catch {
+    const { data } = await axios.get(`${API}/api/appointments/admin/all`, {
+      headers: getHeaders(),
+      params: { limit: 200 }
+    })
+    const list = data?.data && Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : []
+    appointments.value = list
+
+    // Batch-fetch profile images in background
+    fetchProfileImages(list)
+  } catch (err) {
+    console.error('Failed to load appointments:', err.response?.data || err.message)
     appointments.value = []
   } finally {
     loading.value = false
   }
+}
+
+async function fetchProfileImages(list) {
+  // Collect unique doctor IDs
+  const uniqueDoctorIds  = [...new Set(list.map(a => a.doctorId).filter(Boolean))]
+
+  // Fetch patient images: GET /api/admin/users returns profileImage on each user
+  // Use the admin users endpoint with role=patient to get all at once
+  try {
+    const { data } = await adminApi.getUsers({ role: 'patient', limit: 200 })
+    const users = data.data || []
+    users.forEach(u => {
+      const img = resolveImg(u.profileImage)
+      if (img && u.roleId) patientImages.value[u.roleId] = img
+    })
+  } catch { /* silent */ }
+
+  // Fetch doctor images from MS2 in parallel
+  const doctorResults = await Promise.allSettled(
+    uniqueDoctorIds.map(id => getDoctorPublicProfile(id))
+  )
+  uniqueDoctorIds.forEach((id, i) => {
+    const result = doctorResults[i]
+    if (result.status === 'fulfilled' && result.value?.profileImage) {
+      const img = resolveImg(result.value.profileImage)
+      if (img) doctorImages.value[id] = img
+    }
+  })
 }
 
 function openDetail(appt) {
@@ -519,7 +577,10 @@ onMounted(loadAppointments)
 
   &--patient { background: linear-gradient(135deg, #0d9488, #14b8a6); }
   &--doctor  { background: linear-gradient(135deg, #1d4ed8, #3b82f6); }
+  &--img     { object-fit: cover; background: #f0f4f8; }
 }
+
+.avatar-wrap { position: relative; flex-shrink: 0; }
 
 .datetime-cell {
   .dt-date { display: block; font-size: 13px; font-weight: 600; color: #0f172a; }
