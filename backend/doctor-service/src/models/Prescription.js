@@ -7,14 +7,39 @@ const prescriptionSchema = new mongoose.Schema(
       required: true
     },
 
+    doctorName: {
+      type: String,
+    },
+
     patientId: {
       type: String,
       required: true
     },
 
-    medicines: {
-      type: [String],
+    appointmentId: {
+      type: String,
+    },
+
+    diagnosis: {
+      type: String,
       required: true
+    },
+
+    symptoms: {
+      type: mongoose.Schema.Types.Mixed, // Can be String or [String]
+    },
+
+    medicines: {
+      type: [mongoose.Schema.Types.Mixed], // Can be String or Object {name, dosage, frequency, duration, instructions}
+      required: true
+    },
+
+    advice: {
+      type: String,
+    },
+
+    followUpDate: {
+      type: Date,
     },
 
     notes: {

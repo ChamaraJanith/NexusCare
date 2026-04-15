@@ -39,7 +39,7 @@
                 </q-item-section>
                 <q-item-section class="text-dark">
                   <span class="text-grey-7 text-weight-medium">Age:</span>
-                  <span class="text-weight-bold"> {{ patient.age ? patient.age + ' yrs' : 'N/A' }}</span>
+                  <span class="text-weight-bold text-dark"> {{ patient.age ? patient.age + ' yrs' : 'N/A' }}</span>
                 </q-item-section>
               </q-item>
 
@@ -49,7 +49,7 @@
                 </q-item-section>
                 <q-item-section class="text-dark">
                   <span class="text-grey-7 text-weight-medium">Gender:</span>
-                  <span class="text-weight-bold"> {{ patient.gender || 'N/A' }}</span>
+                  <span class="text-weight-bold text-dark"> {{ patient.gender || 'N/A' }}</span>
                 </q-item-section>
               </q-item>
 
@@ -59,7 +59,7 @@
                 </q-item-section>
                 <q-item-section class="text-dark">
                   <span class="text-grey-7 text-weight-medium">Blood Group:</span>
-                  <span class="text-weight-bold"> {{ patient.bloodGroup || 'N/A' }}</span>
+                  <span class="text-weight-bold text-dark"> {{ patient.bloodGroup || 'N/A' }}</span>
                 </q-item-section>
               </q-item>
 
@@ -70,20 +70,20 @@
                 </q-item-section>
                 <q-item-section class="text-dark">
                   <span class="text-grey-7 text-weight-medium">Phone:</span>
-                  <span class="text-weight-bold">
+                  <span class="text-weight-bold text-dark">
                     {{ patient.phone || 'N/A' }}
                   </span>
                 </q-item-section>
               </q-item>
 
-              <!-- Email (NEW) -->
+              <!-- Email -->
               <q-item>
                 <q-item-section avatar>
                   <q-icon name="email" color="grey" />
                 </q-item-section>
                 <q-item-section class="text-dark">
                   <span class="text-grey-7 text-weight-medium">Email:</span>
-                  <span class="text-weight-bold">
+                  <span class="text-weight-bold text-dark">
                     {{ patient.email || 'N/A' }}
                   </span>
                 </q-item-section>
@@ -96,7 +96,7 @@
                 </q-item-section>
                 <q-item-section class="text-dark">
                   <span class="text-grey-7 text-weight-medium">City:</span>
-                  <span class="text-weight-bold">
+                  <span class="text-weight-bold text-dark">
                     {{ patient.address?.city || 'N/A' }}
                   </span>
                 </q-item-section>
@@ -109,7 +109,7 @@
                 </q-item-section>
                 <q-item-section class="text-dark">
                   <span class="text-grey-7 text-weight-medium">Emergency:</span>
-                  <span class="text-weight-bold">
+                  <span class="text-weight-bold text-dark">
                     {{ patient.emergencyContact?.name || 'N/A' }}
                   </span>
                 </q-item-section>
@@ -124,7 +124,7 @@
                 {{ allergy }}
               </q-chip>
             </div>
-            <div v-else class="text-grey-5 text-caption">No known allergies.</div>
+            <div v-else class="text-grey-7 text-caption">No known allergies.</div>
 
             <div class="text-weight-bold text-dark q-mt-md q-mb-xs">Chronic Conditions</div>
             <div v-if="patient.chronicConditions && patient.chronicConditions.length > 0">
@@ -132,10 +132,10 @@
                 {{ cond }}
               </q-chip>
             </div>
-            <div v-else class="text-grey-5 text-caption">None reported.</div>
+            <div v-else class="text-grey-7 text-caption">None reported.</div>
           </q-card-section>
           
-          <q-card-section v-else class="text-center text-grey-6 py-lg">
+          <q-card-section v-else class="text-center text-grey-7 py-lg">
             Could not load patient details.
           </q-card-section>
         </q-card>
@@ -147,7 +147,7 @@
           </q-card-section>
           
           <q-card-section>
-            <div v-if="reports.length === 0" class="text-grey-6 text-center q-py-md">
+            <div v-if="reports.length === 0" class="text-grey-7 text-center q-py-md">
               No reports available for this patient.
             </div>
             <q-list v-else separator>
@@ -156,8 +156,8 @@
                   <q-icon :name="report.fileType === 'pdf' ? 'picture_as_pdf' : 'image'" :color="report.fileType === 'pdf' ? 'red' : 'blue'" />
                 </q-item-section>
                 <q-item-section>
-                  <q-item-label class="text-weight-bold">{{ report.title }}</q-item-label>
-                  <q-item-label caption lines="1">{{ report.description || 'No description' }}</q-item-label>
+                  <q-item-label class="text-weight-bold text-dark">{{ report.title }}</q-item-label>
+                  <q-item-label caption lines="1" class="text-grey-7">{{ report.description || 'No description' }}</q-item-label>
                 </q-item-section>
                 <q-item-section side>
                   <q-icon name="open_in_new" color="grey" size="xs" />
@@ -169,47 +169,106 @@
 
       </div>
 
-      <!-- Right Column: Prescription Form -->
-      <div class="col-12 col-md-8">
-        <q-card flat bordered style="border-radius: 12px;" class="full-height">
+      <!-- Right Column: Prescription Form and History -->
+      <div class="col-12 col-md-8 column q-gutter-y-md">
+        
+        <!-- Prescription Form -->
+        <q-card flat bordered style="border-radius: 12px;">
           <q-card-section>
             <div class="text-h5 text-weight-bold text-dark q-mb-md">Create Prescription</div>
             
             <q-form @submit="submitPrescription" class="q-gutter-md">
+              
               <!-- Diagnosis -->
               <div>
-                <div class="text-weight-bold q-mb-xs">Diagnosis</div>
+                <div class="text-weight-bold q-mb-xs text-grey-7">Diagnosis <span class="text-red">*</span></div>
                 <q-input
                   v-model="form.diagnosis"
                   outlined
                   dense
                   placeholder="E.g. Viral Pharyngitis"
+                  :rules="[val => !!val || 'Diagnosis is required']"
                 />
               </div>
 
-              <!-- Medications Array -->
+              <!-- Symptoms -->
               <div>
-                <div class="text-weight-bold q-mb-xs">Medications <span class="text-red">*</span></div>
-                <div v-for="(med, index) in form.medications" :key="index" class="row q-col-gutter-sm q-mb-sm items-center">
-                  <div class="col">
-                    <q-input v-model="form.medications[index]" outlined dense placeholder="E.g. Amoxicillin 500mg - 1 tab 3x day" />
-                  </div>
-                  <div class="col-auto">
-                    <q-btn icon="remove_circle" color="negative" flat round dense @click="removeMedication(index)" v-if="form.medications.length > 1" />
-                  </div>
-                </div>
-                <q-btn flat color="primary" icon="add" label="Add Medication" @click="addMedication" size="sm" class="q-mt-xs" />
+                <div class="text-weight-bold q-mb-xs text-grey-7">Symptoms</div>
+                <q-input
+                  v-model="form.symptoms"
+                  outlined
+                  type="textarea"
+                  rows="2"
+                  placeholder="E.g. Sore throat, mild fever"
+                />
+              </div>
+
+              <!-- Structured Medicines Array -->
+              <div>
+                <div class="text-weight-bold q-mb-xs text-grey-7">Medicines <span class="text-red">*</span></div>
+                
+                <q-card v-for="(med, index) in form.medicines" :key="index" flat bordered class="q-mb-md" style="background: #fafbfc; border-radius: 8px;">
+                  <q-card-section>
+                    <div class="row items-center q-mb-sm">
+                      <div class="text-weight-bold text-dark">Medicine {{ index + 1 }}</div>
+                      <q-space />
+                      <q-btn icon="remove_circle" color="negative" flat round dense @click="removeMedication(index)" v-if="form.medicines.length > 1" />
+                    </div>
+                    <div class="row q-col-gutter-sm">
+                      <div class="col-12 col-md-6">
+                        <q-input v-model="med.name" outlined dense placeholder="Medicine name" :rules="[val => !!val || 'Required']" />
+                      </div>
+                      <div class="col-12 col-md-6">
+                        <q-input v-model="med.dosage" outlined dense placeholder="Dosage (e.g. 500mg)" />
+                      </div>
+                      <div class="col-12 col-md-4">
+                         <q-select v-model="med.frequency" outlined dense :options="frequencyOptions" placeholder="Frequency" emit-value map-options popup-content-class="dropdown-fix"/>
+                      </div>
+                      <div class="col-12 col-md-4">
+                        <q-input v-model="med.duration" outlined dense placeholder="Duration (e.g. 5 days)" />
+                      </div>
+                      <div class="col-12 col-md-4">
+                        <q-input v-model="med.instructions" outlined dense placeholder="Instructions" />
+                      </div>
+                    </div>
+                  </q-card-section>
+                </q-card>
+                
+                <q-btn flat color="primary" icon="add" label="Add Medication" @click="addMedication" size="sm" />
+              </div>
+
+              <!-- Advice -->
+              <div>
+                <div class="text-weight-bold q-mb-xs text-grey-7">Advice</div>
+                <q-input
+                  v-model="form.advice"
+                  outlined
+                  type="textarea"
+                  rows="2"
+                  placeholder="General wellness advice"
+                />
+              </div>
+
+              <!-- Follow Up Date -->
+              <div>
+                <div class="text-weight-bold q-mb-xs text-grey-7">Follow-up Date</div>
+                <q-input
+                  v-model="form.followUpDate"
+                  outlined
+                  dense
+                  type="date"
+                />
               </div>
 
               <!-- Notes -->
               <div>
-                <div class="text-weight-bold q-mb-xs">Additional Notes / Instructions</div>
+                <div class="text-weight-bold q-mb-xs text-grey-7">Internal Notes</div>
                 <q-input
                   v-model="form.notes"
                   outlined
                   type="textarea"
-                  rows="4"
-                  placeholder="E.g. Drink plenty of water and rest."
+                  rows="2"
+                  placeholder="Private notes (not visible to patient)"
                 />
               </div>
 
@@ -221,6 +280,70 @@
 
           </q-card-section>
         </q-card>
+
+        <!-- Prescription History Display -->
+        <q-card v-if="prescriptionHistory.length > 0" flat bordered style="border-radius: 12px;">
+          <q-card-section class="bg-deep-purple text-white">
+            <div class="text-h6 text-weight-bold">Prescription Layout (Doctor View Only)</div>
+            <div class="text-caption">{{ prescriptionHistory.length }} past record(s) directly from doctor-service</div>
+          </q-card-section>
+          
+          <q-card-section>
+             <div v-for="rx in prescriptionHistory" :key="rx._id" class="q-mb-md">
+                <q-card flat bordered style="border-radius: 10px;">
+                  <q-card-section>
+                    <div class="row items-center q-mb-sm">
+                      <q-icon name="medication" color="primary" size="sm" class="q-mr-sm" />
+                       <div class="text-weight-bold text-dark text-subtitle1">{{ rx.diagnosis || 'Prescription' }}</div>
+                       <q-space />
+                       <q-badge :color="rx.status === 'completed' ? 'green' : 'blue'" :label="rx.status || 'active'" />
+                       <span class="text-caption text-grey-6 q-ml-sm">{{ formatDate(rx.createdAt) }}</span>
+                    </div>
+
+                    <div v-if="rx.symptoms" class="text-caption text-grey-7 q-mb-sm">
+                      <span class="text-weight-bold">Symptoms: </span>{{ Array.isArray(rx.symptoms) ? rx.symptoms.join(', ') : rx.symptoms }}
+                    </div>
+
+                    <div class="q-mb-sm">
+                      <div class="text-weight-medium text-grey-8 q-mb-xs">Medicines:</div>
+                      <q-markup-table flat bordered dense separator="cell" class="text-caption bg-white" style="border-radius: 8px;">
+                        <thead class="bg-grey-2">
+                          <tr>
+                            <th class="text-left">Medicine</th>
+                            <th class="text-left">Dosage</th>
+                            <th class="text-left text-dark">Frequency</th>
+                            <th class="text-left text-dark">Duration</th>
+                            <th class="text-left text-dark">Instructions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="(med, i) in rx.medicines" :key="i">
+                            <td class="text-weight-bold text-dark">{{ typeof med === 'string' ? med : (med.name || '—') }}</td>
+                            <td class="text-dark">{{ typeof med === 'string' ? '—' : (med.dosage || '—') }}</td>
+                            <td class="text-dark">{{ typeof med === 'string' ? '—' : (med.frequency || '—') }}</td>
+                            <td class="text-dark">{{ typeof med === 'string' ? '—' : (med.duration || '—') }}</td>
+                            <td class="text-dark">{{ typeof med === 'string' ? '—' : (med.instructions || '—') }}</td>
+                          </tr>
+                        </tbody>
+                      </q-markup-table>
+                    </div>
+
+                    <div v-if="rx.advice" class="q-mb-xs">
+                      <span class="text-weight-medium text-grey-8">Advice: </span>
+                      <span class="text-dark">{{ rx.advice }}</span>
+                    </div>
+                    
+                    <div v-if="rx.followUpDate" class="q-mb-xs">
+                      <span class="text-weight-medium text-grey-8">Follow-up: </span>
+                      <span class="text-dark">{{ formatDate(rx.followUpDate) }}</span>
+                    </div>
+
+                  </q-card-section>
+                </q-card>
+             </div>
+          </q-card-section>
+        </q-card>
+
       </div>
     </div>
   </q-page>
@@ -243,11 +366,24 @@ const loading = ref(true);
 const submitting = ref(false);
 const patient = ref(null);
 const reports = ref([]);
+const prescriptionHistory = ref([]);
+
+const frequencyOptions = [
+  { label: 'Once daily', value: 'Once daily' },
+  { label: 'Twice daily', value: 'Twice daily' },
+  { label: '3 times daily', value: '3 times daily' },
+  { label: 'Every 8 hours', value: 'Every 8 hours' },
+  { label: 'As needed (PRN)', value: 'As needed (PRN)' },
+  { label: 'At bedtime', value: 'At bedtime' },
+];
 
 const form = reactive({
   diagnosis: '',
+  symptoms: '',
+  advice: '',
+  followUpDate: '',
   notes: '',
-  medications: ['']
+  medicines: [{ name: '', dosage: '', frequency: '', duration: '', instructions: '' }]
 });
 
 const getToken = () => localStorage.getItem('token') || localStorage.getItem('nexus_token');
@@ -260,14 +396,13 @@ onMounted(async () => {
     router.back();
     return;
   }
-
   await fetchPatientData();
+  await loadPrescriptions();
 });
 
 const fetchPatientData = async () => {
   loading.value = true;
   try {
-    // Parallel fetch for speed
     const [patientRes, reportsRes] = await Promise.allSettled([
       axios.get(`${API_URL}/api/patient/doctor/${patientId}`, { headers: getHeaders() }),
       axios.get(`${API_URL}/api/patient/reports`, { params: { patientId }, headers: getHeaders() })
@@ -282,10 +417,7 @@ const fetchPatientData = async () => {
 
     if (reportsRes.status === 'fulfilled') {
       reports.value = reportsRes.value.data.data || [];
-    } else {
-      console.error('Failed to fetch patient reports', reportsRes.reason);
     }
-
   } catch (error) {
     console.error(error);
   } finally {
@@ -293,51 +425,124 @@ const fetchPatientData = async () => {
   }
 };
 
+const loadPrescriptions = async () => {
+  try {
+    const res = await axios.get(`${API_URL}/api/prescriptions/${patientId}`, { headers: getHeaders() });
+    if (res.data?.success) {
+      prescriptionHistory.value = res.data.data || [];
+    } else if (Array.isArray(res.data)) {
+      prescriptionHistory.value = res.data;
+    }
+  } catch (err) {
+    console.error("Prescriptions fetch fail:", err);
+    // Suppress warning if strictly empty vs actually down natively
+  }
+};
+
+const formatDate = (date) => {
+  if (!date) return '—';
+  return new Date(date).toLocaleDateString();
+};
+
 const openReport = (url) => {
   if (url) window.open(url, '_blank');
 };
 
 const addMedication = () => {
-  form.medications.push('');
+  form.medicines.push({ name: '', dosage: '', frequency: '', duration: '', instructions: '' });
 };
 
 const removeMedication = (index) => {
-  form.medications.splice(index, 1);
+  form.medicines.splice(index, 1);
 };
 
 const submitPrescription = async () => {
-  // Validate
-  const validMedications = form.medications.filter(m => m.trim().length > 0);
+  // Validate medicines
+  const validMedications = form.medicines.filter(
+    m => m.name && m.name.trim().length > 0
+  );
+
   if (validMedications.length === 0) {
-    $q.notify({ type: 'warning', message: 'Please add at least one medication.' });
+    $q.notify({
+      type: 'warning',
+      message: 'Please add at least one medication.'
+    });
     return;
   }
 
   submitting.value = true;
 
   try {
-    await axios.post(
-      `${API_URL}/api/prescriptions`,
-      {
-        patientId,
-        appointmentId,
-        diagnosis: form.diagnosis.trim(),
-        notes: form.notes.trim(),
-        medications: validMedications
-      },
-      { headers: getHeaders() }
-    );
+    const payload = {
+      patientId,
+      appointmentId,
+      diagnosis: form.diagnosis?.trim(),
+      symptoms: form.symptoms?.trim(),
+      advice: form.advice?.trim(),
+      followUpDate: form.followUpDate || null,
+      notes: form.notes?.trim(),
+      medicines: validMedications
+    };
 
-    $q.notify({ type: 'positive', message: 'Prescription created successfully!' });
-    router.push('/doctor/consultations');
+    // 🔐 Send request with token
+    await axios.post(`${API_URL}/api/prescriptions`, payload, {
+      headers: getHeaders()
+    });
+
+    // ✅ Success
+    $q.notify({
+      type: 'positive',
+      message: 'Prescription created successfully!'
+    });
+
+    // 🔄 Reset form
+    form.diagnosis = '';
+    form.symptoms = '';
+    form.advice = '';
+    form.followUpDate = '';
+    form.notes = '';
+    form.medicines = [
+      { name: '', dosage: '', frequency: '', duration: '', instructions: '' }
+    ];
+
+    // 🔁 Reload prescriptions
+    await loadPrescriptions();
+
   } catch (error) {
     console.error('Prescription submission failed:', error);
+
+    const msg =
+      error.response?.data?.message ||
+      (error.response?.status === 502
+        ? 'Bad Gateway (Service Down)'
+        : 'Failed to submit prescription.');
+
     $q.notify({
       type: 'negative',
-      message: error.response?.data?.message || 'Failed to submit prescription.'
+      message: msg
     });
+
   } finally {
     submitting.value = false;
   }
 };
+
 </script>
+
+<style>
+.dropdown-fix {
+  background: #ffffff !important;
+}
+
+.dropdown-fix .q-item {
+  color: #000000 !important;
+}
+
+.dropdown-fix .q-item__label {
+  color: #000000 !important;
+}
+
+.dropdown-fix .q-item__section {
+  color: #000000 !important;
+}
+</style>

@@ -1,66 +1,68 @@
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 
+import Prescription from "../models/Prescription.js";
+
 // CREATE
 export const createPrescription = async (data, user) => {
   if (user.role !== "doctor") {
     throw new Error("Only doctors can create prescriptions");
   }
 
-  const { patientId, appointmentId, medications, diagnosis, notes } = data;
+  const { patientId, appointmentId, diagnosis, symptoms, medicines, advice, followUpDate, notes } = data;
 
-  if (!patientId || !appointmentId || !medications || !medications.length) {
-    throw new Error("patientId, appointmentId, and medications are required");
+  if (!patientId || !medicines || !medicines.length || !diagnosis) {
+    throw new Error("patientId, diagnosis, and medicines are required");
   }
+
+  // Backwards compatibility: Map string arrays to structured object arrays
+  const formattedMedicines = medicines.map((med) => {
+    if (typeof med === "string") {
+      return { name: med, dosage: "", frequency: "", duration: "", instructions: "" };
+    }
+    return med;
+  });
 
   const doctorId = user.doctorId || user.id;
   const doctorName = user.name || "Unknown Doctor";
 
-  const internalKey = process.env.INTERNAL_SERVICE_KEY;
-  const patientServiceUrl = process.env.USER_PATIENT_SERVICE_URL || "http://localhost:5001";
-
   try {
-    const response = await axios.post(
-      `${patientServiceUrl}/api/patient/prescriptions/add`,
-      {
-        prescriptionId: uuidv4(),
-        patientId,
-        doctorId,
-        doctorName,
-        appointmentId,
-        medications,
-        diagnosis,
-        notes,
-      },
-      {
-        headers: {
-          "x-internal-service-key": internalKey,
-        },
-      }
-    );
+    const newPrescription = new Prescription({
+      doctorId,
+      doctorName,
+      patientId,
+      appointmentId,
+      diagnosis,
+      symptoms,
+      medicines: formattedMedicines,
+      advice,
+      followUpDate,
+      notes
+    });
 
-    return response.data;
+    const savedPrescription = await newPrescription.save();
+    return savedPrescription;
   } catch (error) {
-    const errorMsg = error.response?.data?.message || error.message;
-    throw new Error(`Failed to forward prescription: ${errorMsg}`);
+    throw new Error(`Failed to create prescription: ${error.message}`);
   }
 };
 
-// Stateless architecture: Doctor service should not directly read, update, or delete prescriptions
-// If READ/UPDATE/DELETE is needed by doctor, it should also be forwarded via internal-service calls
-// For now, these operate as pass-throughs or throw errors if unimplemented in patient service.
-
-// READ
+// READ BY PATIENT
 export const getByPatient = async (patientId) => {
-  throw new Error("Fetching prescriptions via doctor-service is deprecated. Access via user-patient-service.");
+  try {
+    const prescriptions = await Prescription.find({ patientId, isDeleted: false }).sort({ createdAt: -1 });
+    return prescriptions;
+  } catch (error) {
+    throw new Error(`Error fetching prescriptions: ${error.message}`);
+  }
 };
 
 // UPDATE
 export const updatePrescription = async (id, data, user) => {
-  throw new Error("Updating prescriptions is not currently supported in the stateless architecture.");
+  throw new Error("Updating prescriptions is not currently supported in this module.");
 };
 
 // SOFT DELETE
 export const deletePrescription = async (id, user) => {
-  throw new Error("Deleting prescriptions is not currently supported in the stateless architecture.");
+  throw new Error("Deleting prescriptions is not currently supported in this module.");
 };
