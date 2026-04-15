@@ -69,12 +69,20 @@ app.get("/", (req, res) => {
 // 🔹 Env Variables
 const PORT = process.env.PORT || 5002;
 const MONGO_URI = process.env.MONGO_URI;
+const INTERNAL_SERVICE_KEY = process.env.INTERNAL_SERVICE_KEY;
+const USER_PATIENT_SERVICE_URL = process.env.USER_PATIENT_SERVICE_URL;
 
-console.log("MONGO_URI:", MONGO_URI);
+console.log("MONGO_URI:", MONGO_URI ? "✔️ Configured" : "❌ Missing");
+console.log("INTERNAL_SERVICE_KEY:", INTERNAL_SERVICE_KEY ? "✔️ Configured" : "❌ Missing");
+console.log("USER_PATIENT_SERVICE_URL:", USER_PATIENT_SERVICE_URL ? "✔️ Configured" : "❌ Missing");
 
 if (!MONGO_URI) {
   console.error("❌ MONGO_URI is missing in .env");
   process.exit(1);
+}
+
+if (!INTERNAL_SERVICE_KEY || !USER_PATIENT_SERVICE_URL) {
+  console.warn("⚠️ Warning: Inter-service communication variables (INTERNAL_SERVICE_KEY or USER_PATIENT_SERVICE_URL) are missing.");
 }
 
 const startServer = async () => {
@@ -123,6 +131,7 @@ const startServer = async () => {
 
     app.listen(PORT, () => {
       console.log(`🚀 Doctor Service running on port ${PORT}`);
+      console.log(`📌 Status: Service fully initialized and ready to handle requests.`);
     });
   } catch (error) {
     console.error("❌ MongoDB connection failed:", error.message);

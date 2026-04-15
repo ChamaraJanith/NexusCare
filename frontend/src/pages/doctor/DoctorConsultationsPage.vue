@@ -56,11 +56,11 @@
               @click="joinVideo(apt)"
             />
 
-            <!-- Write prescription -->
+            <!-- Write prescription / Start Consultation -->
             <q-btn
               unelevated dense size="sm"
-              color="teal" icon="edit_note" label="Prescription"
-              @click="openPrescription(apt)"
+              color="teal" icon="edit_note" label="Start Consultation"
+              @click="startConsultation(apt)"
             />
 
             <!-- Mark complete -->
@@ -76,50 +76,11 @@
       </q-card>
     </div>
 
-    <!-- Prescription Dialog -->
-    <q-dialog v-model="rxDlg.show" persistent>
-      <q-card style="min-width: 400px; border-radius: 14px;" class="q-pa-md">
-        <q-card-section>
-          <div class="text-h6 text-weight-bold">Write Prescription</div>
-          <div class="text-grey-6 text-caption q-mt-xs">
-            Patient: {{ rxDlg.appointment?.patientName }}
-          </div>
-        </q-card-section>
-
-        <q-card-section class="column q-gutter-sm">
-          <q-input
-            v-model="rxDlg.medicines"
-            label="Medicines (comma separated)"
-            outlined
-            hint="e.g. Paracetamol 500mg, Amoxicillin 250mg"
-          />
-          <q-input
-            v-model="rxDlg.notes"
-            label="Notes / Instructions"
-            outlined
-            type="textarea"
-            rows="3"
-          />
-        </q-card-section>
-
-        <q-card-actions align="right">
-          <q-btn flat label="Cancel" color="grey" v-close-popup />
-          <q-btn
-            unelevated label="Save Prescription"
-            color="teal"
-            :loading="rxDlg.loading"
-            :disable="!rxDlg.medicines.trim()"
-            @click="savePrescription"
-          />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
-
   </q-page>
 </template>
 
 <script setup>
-import { ref, onMounted, reactive } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import axios from 'axios';
@@ -132,13 +93,7 @@ const consultations = ref([]);
 const loading = ref(true);
 const completingId = ref('');
 
-const rxDlg = reactive({
-  show: false,
-  appointment: null,
-  medicines: '',
-  notes: '',
-  loading: false
-});
+
 
 const getToken = () =>
   localStorage.getItem('token') || localStorage.getItem('nexus_token');
@@ -189,46 +144,15 @@ const joinVideo = (apt) => {
   });
 };
 
-// ── Open prescription dialog ──────────────────────────────────────────────────
-const openPrescription = (apt) => {
-  rxDlg.appointment = apt;
-  rxDlg.medicines = '';
-  rxDlg.notes = '';
-  rxDlg.show = true;
-};
-
-// ── Save prescription via MS2 ─────────────────────────────────────────────────
-const savePrescription = async () => {
-  if (!rxDlg.medicines.trim()) return;
-  rxDlg.loading = true;
-
-  const token = getToken();
-  const medicines = rxDlg.medicines
-    .split(',')
-    .map(m => m.trim())
-    .filter(Boolean);
-
-  try {
-    await axios.post(
-      `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/prescriptions`,
-      {
-        patientId: rxDlg.appointment.patientId,
-        medicines,
-        notes: rxDlg.notes
-      },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    rxDlg.show = false;
-    $q.notify({ type: 'positive', message: 'Prescription saved!' });
-  } catch (err) {
-    $q.notify({
-      type: 'negative',
-      message: err.response?.data?.message || 'Failed to save prescription.'
-    });
-  } finally {
-    rxDlg.loading = false;
-  }
+// ── Start Consultation ────────────────────────────────────────────────────────
+const startConsultation = (apt) => {
+  router.push({
+    path: '/doctor/prescription',
+    query: {
+      patientId: apt.patientId,
+      appointmentId: apt._id
+    }
+  });
 };
 
 // ── Mark complete ─────────────────────────────────────────────────────────────
