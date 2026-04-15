@@ -107,8 +107,13 @@
                   <div class="text-grey-7 text-caption ellipsis">
                     {{ apt.date || '—' }} • {{ apt.time || '—' }} • {{ apt.appointmentType || 'Standard' }}
                   </div>
-                  <div v-if="resolveHospital(apt)" class="text-grey-5 text-caption ellipsis">
-                    <q-icon name="local_hospital" size="12px" class="q-mr-xs" />{{ resolveHospital(apt) }}
+                  <div class="text-grey-5 text-caption ellipsis">
+                    <span v-if="apt.slotType === 'ONLINE' || apt.appointmentType === 'ONLINE'">
+                      <q-icon name="videocam" size="12px" class="q-mr-xs" />Online Consultation
+                    </span>
+                    <span v-else>
+                      <q-icon name="local_hospital" size="12px" class="q-mr-xs" />{{ apt.hospital || apt.doctorHospital || 'Unknown Hospital' }}
+                    </span>
                   </div>
                 </div>
                 <div class="row items-center q-gutter-x-sm flex-shrink-0 q-ml-md">
@@ -154,8 +159,13 @@
                   <div class="text-grey-7 text-caption ellipsis">
                     {{ apt.date || '—' }} • {{ apt.time || '—' }} • {{ apt.appointmentType || 'Standard' }}
                   </div>
-                  <div v-if="resolveHospital(apt)" class="text-grey-5 text-caption ellipsis">
-                    <q-icon name="local_hospital" size="12px" class="q-mr-xs" />{{ resolveHospital(apt) }}
+                  <div class="text-grey-5 text-caption ellipsis">
+                    <span v-if="apt.slotType === 'ONLINE' || apt.appointmentType === 'ONLINE'">
+                      <q-icon name="videocam" size="12px" class="q-mr-xs" />Online Consultation
+                    </span>
+                    <span v-else>
+                      <q-icon name="local_hospital" size="12px" class="q-mr-xs" />{{ apt.hospital || apt.doctorHospital || 'Unknown Hospital' }}
+                    </span>
                   </div>
                 </div>
                 <div class="row items-center q-gutter-x-sm flex-shrink-0 q-ml-md">
@@ -198,8 +208,13 @@
                   <div class="text-grey-7 text-caption ellipsis">
                     {{ apt.date || '—' }} • {{ apt.time || '—' }} • {{ apt.appointmentType || 'Standard' }}
                   </div>
-                  <div v-if="resolveHospital(apt)" class="text-grey-5 text-caption ellipsis">
-                    <q-icon name="local_hospital" size="12px" class="q-mr-xs" />{{ resolveHospital(apt) }}
+                  <div class="text-grey-5 text-caption ellipsis">
+                    <span v-if="apt.slotType === 'ONLINE' || apt.appointmentType === 'ONLINE'">
+                      <q-icon name="videocam" size="12px" class="q-mr-xs" />Online Consultation
+                    </span>
+                    <span v-else>
+                      <q-icon name="local_hospital" size="12px" class="q-mr-xs" />{{ apt.hospital || apt.doctorHospital || 'Unknown Hospital' }}
+                    </span>
                   </div>
                   <div v-if="apt.rejectionReason" class="text-red-5 text-caption ellipsis q-mt-xs">
                     Rejected: {{ apt.rejectionReason }}

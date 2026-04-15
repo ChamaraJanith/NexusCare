@@ -12,11 +12,11 @@ const enrichSlotsWithDoctorInfo = async (doctorId, slots) => {
     const doctor = await Doctor.findOne({ doctorId }).lean();
     if (!doctor || !slots.length) return slots;
 
-    // Add hospital to each slot, and preserve denormalized fee fields
+// Add hospital to each slot, and preserve denormalized fee fields
     return slots.map((slot) => ({
       ...slot,
-      hospital: slot.hospital || doctor.hospital || "Hospital",
-      hospitalId: slot.hospitalId || doctor._id?.toString() || doctorId,
+      hospital: slot.slotType === "ONLINE" ? "Online" : slot.hospital || "Unknown Hospital",
+      hospitalId: slot.slotType === "ONLINE" ? null : slot.hospitalId || null,
       hospitalFee: slot.hospitalFee ?? 0,
       serviceFee: slot.serviceFee ?? 0,
     }));
@@ -24,7 +24,8 @@ const enrichSlotsWithDoctorInfo = async (doctorId, slots) => {
     console.warn("⚠️ Failed to enrich slots with doctor info:", error.message);
     return slots.map((slot) => ({
       ...slot,
-      hospital: slot.hospital || "Hospital",
+      hospital: slot.slotType === "ONLINE" ? "Online" : slot.hospital || "Unknown Hospital",
+      hospitalId: slot.slotType === "ONLINE" ? null : slot.hospitalId || null,
       hospitalFee: slot.hospitalFee ?? 0,
       serviceFee: slot.serviceFee ?? 0,
     }));
