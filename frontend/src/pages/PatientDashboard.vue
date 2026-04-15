@@ -1055,7 +1055,6 @@ const uploadingReport = ref(false)
 const editApptDialog = ref(false)
 const updatingAppt = ref(false)
 const apptFilter = ref('ALL')
-const expandedRx = ref(null)
 const unreadCount = ref(2)
 const avatarInputRef = ref(null)
 
