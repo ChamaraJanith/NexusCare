@@ -133,6 +133,40 @@ router.put("/:id", validateUpdateAppointment, updateAppointment);
 router.delete("/:id", cancelAppointment);
 
 
+// 👨‍💼 ADMIN — GET ALL APPOINTMENTS
+router.get("/admin/all", async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "No token provided" });
+
+    const token = authHeader.split(" ")[1];
+    const userData = await verifyUser(token);
+    if (userData.role !== "admin") return res.status(403).json({ error: "Admin only" });
+
+    const { status, type, paymentStatus, page = 1, limit = 100 } = req.query;
+    const filter = {};
+    if (status)        filter.status        = status;
+    if (type)          filter.appointmentType = type;
+    if (paymentStatus) filter.paymentStatus  = paymentStatus;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const [appointments, total] = await Promise.all([
+      Appointment.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit))
+        .lean(),
+      Appointment.countDocuments(filter),
+    ]);
+
+    res.json({ success: true, total, page: parseInt(page), data: appointments });
+  } catch (error) {
+    console.error("❌ ADMIN ALL APPOINTMENTS ERROR:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // 👨‍💼 ADMIN VERIFY APPOINTMENT
 router.put("/admin/verify/:id", async (req, res) => {
   try {
