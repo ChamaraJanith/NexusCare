@@ -199,11 +199,38 @@ const uploadMedicalReport = async (req, res, next) => {
 
 // ─── GET ALL MEDICAL REPORTS ──────────────────────────────────────────────────
 // GET /api/patient/reports
-// Protected - patient only
+// Protected - patient or doctor
 const getMedicalReports = async (req, res, next) => {
   try {
+    let query = {};
+
+    if (req.user.role === 'doctor') {
+      if (!req.query.patientId) {
+        return res.status(400).json({
+          success: false,
+          message: "Doctor must provide patientId query parameter.",
+        });
+      }
+      // Match by patientId like "PAT-XXXX"
+      // Wait, PatientProfile has patientId?
+      // Yes, in addPrescription it does: findOneAndUpdate({ patientId })
+      // Let's see if PatientProfile has patientId field or if we need to look up userId.
+      // Wait, see getPatientByPatientId: PatientProfile.findOne({ patientId }) is used!
+      // But wait! Let's check updateProfile to see how it looks: PatientProfile.findOneAndUpdate({ userId: req.user.userId })
+      // Ah, PatientProfile has both patientId (which is the roleId) and userId.
+      // Wait! addPrescription uses PatientProfile.findOneAndUpdate({ patientId })
+      // Let's use patientId if we assume it exists in the schema. But to be safe, getPatientByPatientId uses `{ patientId }`. Wait string interpolation might be better!
+      // In getPatientByPatientId: PatientProfile.findOne({ patientId })
+      
+      const profileByPat = await PatientProfile.findOne({ patientId: req.query.patientId });
+      query = profileByPat ? { userId: profileByPat.userId } : { patientId: req.query.patientId };
+      // Fallback used above just in case. But let's just query what PatientProfile.findOne does.
+    } else {
+      query = { userId: req.user.userId };
+    }
+
     const profile = await PatientProfile.findOne(
-      { userId: req.user.userId },
+      query,
       { medicalReports: 1 } // Only return reports field
     );
 
@@ -416,6 +443,50 @@ const getPatientByPatientId = async (req, res, next) => {
   }
 };
 
+// ─── GET PATIENT FOR DOCTOR (Frontend access) ──────────────────────────────
+// GET /api/patient/doctor/:patientId
+// Protected with JWT (doctor only)
+const getPatientForDoctor = async (req, res, next) => {
+  try {
+    const { patientId } = req.params;
+
+    const profile = await PatientProfile.findOne({ patientId });
+    const user = profile
+      ? await User.findOne({ userId: profile.userId })
+      : null;
+
+    if (!profile || !user) {
+      return res.status(404).json({
+        success: false,
+        message: "Patient not found.",
+      });
+    }
+
+    // Return minimal safe data
+    res.status(200).json({
+      success: true,
+      data: {
+        userId: user.userId,
+        patientId: user.roleId,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        address: profile.address,
+        emergencyContact: profile.emergencyContact,
+        gender: profile.gender,
+        age: profile.dateOfBirth
+            ? new Date().getFullYear() - new Date(profile.dateOfBirth).getFullYear()
+            : null,
+        bloodGroup: profile.bloodGroup,
+        allergies: profile.allergies,
+        chronicConditions: profile.chronicConditions,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getProfile,
   updateProfile,
@@ -426,4 +497,5 @@ module.exports = {
   getPrescriptions,
   addPrescription,
   getPatientByPatientId,
+  getPatientForDoctor,
 };

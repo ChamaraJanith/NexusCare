@@ -11,15 +11,29 @@ const {
   getPrescriptions,
   addPrescription,
   getPatientByPatientId,
-} = require("../controllers/patientController");
+  getPatientForDoctor,
+} = require("../controllers/patientcontroller");
 const { protect, restrictTo } = require("../middleware/auth");
 const {
   uploadProfileImage: multerProfileImage,
   uploadMedicalReport: multerMedicalReport,
 } = require("../middleware/upload");
 
-// All routes below require patient authentication
+// Internal routes (called by other microservices, NOT protected by JWT)
+// These use x-internal-service-key header instead
+router.post("/prescriptions/add", addPrescription);
+router.get("/internal/:patientId", getPatientByPatientId);
+
+// All routes below require authentication
 router.use(protect);
+
+// Routes accessible by both patients and doctors
+router.get("/reports", restrictTo("patient", "doctor"), getMedicalReports);
+
+// Routes accessible by doctors only
+router.get("/doctor/:patientId", restrictTo("doctor"), getPatientForDoctor);
+
+// All routes below require patient role only
 router.use(restrictTo("patient"));
 
 // Profile routes
@@ -31,8 +45,7 @@ router.post(
   uploadProfileImage
 );
 
-// Medical reports routes
-router.get("/reports", getMedicalReports);
+// Medical reports routes (Create, Delete)
 router.post(
   "/reports",
   multerMedicalReport.single("report"), // Field name in form-data: "report"
@@ -42,10 +55,5 @@ router.delete("/reports/:reportId", deleteMedicalReport);
 
 // Prescriptions routes (read-only for patient)
 router.get("/prescriptions", getPrescriptions);
-
-// Internal routes (called by other microservices, NOT protected by JWT)
-// These use x-internal-service-key header instead
-router.post("/prescriptions/add", addPrescription);
-router.get("/internal/:patientId", getPatientByPatientId);
 
 module.exports = router;

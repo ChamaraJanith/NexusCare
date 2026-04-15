@@ -57,6 +57,7 @@ const routes = [
       { path: 'schedule', component: () => import('pages/doctor/DoctorSchedulePage.vue') },
       { path: 'patients', component: () => import('pages/doctor/DoctorPatientsPage.vue') },
       { path: 'consultations', component: () => import('pages/doctor/DoctorConsultationsPage.vue') },
+      { path: 'prescription', component: () => import('pages/doctor/DoctorPrescriptionPage.vue') },
       { path: 'availability', component: () => import('pages/doctor/DoctorAvailabilityPage.vue') },
       { path: 'profile', component: () => import('pages/doctor/DoctorProfilePage.vue') },
       { path: 'reports', component: () => import('pages/doctor/DoctorReportsPage.vue') },
