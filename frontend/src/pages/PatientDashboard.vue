@@ -557,60 +557,108 @@
             <div
               v-for="ap in filteredAppts"
               :key="ap._id || ap.appointmentId"
-              class="appt-item"
+              class="appt-card"
               :class="'appt-status-' + ap.status.toLowerCase()"
             >
-              <!-- Date -->
-              <div class="appt-date-block">
+              <!-- Left accent bar by status -->
+              <div class="appt-accent-bar" :class="'accent-' + ap.status.toLowerCase()"></div>
+
+              <!-- Date block -->
+              <div class="appt-date-col">
                 <span class="appt-day">{{ fmtDay(ap.date) }}</span>
                 <span class="appt-month">{{ fmtMonth(ap.date) }}</span>
+                <span class="appt-year">{{ ap.date ? new Date(ap.date).getFullYear() : '' }}</span>
               </div>
-      
-              <!-- Info -->
-              <div class="appt-info">
-                <div class="appt-title">{{ ap.patientName || profileData.name }}</div>
-                <div class="appt-meta-row">
-                  {{ ap.time }} · {{ ap.appointmentType }} · Queue #{{ ap.queueNumber || '—' }}
+
+              <!-- Main info -->
+              <div class="appt-body">
+                <!-- Row 1: Doctor name + type badge -->
+                <div class="appt-row-top">
+                  <div class="appt-doctor-name">
+                    Dr. {{ ap.doctorName || doctorNames[ap.doctorId] || 'Unknown Physician' }}
+                  </div>
+                  <span class="appt-type-badge" :class="ap.appointmentType === 'ONLINE' ? 'type-online' : 'type-physical'">
+                    <span v-if="ap.appointmentType === 'ONLINE'">⬤ Online</span>
+                    <span v-else>⬤ Physical</span>
+                  </span>
                 </div>
-                <div v-if="doctorNames[ap.doctorId]" class="appt-doctor-row">
-                  Dr. {{ doctorNames[ap.doctorId] }}
+
+                <!-- Row 2: Specialization -->
+                <div v-if="ap.doctorSpecialization" class="appt-specialization">
+                  {{ ap.doctorSpecialization }}
                 </div>
-                <div v-if="ap.charges?.total" class="appt-payment-row">
-                  LKR {{ ap.charges.total.toLocaleString() }}
+
+                <!-- Row 3: Appointment venue -->
+                <div class="appt-location" v-if="ap.venue || ap.appointmentType === 'ONLINE'">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                  <span class="venue-label">Venue</span>
+                  {{ ap.venue || 'Online Consultation' }}
+                </div>
+
+                <!-- Row 4: Time · Queue -->
+                <div class="appt-meta-chips">
+                  <span class="meta-chip">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    {{ ap.time }}
+                  </span>
+                  <span class="meta-chip">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    Queue #{{ ap.queueNumber || '—' }}
+                  </span>
+                  <span v-if="ap.charges?.total" class="meta-chip chip-amount">
+                    LKR {{ ap.charges.total.toLocaleString() }}
+                  </span>
                   <span class="pay-badge" :class="ap.paymentStatus === 'PAID' ? 'pay-paid' : 'pay-pending'">
                     {{ ap.paymentStatus || 'PENDING' }}
                   </span>
                 </div>
-                <div v-if="ap.status === 'CANCELLED' && ap.rejectionReason" class="appt-rejection-row">
+
+                <!-- Cancellation reason -->
+                <div v-if="ap.status === 'CANCELLED' && ap.rejectionReason" class="appt-rejection">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                   {{ ap.rejectionReason }}
                 </div>
               </div>
-      
-              <!-- Status + Actions -->
-              <div class="appt-right">
+
+              <!-- Right: status + actions -->
+              <div class="appt-right-col">
                 <span class="status-pill" :class="statusClass(ap.status)">{{ ap.status }}</span>
-      
-                <div class="appt-action-group">
+
+                <div class="appt-actions">
                   <template v-if="ap.status === 'PENDING'">
-                    <div class="appt-status-hint">Awaiting doctor</div>
-                    <button class="appt-cancel-btn" @click="cancelAppt(ap._id || ap.appointmentId)">✕</button>
+                    <span class="hint-text">Awaiting confirmation</span>
+                    <button class="btn-icon-cancel" @click="cancelAppt(ap._id || ap.appointmentId)" title="Cancel">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
                   </template>
-      
+
                   <template v-else-if="ap.status === 'CONFIRMED' && ap.paymentStatus !== 'PAID'">
-                    <button class="btn-pay-now" @click="goToPayment(ap)">Pay Now</button>
+                    <button class="btn-pay" @click="goToPayment(ap)">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                      Pay Now
+                    </button>
                   </template>
-      
+
                   <template v-else-if="ap.status === 'CONFIRMED' && ap.paymentStatus === 'PAID'">
-                    <button class="btn-receipt" @click="viewReceipt(ap)">Receipt</button>
-                    <button v-if="ap.appointmentType === 'ONLINE'" class="btn-video" @click="joinVideo(ap)">Join</button>
+                    <button class="btn-receipt" @click="viewReceipt(ap)">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                      Receipt
+                    </button>
+                    <button v-if="ap.appointmentType === 'ONLINE'" class="btn-join" @click="joinVideo(ap)">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+                      Join
+                    </button>
                   </template>
-      
+
                   <template v-else-if="ap.status === 'COMPLETED'">
-                    <button class="btn-receipt" @click="viewReceipt(ap)">Receipt</button>
+                    <button class="btn-receipt" @click="viewReceipt(ap)">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                      Receipt
+                    </button>
                   </template>
-      
+
                   <template v-else-if="ap.status === 'CANCELLED'">
-                    <span class="appt-status-hint cancelled-hint">Cancelled</span>
+                    <span class="hint-text cancelled-hint">Cancelled</span>
                   </template>
                 </div>
               </div>
@@ -966,8 +1014,30 @@ const loadAppointments = async () => {
     if (!patId) return
  
     const { data } = await apptApi.get(`/api/appointments/patient/${patId}`)
-    appointments.value = (Array.isArray(data) ? data : data.data || [])
+    const appts = (Array.isArray(data) ? data : data.data || [])
       .sort((a, b) => new Date(b.date) - new Date(a.date))
+
+    // ── Resolve hospital names for appointments missing venue ───────
+    // Fetch hospital list once, then patch venue onto each appointment
+    try {
+      const needsHospital = appts.filter(a => !a.venue && a.hospitalId && a.appointmentType === 'PHYSICAL')
+      if (needsHospital.length > 0) {
+        const hRes = await apptApi.get('/api/hospitals')
+        const hospitals = hRes.data?.data || hRes.data || []
+        const hospitalMap = {}
+        hospitals.forEach(h => {
+          if (h.hospitalId) hospitalMap[h.hospitalId] = h.name
+          if (h._id) hospitalMap[h._id] = h.name
+        })
+        appts.forEach(a => {
+          if (!a.venue && a.hospitalId && hospitalMap[a.hospitalId]) {
+            a.venue = hospitalMap[a.hospitalId]
+          }
+        })
+      }
+    } catch { /* hospital service down — skip */ }
+
+    appointments.value = appts
  
     // ── Resolve doctor names from payment history ───────
     try {
@@ -2050,56 +2120,214 @@ const joinVideo = (ap) => {
 }
 
 .appointments-list { display: flex; flex-direction: column; gap: 12px; }
-.appt-item {
+
+/* ══════════════════════════════════════════
+   APPOINTMENT CARD
+══════════════════════════════════════════ */
+.appt-card {
   display: flex;
-  align-items: center;
-  gap: 16px;
-  background: rgba(255,255,255,0.02);
-  border: 1px solid rgba(255,255,255,0.05);
-  border-radius: 14px;
-  padding: 16px 18px;
-  transition: all 0.25s;
-  flex-wrap: wrap;
+  align-items: stretch;
+  background: rgba(10, 18, 40, 0.75);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: all 0.22s ease;
+  position: relative;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.2);
 }
-.appt-item:hover { background: rgba(255,255,255,0.04); }
-.appt-date-block {
+.appt-card:hover {
+  border-color: rgba(99,179,237,0.3);
+  background: rgba(10, 18, 40, 0.95);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.35);
+}
+
+/* ── Left accent bar ── */
+.appt-accent-bar { width: 5px; flex-shrink: 0; }
+.accent-pending   { background: linear-gradient(180deg, #f59e0b, #d97706); }
+.accent-confirmed { background: linear-gradient(180deg, #3b82f6, #2563eb); }
+.accent-completed { background: linear-gradient(180deg, #10b981, #059669); }
+.accent-cancelled { background: linear-gradient(180deg, #6b7280, #4b5563); }
+.accent-verified  { background: linear-gradient(180deg, #8b5cf6, #7c3aed); }
+
+/* ── Date column ── */
+.appt-date-col {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: rgba(139,92,246,0.1);
-  border: 1px solid rgba(139,92,246,0.15);
-  border-radius: 10px;
-  padding: 8px 14px;
-  min-width: 54px;
+  justify-content: center;
+  padding: 18px 16px;
+  min-width: 68px;
+  background: rgba(255,255,255,0.025);
+  border-right: 1px solid rgba(255,255,255,0.06);
   flex-shrink: 0;
+  gap: 1px;
 }
-.appt-day { font-size: 1.4rem; font-weight: 800; color: #f1f5f9; line-height: 1; }
-.appt-month { font-size: 10px; font-weight: 700; color: #a78bfa; text-transform: uppercase; }
-.appt-info { flex: 1; min-width: 180px; }
-.appt-title { font-size: 14px; font-weight: 700; color: #e2e8f0; margin-bottom: 4px; }
-.appt-sub { font-size: 12px; color: #64748b; display: flex; align-items: center; gap: 4px; margin-bottom: 4px; }
-.appt-sub svg { flex-shrink: 0; }
-.appt-payment { font-size: 12px; color: #34d399; display: flex; align-items: center; gap: 6px; }
-.pay-badge { font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 6px; }
-.pay-paid { background: rgba(16,185,129,0.12); color: #34d399; }
-.pay-pending { background: rgba(245,158,11,0.12); color: #fbbf24; }
-.appt-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
-.appt-btns { display: flex; gap: 6px; }
-.appt-edit-btn, .appt-cancel-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  border: none;
+.appt-day   { font-size: 1.75rem; font-weight: 900; color: #f1f5f9; line-height: 1; }
+.appt-month { font-size: 10px; font-weight: 700; color: #818cf8; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 3px; }
+.appt-year  { font-size: 9px; color: #334155; margin-top: 1px; }
+
+/* ── Body ── */
+.appt-body {
+  flex: 1;
+  padding: 16px 18px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/* Row 1: Doctor name + type badge */
+.appt-row-top {
   display: flex;
   align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
+  gap: 10px;
+  flex-wrap: wrap;
 }
-.appt-edit-btn { background: rgba(6,182,212,0.1); color: #22d3ee; }
-.appt-edit-btn:hover { background: rgba(6,182,212,0.2); }
-.appt-cancel-btn { background: rgba(239,68,68,0.1); color: #f87171; }
-.appt-cancel-btn:hover { background: rgba(239,68,68,0.2); }
+.appt-doctor-name {
+  font-size: 16px;
+  font-weight: 800;
+  color: #f1f5f9;
+  letter-spacing: -0.3px;
+}
+.appt-type-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.4px;
+  flex-shrink: 0;
+}
+.type-online   { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
+.type-physical { background: rgba(139,92,246,0.15); color: #a78bfa; border: 1px solid rgba(139,92,246,0.3); }
+
+/* Row 2: Specialization */
+.appt-specialization {
+  font-size: 12.5px;
+  color: #38bdf8;
+  font-weight: 600;
+  letter-spacing: 0.1px;
+}
+
+/* Row 3: Venue — prominent */
+.appt-location {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #94a3b8;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 7px;
+  padding: 5px 10px;
+  width: fit-content;
+}
+.appt-location svg { color: #64748b; flex-shrink: 0; }
+.venue-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding-right: 6px;
+  border-right: 1px solid rgba(255,255,255,0.08);
+}
+
+/* Row 4: Meta chips */
+.appt-meta-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+.meta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  color: #94a3b8;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  padding: 4px 10px;
+  border-radius: 7px;
+  font-weight: 600;
+}
+.meta-chip svg { color: #64748b; }
+.chip-amount { color: #cbd5e1; font-weight: 700; background: rgba(255,255,255,0.06); }
+
+.pay-badge {
+  font-size: 10px; font-weight: 800;
+  padding: 4px 10px; border-radius: 7px; letter-spacing: 0.6px;
+}
+.pay-paid    { background: rgba(16,185,129,0.12); color: #34d399; border: 1px solid rgba(16,185,129,0.25); }
+.pay-pending { background: rgba(245,158,11,0.12); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); }
+
+/* Cancellation reason */
+.appt-rejection {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; color: #f87171; margin-top: 4px;
+  background: rgba(239,68,68,0.07);
+  border: 1px solid rgba(239,68,68,0.15);
+  border-radius: 6px; padding: 5px 10px;
+}
+
+/* ── Right column ── */
+.appt-right-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 16px 18px;
+  gap: 10px;
+  flex-shrink: 0;
+  min-width: 130px;
+  border-left: 1px solid rgba(255,255,255,0.05);
+  background: rgba(255,255,255,0.01);
+}
+.appt-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 7px;
+}
+.hint-text { font-size: 11px; color: #475569; font-style: italic; }
+.cancelled-hint { color: #6b7280; }
+
+/* ── Action buttons ── */
+.btn-pay, .btn-receipt, .btn-join, .btn-icon-cancel {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; font-weight: 700;
+  padding: 7px 15px; border-radius: 9px; border: none;
+  cursor: pointer; transition: all 0.2s;
+  letter-spacing: 0.3px; white-space: nowrap;
+}
+.btn-pay {
+  background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+  color: #fff;
+  box-shadow: 0 3px 14px rgba(37,99,235,0.35);
+}
+.btn-pay:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.btn-receipt {
+  background: rgba(255,255,255,0.05);
+  color: #94a3b8;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.btn-receipt:hover { background: rgba(255,255,255,0.1); color: #e2e8f0; }
+.btn-join {
+  background: linear-gradient(135deg, #059669, #10b981);
+  color: #fff;
+  box-shadow: 0 3px 14px rgba(16,185,129,0.3);
+}
+.btn-join:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.btn-icon-cancel {
+  background: rgba(239,68,68,0.08);
+  color: #f87171;
+  border: 1px solid rgba(239,68,68,0.15);
+  padding: 7px 12px;
+}
+.btn-icon-cancel:hover { background: rgba(239,68,68,0.18); }
 
 /* ════════════════════════════════════════════════════
    DIALOGS
@@ -2164,7 +2392,8 @@ const joinVideo = (ap) => {
   .form-card { padding: 20px; }
   .content-card { padding: 18px; }
   .header-actions .logout-btn span { display: none; }
-  .appt-item { gap: 10px; }
+  .appt-card { gap: 0; }
+  .appt-right-col { min-width: 100px; }
 }
 @media (max-width: 500px) {
   .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -2179,59 +2408,11 @@ const joinVideo = (ap) => {
   min-width: 18px; height: 18px; border-radius: 9px;
   padding: 0 5px; margin-left: 4px;
 }
-.appt-doctor-row {
-  display: flex; align-items: center; gap: 4px;
-  font-size: 12px; color: #22d3ee; margin-bottom: 4px;
-}
-.appt-meta-row {
-  display: flex; align-items: center; gap: 4px;
-  font-size: 12px; color: #64748b; margin-bottom: 4px;
-}
-.appt-payment-row {
-  display: flex; align-items: center; gap: 6px;
-  font-size: 12px; color: #34d399;
-}
-.pay-badge { font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 6px; }
-.pay-paid    { background: rgba(16,185,129,0.12); color: #34d399; }
-.pay-pending { background: rgba(245,158,11,0.12);  color: #fbbf24; }
-.appt-rejection-row {
-  display: flex; align-items: flex-start; gap: 4px;
-  font-size: 11px; color: #f87171; margin-top: 4px; font-style: italic;
-}
-.appt-action-group {
-  display: flex; flex-direction: column; align-items: flex-end; gap: 6px; margin-top: 4px;
-}
-.appt-status-hint { font-size: 11px; color: #64748b; font-style: italic; }
-.cancelled-hint   { color: #f87171; }
- 
-.btn-pay-now {
-  display: inline-flex; align-items: center; gap: 5px;
-  background: linear-gradient(135deg, rgba(16,185,129,0.2), rgba(5,150,105,0.2));
-  border: 1px solid rgba(16,185,129,0.35); color: #34d399;
-  border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 700;
-  cursor: pointer; transition: all 0.2s; white-space: nowrap;
-}
-.btn-pay-now:hover { background: rgba(16,185,129,0.3); transform: translateY(-1px); }
- 
-.btn-receipt {
-  display: inline-flex; align-items: center; gap: 5px;
-  background: rgba(6,182,212,0.1); border: 1px solid rgba(6,182,212,0.25); color: #22d3ee;
-  border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 700;
-  cursor: pointer; transition: all 0.2s; white-space: nowrap;
-}
-.btn-receipt:hover { background: rgba(6,182,212,0.2); }
- 
-.btn-video {
-  display: inline-flex; align-items: center; gap: 5px;
-  background: rgba(139,92,246,0.12); border: 1px solid rgba(139,92,246,0.3); color: #a78bfa;
-  border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 700;
-  cursor: pointer; transition: all 0.2s; white-space: nowrap;
-}
-.btn-video:hover { background: rgba(139,92,246,0.22); }
- 
-.appt-status-pending   { border-left: 3px solid rgba(245,158,11,0.45); }
-.appt-status-confirmed { border-left: 3px solid rgba(16,185,129,0.45); }
-.appt-status-completed { border-left: 3px solid rgba(148,163,184,0.3); }
-.appt-status-cancelled { border-left: 3px solid rgba(239,68,68,0.3); opacity: 0.7; }
+
+/* old status border overrides — now handled by accent bar */
+.appt-status-pending   { opacity: 1; }
+.appt-status-confirmed { opacity: 1; }
+.appt-status-completed { opacity: 1; }
+.appt-status-cancelled { opacity: 0.7; }
 
 </style>
