@@ -12,7 +12,7 @@ const {
   addPrescription,
   getPatientByPatientId,
   getPatientForDoctor,
-} = require("../controllers/patientcontroller");
+} = require("../controllers/patientController");
 const { protect, restrictTo } = require("../middleware/auth");
 const {
   uploadProfileImage: multerProfileImage,
