@@ -572,42 +572,85 @@
 
               <!-- Main info -->
               <div class="appt-body">
-                <!-- Row 1: Doctor name + type badge -->
+
+                <!-- Row 1: Doctor avatar + name + type badge -->
                 <div class="appt-row-top">
-                  <div class="appt-doctor-name">
-                    Dr. {{ ap.doctorName || doctorNames[ap.doctorId] || 'Unknown Physician' }}
+                  <div class="appt-doctor-avatar" v-if="ap.doctorProfileImage">
+                    <img :src="ap.doctorProfileImage" :alt="ap.doctorName" @error="e => e.target.style.display='none'" />
+                  </div>
+                  <div class="appt-doctor-avatar appt-doctor-avatar-fallback" v-else>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                  </div>
+                  <div class="appt-doctor-info">
+                    <div class="appt-doctor-name">
+                      Dr. {{ ap.doctorName || doctorNames[ap.doctorId] || 'Unknown Physician' }}
+                    </div>
+                    <div v-if="ap.doctorSpecialization" class="appt-specialization">
+                      {{ ap.doctorSpecialization }}
+                    </div>
                   </div>
                   <span class="appt-type-badge" :class="ap.appointmentType === 'ONLINE' ? 'type-online' : 'type-physical'">
-                    <span v-if="ap.appointmentType === 'ONLINE'">⬤ Online</span>
-                    <span v-else>⬤ Physical</span>
+                    <span v-if="ap.appointmentType === 'ONLINE'">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-1px;margin-right:3px"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>Online
+                    </span>
+                    <span v-else>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-1px;margin-right:3px"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>Physical
+                    </span>
                   </span>
                 </div>
 
-                <!-- Row 2: Specialization -->
-                <div v-if="ap.doctorSpecialization" class="appt-specialization">
-                  {{ ap.doctorSpecialization }}
+                <!-- Row 2: Hospital + venue info -->
+                <div class="appt-hospital-row">
+                  <div class="appt-hospital-chip" v-if="ap.appointmentType === 'PHYSICAL'">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
+                    <span class="hospital-label">Hospital</span>
+                    <span class="hospital-name">{{ ap.doctorHospital || ap.venue || 'Not specified' }}</span>
+                  </div>
+                  <div class="appt-hospital-chip appt-online-chip" v-else>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/></svg>
+                    <span class="hospital-label">Mode</span>
+                    <span class="hospital-name">Online Video Consultation</span>
+                  </div>
+                  <div class="appt-id-chip">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-9 4h2v2h-2V8zm0 4h2v4h-2v-4zm-4-4h2v6H7V8zm8 6v-2h2v2h-2z"/></svg>
+                    {{ ap.appointmentId || ap._id?.slice(-6)?.toUpperCase() || '—' }}
+                  </div>
                 </div>
 
-                <!-- Row 3: Appointment venue -->
-                <div class="appt-location" v-if="ap.venue || ap.appointmentType === 'ONLINE'">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                  <span class="venue-label">Venue</span>
-                  {{ ap.venue || 'Online Consultation' }}
-                </div>
-
-                <!-- Row 4: Time · Queue -->
+                <!-- Row 3: Time · Queue · Patient -->
                 <div class="appt-meta-chips">
                   <span class="meta-chip">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                     {{ ap.time }}
                   </span>
                   <span class="meta-chip">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
                     Queue #{{ ap.queueNumber || '—' }}
                   </span>
-                  <span v-if="ap.charges?.total" class="meta-chip chip-amount">
-                    LKR {{ ap.charges.total.toLocaleString() }}
+                  <span class="meta-chip" v-if="ap.patientName">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    {{ ap.patientName }}
                   </span>
+                </div>
+
+                <!-- Row 4: Fee breakdown -->
+                <div class="appt-fee-row" v-if="ap.charges?.total">
+                  <span class="fee-item">
+                    <span class="fee-label">Doctor</span>
+                    <span class="fee-val">LKR {{ (ap.charges.doctorFee || 0).toLocaleString() }}</span>
+                  </span>
+                  <span class="fee-sep">+</span>
+                  <span class="fee-item" v-if="ap.appointmentType === 'PHYSICAL'">
+                    <span class="fee-label">Hospital</span>
+                    <span class="fee-val">LKR {{ (ap.charges.hospitalFee || 0).toLocaleString() }}</span>
+                  </span>
+                  <span class="fee-sep" v-if="ap.appointmentType === 'PHYSICAL'">+</span>
+                  <span class="fee-item">
+                    <span class="fee-label">Service</span>
+                    <span class="fee-val">LKR {{ (ap.charges.serviceFee || 0).toLocaleString() }}</span>
+                  </span>
+                  <span class="fee-sep">=</span>
+                  <span class="fee-total">LKR {{ ap.charges.total.toLocaleString() }}</span>
                   <span class="pay-badge" :class="ap.paymentStatus === 'PAID' ? 'pay-paid' : 'pay-pending'">
                     {{ ap.paymentStatus || 'PENDING' }}
                   </span>
@@ -629,6 +672,7 @@
                     <span class="hint-text">Awaiting confirmation</span>
                     <button class="btn-icon-cancel" @click="cancelAppt(ap._id || ap.appointmentId)" title="Cancel">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                      Cancel
                     </button>
                   </template>
 
@@ -1017,11 +1061,11 @@ const loadAppointments = async () => {
     const appts = (Array.isArray(data) ? data : data.data || [])
       .sort((a, b) => new Date(b.date) - new Date(a.date))
 
-    // ── Resolve hospital names for appointments missing venue ───────
-    // Fetch hospital list once, then patch venue onto each appointment
+    // ── Resolve channelling hospital names from hospitalId ───────
+    // Always resolve for PHYSICAL appointments — venue = channelling hospital selected by patient
     try {
-      const needsHospital = appts.filter(a => !a.venue && a.hospitalId && a.appointmentType === 'PHYSICAL')
-      if (needsHospital.length > 0) {
+      const physicalAppts = appts.filter(a => a.hospitalId && a.appointmentType === 'PHYSICAL')
+      if (physicalAppts.length > 0) {
         const hRes = await apptApi.get('/api/hospitals')
         const hospitals = hRes.data?.data || hRes.data || []
         const hospitalMap = {}
@@ -1030,12 +1074,12 @@ const loadAppointments = async () => {
           if (h._id) hospitalMap[h._id] = h.name
         })
         appts.forEach(a => {
-          if (!a.venue && a.hospitalId && hospitalMap[a.hospitalId]) {
-            a.venue = hospitalMap[a.hospitalId]
+          if (a.hospitalId && hospitalMap[a.hospitalId]) {
+            a.venue = hospitalMap[a.hospitalId]  // always overwrite with authoritative name
           }
         })
       }
-    } catch { /* hospital service down — skip */ }
+    } catch { /* hospital service down — keep existing venue value */ }
 
     appointments.value = appts
  
@@ -2177,18 +2221,30 @@ const joinVideo = (ap) => {
   gap: 5px;
 }
 
-/* Row 1: Doctor name + type badge */
+/* Row 1: Doctor avatar + name + type badge */
 .appt-row-top {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
 }
+.appt-doctor-avatar {
+  width: 36px; height: 36px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
+  border: 2px solid rgba(99,179,237,0.25);
+}
+.appt-doctor-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.appt-doctor-avatar-fallback {
+  background: rgba(99,179,237,0.1);
+  display: flex; align-items: center; justify-content: center;
+  color: #60a5fa;
+}
+.appt-doctor-info { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
 .appt-doctor-name {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 800;
   color: #f1f5f9;
   letter-spacing: -0.3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .appt-type-badge {
   font-size: 10px;
@@ -2197,44 +2253,52 @@ const joinVideo = (ap) => {
   border-radius: 20px;
   letter-spacing: 0.4px;
   flex-shrink: 0;
+  display: inline-flex; align-items: center;
 }
 .type-online   { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
 .type-physical { background: rgba(139,92,246,0.15); color: #a78bfa; border: 1px solid rgba(139,92,246,0.3); }
 
 /* Row 2: Specialization */
 .appt-specialization {
-  font-size: 12.5px;
+  font-size: 11.5px;
   color: #38bdf8;
   font-weight: 600;
   letter-spacing: 0.1px;
 }
 
-/* Row 3: Venue — prominent */
-.appt-location {
+/* Row 2: Hospital row */
+.appt-hospital-row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: #94a3b8;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+.appt-hospital-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600;
+  color: #a78bfa;
+  background: rgba(139,92,246,0.08);
+  border: 1px solid rgba(139,92,246,0.2);
+  border-radius: 7px; padding: 4px 10px;
+}
+.appt-online-chip { color: #60a5fa; background: rgba(59,130,246,0.08); border-color: rgba(59,130,246,0.2); }
+.hospital-label {
+  font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;
+  color: #6b7280; padding-right: 6px; border-right: 1px solid rgba(255,255,255,0.08);
+}
+.hospital-name { color: inherit; }
+.appt-id-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10.5px; font-weight: 700; font-family: monospace;
+  color: #475569;
   background: rgba(255,255,255,0.03);
   border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 7px;
-  padding: 5px 10px;
-  width: fit-content;
-}
-.appt-location svg { color: #64748b; flex-shrink: 0; }
-.venue-label {
-  font-size: 10px;
-  font-weight: 600;
-  color: #475569;
-  text-transform: uppercase;
+  border-radius: 6px; padding: 3px 8px;
   letter-spacing: 0.5px;
-  padding-right: 6px;
-  border-right: 1px solid rgba(255,255,255,0.08);
 }
 
-/* Row 4: Meta chips */
+/* Row 3: Meta chips */
 .appt-meta-chips {
   display: flex;
   align-items: center;
@@ -2263,6 +2327,20 @@ const joinVideo = (ap) => {
 }
 .pay-paid    { background: rgba(16,185,129,0.12); color: #34d399; border: 1px solid rgba(16,185,129,0.25); }
 .pay-pending { background: rgba(245,158,11,0.12); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); }
+
+/* Fee breakdown row */
+.appt-fee-row {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 8px; padding: 6px 12px;
+  margin-top: 2px;
+}
+.fee-item { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.fee-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; }
+.fee-val { font-size: 11.5px; font-weight: 700; color: #94a3b8; }
+.fee-sep { font-size: 11px; color: #334155; font-weight: 700; }
+.fee-total { font-size: 13px; font-weight: 900; color: #e2e8f0; margin-left: 2px; }
 
 /* Cancellation reason */
 .appt-rejection {
