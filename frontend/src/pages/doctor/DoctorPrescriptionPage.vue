@@ -301,66 +301,140 @@
           </q-card-section>
         </q-card>
 
-        <!-- Prescription History Display -->
-        <q-card v-if="prescriptionHistory.length > 0" flat bordered style="border-radius: 12px;">
-          <q-card-section class="bg-deep-purple text-white">
-            <div class="text-h6 text-weight-bold">Prescription Layout (Doctor View Only)</div>
-            <div class="text-caption">{{ prescriptionHistory.length }} past record(s) directly from doctor-service</div>
+        <!-- ══════════════════════════════════════════════════════════════════════
+             PRESCRIPTION HISTORY — Real Clinical Document Layout
+             Parts 2, 3, 6, 7, 8, 9
+             ══════════════════════════════════════════════════════════════════════ -->
+        <q-card flat bordered class="rx-history-card">
+          <q-card-section class="rx-history-header">
+            <div class="rx-header-title">Patient Clinical Prescription History</div>
+            <div class="rx-header-sub">Securely generated and maintained by NexusCare EMR system</div>
           </q-card-section>
           
           <q-card-section>
-             <div v-for="rx in prescriptionHistory" :key="rx._id" class="q-mb-md">
-                <q-card flat bordered style="border-radius: 10px;">
-                  <q-card-section>
-                    <div class="row items-center q-mb-sm">
-                      <q-icon name="medication" color="primary" size="sm" class="q-mr-sm" />
-                       <div class="text-weight-bold text-dark text-subtitle1">{{ rx.diagnosis || 'Prescription' }}</div>
-                       <q-space />
-                       <q-badge :color="rx.status === 'completed' ? 'green' : 'blue'" :label="rx.status || 'active'" />
-                       <span class="text-caption text-grey-6 q-ml-sm">{{ formatDate(rx.createdAt) }}</span>
+            <!-- Empty State (Part 9) -->
+            <div v-if="prescriptionHistory.length === 0" class="rx-empty-state">
+              <q-icon name="medication" size="56px" color="grey-4" />
+              <div class="rx-empty-title">No prescriptions yet</div>
+              <div class="rx-empty-sub">Prescriptions will appear here once created for this patient.</div>
+            </div>
+
+            <!-- Timeline Layout (Part 8) -->
+            <div v-else class="rx-timeline">
+              <div
+                v-for="(rx, index) in prescriptionHistory"
+                :key="rx._id"
+                class="rx-timeline-entry"
+              >
+                <!-- Timeline dot + line -->
+                <div class="rx-timeline-rail">
+                  <div class="rx-timeline-dot" :class="{ 'rx-dot-latest': index === 0 }"></div>
+                  <div v-if="index < prescriptionHistory.length - 1" class="rx-timeline-line"></div>
+                </div>
+
+                <!-- Prescription Card -->
+                <div class="rx-timeline-content">
+                  <q-card flat class="rx-card">
+
+                    <!-- SECTION 1: Diagnosis Header + Status + Date -->
+                    <div class="rx-card-header">
+                      <div class="row items-center" style="gap: 8px; flex-wrap: wrap;">
+                        <q-badge v-if="index === 0" color="green-2" text-color="green-9" label="LATEST" class="text-weight-bold" rounded />
+                        <div class="rx-diagnosis">{{ rx.diagnosis || 'General Prescription' }}</div>
+                      </div>
+                      <div class="row items-center" style="gap: 8px; flex-shrink: 0;">
+                        <q-badge
+                          :color="rx.status === 'completed' ? 'green-1' : (index === 0 ? 'blue-1' : 'grey-3')"
+                          :text-color="rx.status === 'completed' ? 'green-9' : (index === 0 ? 'blue-9' : 'grey-8')"
+                          :label="rx.status || 'Active'"
+                          class="text-weight-bold text-uppercase"
+                        />
+                        <span class="rx-date-chip">{{ formatDateFull(rx.createdAt) }}</span>
+                      </div>
                     </div>
 
-                    <div v-if="rx.symptoms" class="text-caption text-grey-7 q-mb-sm">
-                      <span class="text-weight-bold">Symptoms: </span>{{ Array.isArray(rx.symptoms) ? rx.symptoms.join(', ') : rx.symptoms }}
-                    </div>
+                    <q-card-section class="q-pa-md q-pt-none">
 
-                    <div class="q-mb-sm">
-                      <div class="text-weight-medium text-grey-8 q-mb-xs">Medicines:</div>
-                      <q-markup-table flat bordered dense separator="cell" class="text-caption bg-white" style="border-radius: 8px;">
-                        <thead class="bg-grey-2">
-                          <tr>
-                            <th class="text-left">Medicine</th>
-                            <th class="text-left">Dosage</th>
-                            <th class="text-left text-dark">Frequency</th>
-                            <th class="text-left text-dark">Duration</th>
-                            <th class="text-left text-dark">Instructions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr v-for="(med, i) in rx.medicines" :key="i">
-                            <td class="text-weight-bold text-dark">{{ typeof med === 'string' ? med : (med.name || '—') }}</td>
-                            <td class="text-dark">{{ typeof med === 'string' ? '—' : (med.dosage || '—') }}</td>
-                            <td class="text-dark">{{ typeof med === 'string' ? '—' : (med.frequency || '—') }}</td>
-                            <td class="text-dark">{{ typeof med === 'string' ? '—' : (med.duration || '—') }}</td>
-                            <td class="text-dark">{{ typeof med === 'string' ? '—' : (med.instructions || '—') }}</td>
-                          </tr>
-                        </tbody>
-                      </q-markup-table>
-                    </div>
+                      <!-- SECTION 2: Patient + Doctor Info Block (Part 2) -->
+                      <div class="rx-meta-block">
+                        <div class="rx-meta-row">
+                          <span class="rx-meta-label">Patient:</span>
+                          <span class="rx-meta-value">{{ patient?.name || '—' }} ({{ patient?.age ? patient.age + ' yrs' : 'N/A' }})</span>
+                        </div>
+                        <div class="rx-meta-row">
+                          <span class="rx-meta-label">Patient ID:</span>
+                          <span class="rx-meta-value">{{ patient?.patientId || '—' }}</span>
+                        </div>
+                        <div class="rx-meta-row">
+                          <span class="rx-meta-value">{{ rx.doctorName || 'Dr. Unknown' }}</span>
+                        </div>
+                        <div class="rx-meta-row">
+                          <span class="rx-meta-label">Date:</span>
+                          <span class="rx-meta-value">{{ formatDateFull(rx.createdAt) }}</span>
+                        </div>
+                      </div>
 
-                    <div v-if="rx.advice" class="q-mb-xs">
-                      <span class="text-weight-medium text-grey-8">Advice: </span>
-                      <span class="text-dark">{{ rx.advice }}</span>
-                    </div>
-                    
-                    <div v-if="rx.followUpDate" class="q-mb-xs">
-                      <span class="text-weight-medium text-grey-8">Follow-up: </span>
-                      <span class="text-dark">{{ formatDate(rx.followUpDate) }}</span>
-                    </div>
+                      <!-- SECTION 3: Symptoms (Part 3) -->
+                      <div v-if="rx.symptoms && rx.symptoms.length > 0" class="rx-section">
+                        <div class="rx-section-label">Symptoms</div>
+                        <ul class="rx-symptom-list">
+                          <li v-for="(s, si) in parseSymptoms(rx.symptoms)" :key="si">{{ s }}</li>
+                        </ul>
+                      </div>
 
-                  </q-card-section>
-                </q-card>
-             </div>
+                      <!-- SECTION 4: Medicines Table (Parts 3 + 4) -->
+                      <div class="rx-section">
+                        <div class="rx-section-label">Prescribed Medicines</div>
+                        <div class="rx-table-wrap">
+                          <table class="rx-med-table">
+                            <thead>
+                              <tr>
+                                <th>Medicine</th>
+                                <th>Dosage</th>
+                                <th>Frequency</th>
+                                <th>Duration</th>
+                                <th>Instructions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr v-for="(med, i) in rx.medicines" :key="i">
+                                <td class="rx-med-name">{{ typeof med === 'string' ? med : (med.name || '—') }}</td>
+                                <td>{{ typeof med === 'string' ? '—' : (med.dosage || '—') }}</td>
+                                <td>{{ typeof med === 'string' ? '—' : (med.frequency || '—') }}</td>
+                                <td>{{ typeof med === 'string' ? '—' : (med.duration || '—') }}</td>
+                                <td>{{ typeof med === 'string' ? '—' : (med.instructions || '—') }}</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      <!-- SECTION 5: Advice (Part 3) -->
+                      <div v-if="rx.advice" class="rx-section">
+                        <div class="rx-section-label">Doctor's Advice</div>
+                        <div class="rx-advice-box">{{ rx.advice }}</div>
+                      </div>
+
+                      <!-- SECTION 6: Follow-up (Part 3) -->
+                      <div v-if="rx.followUpDate" class="rx-section">
+                        <div class="rx-section-label">Follow-up</div>
+                        <div class="rx-followup-box">
+                          <q-icon name="event" size="xs" class="q-mr-xs" style="color: #6b7280;" />
+                          {{ formatDateFull(rx.followUpDate) }}
+                        </div>
+                      </div>
+
+                      <!-- SECTION 7: Footer (Part 3) -->
+                      <div class="rx-footer">
+                        Digitally generated prescription — NexusCare EMR
+                      </div>
+
+                    </q-card-section>
+                  </q-card>
+                </div>
+              </div>
+            </div>
+
           </q-card-section>
         </q-card>
 
@@ -370,7 +444,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, inject } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import axios from 'axios';
@@ -387,6 +461,9 @@ const submitting = ref(false);
 const patient = ref(null);
 const reports = ref([]);
 const prescriptionHistory = ref([]);
+
+// Injected from DoctorLayout.vue — provides full doctor profile
+const doctor = inject('doctor', ref({}));
 
 const previewOpen = ref(false);
 const previewUrl = ref('');
@@ -413,6 +490,22 @@ const form = reactive({
 const getToken = () => localStorage.getItem('token') || localStorage.getItem('nexus_token');
 const getHeaders = () => ({ Authorization: `Bearer ${getToken()}` });
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+
+const parseJwt = (t) => { try { return JSON.parse(atob(t.split('.')[1])); } catch { return null; } };
+
+// Doctor name resolution: inject > JWT > fallback
+const getDoctorName = () => {
+  // 1. From injected doctor profile (DoctorLayout provide)
+  if (doctor.value?.name) return doctor.value.name;
+  // 2. From JWT token
+  const token = getToken();
+  if (token) {
+    const decoded = parseJwt(token);
+    if (decoded?.name) return decoded.name;
+  }
+  // 3. Fallback
+  return 'Dr. Unknown';
+};
 
 onMounted(async () => {
   if (!patientId || !appointmentId) {
@@ -459,13 +552,32 @@ const loadPrescriptions = async () => {
     }
   } catch (err) {
     console.error("Prescriptions fetch fail:", err);
-    // Suppress warning if strictly empty vs actually down natively
   }
 };
 
-const formatDate = (date) => {
-  if (!date) return '—';
-  return new Date(date).toLocaleDateString();
+// Part 10 — Proper date formatting with safe fallback (Part 9)
+const formatDateFull = (dateStr) => {
+  if (!dateStr) return '—';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch {
+    return '—';
+  }
+};
+
+// Part 3 — Parse symptoms into array for bullet display
+const parseSymptoms = (symptoms) => {
+  if (!symptoms) return [];
+  if (Array.isArray(symptoms)) return symptoms;
+  return symptoms.split(',').map(s => s.trim()).filter(Boolean);
 };
 
 const openReport = (report) => {
@@ -524,8 +636,8 @@ const removeMedication = (index) => {
   form.medicines.splice(index, 1);
 };
 
+// Part 5 — Submit with doctorName + createdAt injected immediately
 const submitPrescription = async () => {
-  // Validate medicines
   const validMedications = form.medicines.filter(
     m => m.name && m.name.trim().length > 0
   );
@@ -541,6 +653,10 @@ const submitPrescription = async () => {
   submitting.value = true;
 
   try {
+    const doctorName = doctor.value?.name || getDoctorName();
+    const doctorId = doctor.value?.doctorId || doctor.value?._id || null;
+    const now = new Date().toISOString();
+
     const payload = {
       patientId,
       appointmentId,
@@ -549,21 +665,30 @@ const submitPrescription = async () => {
       advice: form.advice?.trim(),
       followUpDate: form.followUpDate || null,
       notes: form.notes?.trim(),
-      medicines: validMedications
+      medicines: validMedications,
+      doctorName,
+      doctorId
     };
 
-    // 🔐 Send request with token
     await axios.post(`${API_URL}/api/prescriptions`, payload, {
       headers: getHeaders()
     });
 
-    // ✅ Success
     $q.notify({
       type: 'positive',
       message: 'Prescription created successfully!'
     });
 
-    // 🔄 Reset form
+    // Immediately reflect in UI before reload completes (Part 5)
+    const newEntry = {
+      _id: 'temp-' + Date.now(),
+      ...payload,
+      createdAt: now,
+      status: 'active'
+    };
+    prescriptionHistory.value.unshift(newEntry);
+
+    // Reset form
     form.diagnosis = '';
     form.symptoms = '';
     form.advice = '';
@@ -573,7 +698,7 @@ const submitPrescription = async () => {
       { name: '', dosage: '', frequency: '', duration: '', instructions: '' }
     ];
 
-    // 🔁 Reload prescriptions
+    // Reload from server to sync real _id / status
     await loadPrescriptions();
 
   } catch (error) {
@@ -597,20 +722,277 @@ const submitPrescription = async () => {
 
 </script>
 
+<!-- Dropdown fix — must be unscoped because popup portals outside component -->
 <style>
 .dropdown-fix {
   background: #ffffff !important;
 }
-
 .dropdown-fix .q-item {
   color: #000000 !important;
 }
-
 .dropdown-fix .q-item__label {
   color: #000000 !important;
 }
-
 .dropdown-fix .q-item__section {
   color: #000000 !important;
+}
+</style>
+
+<!-- All visual styles scoped to this component only (Part 1 rule) -->
+<style scoped>
+/* ── Part 1: Text visibility — all titles use dark readable color ────────── */
+::selection {
+  background: #cce5ff;
+  color: #000000;
+}
+
+/* ── Part 6: History card header ─────────────────────────────────────────── */
+.rx-history-card {
+  border-radius: 12px;
+}
+.rx-history-header {
+  background: #1e293b;
+  padding: 16px 20px;
+}
+.rx-header-title {
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.rx-header-sub {
+  color: #94a3b8;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* ── Part 9: Empty state ─────────────────────────────────────────────────── */
+.rx-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48px 16px;
+  gap: 8px;
+}
+.rx-empty-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #6b7280;
+}
+.rx-empty-sub {
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+/* ── Part 8: Timeline layout ─────────────────────────────────────────────── */
+.rx-timeline {
+  display: flex;
+  flex-direction: column;
+}
+.rx-timeline-entry {
+  display: flex;
+  gap: 16px;
+}
+.rx-timeline-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 20px;
+  flex-shrink: 0;
+}
+.rx-timeline-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #cbd5e1;
+  border: 2px solid #e2e8f0;
+  margin-top: 20px;
+  flex-shrink: 0;
+  z-index: 1;
+}
+.rx-dot-latest {
+  background: #1976D2;
+  border-color: #bbdefb;
+  width: 14px;
+  height: 14px;
+  box-shadow: 0 0 0 4px rgba(25, 118, 210, 0.15);
+}
+.rx-timeline-line {
+  width: 2px;
+  flex: 1;
+  background: #e2e8f0;
+  min-height: 20px;
+}
+.rx-timeline-content {
+  flex: 1;
+  padding-bottom: 20px;
+  min-width: 0;
+}
+
+/* ── Part 7: Prescription card visual upgrade ────────────────────────────── */
+.rx-card {
+  border-radius: 12px !important;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+.rx-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 16px 20px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e5e7eb;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.rx-diagnosis {
+  font-size: 17px;
+  font-weight: 700;
+  color: #1f2937;
+  line-height: 1.3;
+}
+.rx-date-chip {
+  font-size: 12px;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+/* ── Part 2: Patient + Doctor metadata block ─────────────────────────────── */
+.rx-meta-block {
+  background: #f9fafb;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 24px;
+}
+.rx-meta-row {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+}
+.rx-meta-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  white-space: nowrap;
+}
+.rx-meta-value {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1f2937;
+}
+
+/* ── Parts 3 & 4: Section styling ────────────────────────────────────────── */
+.rx-section {
+  margin-bottom: 16px;
+}
+.rx-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #6b7280;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+/* Symptoms bullet list */
+.rx-symptom-list {
+  margin: 0;
+  padding-left: 18px;
+  list-style: disc;
+}
+.rx-symptom-list li {
+  font-size: 13px;
+  color: #374151;
+  line-height: 1.6;
+}
+
+/* ── Part 4: Medicine table ──────────────────────────────────────────────── */
+.rx-table-wrap {
+  overflow-x: auto;
+}
+.rx-med-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+.rx-med-table th {
+  background: #f1f5f9;
+  color: #374151;
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 2px solid #e5e7eb;
+}
+.rx-med-table td {
+  padding: 10px 12px;
+  color: #1f2937;
+  border-bottom: 1px solid #f3f4f6;
+}
+.rx-med-table tbody tr:nth-child(even) {
+  background: #f9fafb;
+}
+.rx-med-table tbody tr:hover {
+  background: #eff6ff;
+}
+.rx-med-name {
+  font-weight: 600;
+}
+
+/* ── Part 3: Advice box ──────────────────────────────────────────────────── */
+.rx-advice-box {
+  background: #eff6ff;
+  border-left: 3px solid #1976D2;
+  border-radius: 4px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #1f2937;
+  line-height: 1.5;
+}
+
+/* ── Follow-up box ───────────────────────────────────────────────────────── */
+.rx-followup-box {
+  display: inline-flex;
+  align-items: center;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #374151;
+  font-weight: 500;
+}
+
+/* ── Part 3: Footer ──────────────────────────────────────────────────────── */
+.rx-footer {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dashed #e5e7eb;
+  text-align: center;
+  font-size: 11px;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* ── Responsive: stack meta grid on mobile ────────────────────────────────── */
+@media (max-width: 600px) {
+  .rx-meta-block {
+    grid-template-columns: 1fr;
+  }
+  .rx-card-header {
+    flex-direction: column;
+  }
 }
 </style>

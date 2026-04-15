@@ -9,6 +9,8 @@ const prescriptionSchema = new mongoose.Schema(
 
     doctorName: {
       type: String,
+      required: true,
+      default: "Dr. Unknown"
     },
 
     patientId: {
@@ -60,5 +62,7 @@ const prescriptionSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+prescriptionSchema.index({ patientId: 1, createdAt: -1 });
 
 export default mongoose.model("Prescription", prescriptionSchema);
