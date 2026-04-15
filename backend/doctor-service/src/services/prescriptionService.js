@@ -24,7 +24,13 @@ export const createPrescription = async (data, user) => {
   });
 
   const doctorId = user.doctorId || user.id;
-  const doctorName = user.name || "Unknown Doctor";
+
+  // 🔥 FIX: robust doctorName resolution
+  const doctorName =
+    data.doctorName ||           // from frontend (highest priority)
+    user.name ||                // from JWT
+    user.fullName ||            // fallback field
+    "Dr. Unknown";
 
   try {
     const newPrescription = new Prescription({
