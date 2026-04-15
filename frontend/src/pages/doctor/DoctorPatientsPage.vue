@@ -165,7 +165,7 @@
 
         <q-separator />
 
-        <q-card-section class="col scroll q-pa-lg">
+        <q-card-section class="col scroll q-pa-lg clinical-records-container">
           <div v-if="loadingModal" class="flex flex-center q-pa-xl column">
             <q-spinner-dots color="primary" size="50px" />
             <div class="q-mt-md text-grey-6">Retrieving historical diagnoses...</div>
@@ -390,4 +390,33 @@ const getRelativeTime = (timestampMs) => {
 .transition-generic {
   transition: all 0.2s ease-in-out;
 }
+
+/* 🔥 FIX CLINICAL RECORD TEXT VISIBILITY */
+.clinical-records-container {
+  color: #1f2937 !important; /* dark readable */
+}
+
+/* timeline title */
+.clinical-records-container .record-title {
+  color: #111827 !important;
+  font-weight: 700;
+}
+
+/* date text */
+.clinical-records-container .record-date {
+  color: #374151 !important;
+}
+
+/* body text */
+.clinical-records-container .record-text {
+  color: #4b5563 !important;
+}
+
+/* table text fix */
+.clinical-records-container table,
+.clinical-records-container td,
+.clinical-records-container th {
+  color: #1f2937 !important;
+}
+
 </style>
