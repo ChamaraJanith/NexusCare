@@ -29,3 +29,103 @@
     background: #fff !important;
   }
 }
+
+/* ── Admin: q-select / q-field outlined overrides ─────────────────────────── */
+/* Make all outlined selects and inputs clearly visible with strong borders */
+
+.admin-page {
+  /* Outlined field control */
+  .q-field--outlined .q-field__control {
+    border-radius: 10px !important;
+    background: #ffffff !important;
+
+    &::before {
+      border-color: #94a3b8 !important;
+      border-width: 1.5px !important;
+      transition: border-color 0.2s ease !important;
+    }
+  }
+
+  /* Hover state */
+  .q-field--outlined:not(.q-field--focused) .q-field__control:hover::before {
+    border-color: #475569 !important;
+    border-width: 2px !important;
+  }
+
+  /* Focused state */
+  .q-field--outlined.q-field--focused .q-field__control {
+    background: #f0fdf4 !important;
+
+    &::before { border-color: #10b981 !important; border-width: 2px !important; }
+    &::after  { border-color: #10b981 !important; border-width: 2px !important; }
+  }
+
+  /* Label */
+  .q-field__label {
+    color: #475569 !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+  }
+
+  /* Focused label */
+  .q-field--focused .q-field__label {
+    color: #10b981 !important;
+  }
+
+  /* Input text */
+  .q-field__native,
+  .q-field__input {
+    color: #0f172a !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+  }
+
+  /* Icons */
+  .q-field__append .q-icon,
+  .q-select__dropdown-icon {
+    color: #475569 !important;
+    font-size: 20px !important;
+  }
+
+  /* Dense variant */
+  .q-field--dense .q-field__control {
+    height: 40px !important;
+  }
+}
+
+/* ── Dropdown popup menu ───────────────────────────────────────────────────── */
+.q-menu {
+  border-radius: 12px !important;
+  border: 1.5px solid #e2e8f0 !important;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.14) !important;
+  overflow: hidden !important;
+  min-width: 160px !important;
+
+  .q-item {
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: #334155 !important;
+    padding: 11px 18px !important;
+    min-height: 42px !important;
+    transition: background 0.12s !important;
+
+    &:hover {
+      background: #f1f5f9 !important;
+      color: #0f172a !important;
+    }
+
+    &.q-item--active,
+    &.q-manual-focusable--focused {
+      background: #f0fdf4 !important;
+      color: #16a34a !important;
+      font-weight: 700 !important;
+    }
+  }
+
+  .q-separator {
+    background: #f0f4f8 !important;
+    margin: 4px 0 !important;
+  }
+}
+
+/* ── Admin action buttons — handled per-component ──────────────────────────── */

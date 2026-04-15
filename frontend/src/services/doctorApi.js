@@ -189,3 +189,14 @@ export const searchDoctorProfiles = async (params = {}) => {
     return [];
   }
 };
+
+// Fetch a single doctor's public profile from MS2 (includes profileImage)
+export const getDoctorPublicProfile = async (doctorId) => {
+  try {
+    const res = await axios.get(`${DOCTOR_SERVICE_URL}/api/doctors/public/${doctorId}`);
+    return res.data?.data || null;
+  } catch (err) {
+    console.warn('[doctorApi] getDoctorPublicProfile failed:', err.message);
+    return null;
+  }
+};
