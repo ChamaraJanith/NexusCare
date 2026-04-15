@@ -34,33 +34,43 @@ export const addSlot = async (body, doctorId) => {
   if (startTime >= endTime) throw new Error("startTime must be before endTime");
   if (!slotType) throw new Error("slotType required (ONLINE / PHYSICAL)");
 
+  // ── Strict ONLINE/PHYSICAL rules ──────────────────────────────────
+  // ONLINE appointments have no hospital context
+  let resolvedHospital = hospital || location || "";
+  let resolvedHospitalId = hospitalId || "";
+
+  if (slotType === "ONLINE") {
+    resolvedHospital = "";
+    resolvedHospitalId = "";
+  } else if (slotType === "PHYSICAL" && !hospitalId && !hospital && !location) {
+    throw new Error("Hospital is required for physical slots");
+  }
+
   // Denormalize hospital fee and service fee at creation time
   let hospitalFee = 0;
-  if (slotType === "PHYSICAL" && (hospitalId || hospital || location)) {
-    hospitalFee = await fetchHospitalFee(hospitalId || "", hospital || location || "");
+  if (slotType === "PHYSICAL" && (resolvedHospitalId || resolvedHospital)) {
+    hospitalFee = await fetchHospitalFee(resolvedHospitalId, resolvedHospital);
   }
   const serviceFee = await fetchServiceFee();
+
+  // ── Enforce capacity rules per slot type ─────────────────────────
+  // ONLINE = always 1.  PHYSICAL = use explicit value (never undefined).
+  const resolvedSlotCount = slotType === "ONLINE" ? 1 : (slotCount ? Number(slotCount) : 1);
 
   let slotData = {
     doctorId,
     startTime,
     endTime,
-    hospital: hospital || location || "",
-    hospitalId: hospitalId || "",
+    hospital: resolvedHospital,
+    hospitalId: resolvedHospitalId,
     hospitalFee,
     serviceFee,
-    location: location || hospital || "",
+    location: slotType === "ONLINE" ? "" : (location || hospital || ""),
     platform: platform || "",
     slotType,
+    slotCount: resolvedSlotCount,
     bookedCount: 0
   };
-
-  // Enforce capacity rules per slot type
-  if (slotType === "ONLINE") {
-    slotData.slotCount = 1; // ONLINE always single-booking
-  } else if (slotType === "PHYSICAL") {
-    slotData.slotCount = slotCount ? Number(slotCount) : 1; // PHYSICAL can have custom queue size
-  }
 
   if (type === "recurring") {
     if (!dayOfWeek) throw new Error("dayOfWeek is required for recurring slots");
@@ -151,20 +161,38 @@ export const updateSlot = async (slotId, body, doctorId) => {
   const updates = {};
   if (startTime) updates.startTime = startTime;
   if (endTime) updates.endTime = endTime;
-  if (hospital !== undefined) updates.hospital = hospital;
-  if (hospitalId !== undefined) updates.hospitalId = hospitalId;
   if (location !== undefined) updates.location = location;
   if (platform !== undefined) updates.platform = platform;
   if (slotType !== undefined) updates.slotType = slotType;
 
   // slotCount can only be updated on PHYSICAL slots
   const effectiveSlotType = slotType || slot.slotType;
-  if (effectiveSlotType === "PHYSICAL" && body.slotCount !== undefined) {
-    const newSlotCount = Number(body.slotCount);
-    if (newSlotCount < slot.bookedCount) {
-      throw new Error("slotCount cannot be less than bookedCount");
+  
+  if (effectiveSlotType === "ONLINE") {
+    // ONLINE strict rule (no hospital allowed)
+    updates.hospital = null;
+    updates.hospitalId = null;
+    if (body.slotCount !== undefined && Number(body.slotCount) !== 1) {
+      throw new Error("slotCount must be exactly 1 for ONLINE slots");
     }
-    updates.slotCount = newSlotCount;
+    updates.slotCount = 1;
+  } else {
+    // PHYSICAL rules
+    if (hospital !== undefined) updates.hospital = hospital;
+    if (hospitalId !== undefined) updates.hospitalId = hospitalId;
+    
+    if (!updates.hospitalId && !updates.hospital && !slot.hospitalId && !slot.hospital) {
+      throw new Error("Hospital is required for physical slots");
+    }
+    
+    // slotCount calculation
+    if (body.slotCount !== undefined) {
+      const newSlotCount = Number(body.slotCount);
+      if (newSlotCount < slot.bookedCount) {
+        throw new Error("slotCount cannot be less than bookedCount");
+      }
+      updates.slotCount = newSlotCount;
+    }
   }
 
   if (type === "recurring") {
