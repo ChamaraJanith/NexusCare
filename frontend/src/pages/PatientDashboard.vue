@@ -1493,6 +1493,7 @@ const goToPayment = (ap) => {
       doctorFee:     ap.charges?.doctorFee   || 0,
       hospitalFee:   ap.charges?.hospitalFee || 0,
       serviceFee:    ap.charges?.serviceFee  || 0,
+      hospitalId:    ap.hospitalId           || null,
       date:          ap.date,
       time:          ap.time,
       type:          ap.appointmentType

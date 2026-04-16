@@ -366,10 +366,10 @@ const appointmentContext = computed(() => {
     doctorId:      q.doctorId,
     doctorName:    q.doctorName  || 'Doctor',
     specialty:     q.specialty   || '',
-    doctorFee: parseFloat(q.doctorFee) || 0,
-    hospitalFee: parseFloat(q.hospitalFee) || 0,
-    serviceFee: parseFloat(q.serviceFee) || 0,
-
+    doctorFee:     parseFloat(q.doctorFee)   || 0,
+    hospitalFee:   parseFloat(q.hospitalFee) || 0,
+    serviceFee:    parseFloat(q.serviceFee)  || 0,
+    hospitalId:    q.hospitalId  || null,
     fee:
       (parseFloat(q.doctorFee) || 0) +
       (parseFloat(q.hospitalFee) || 0) +
@@ -500,6 +500,10 @@ const doInitiatePayment = async () => {
       doctorId:      appointmentContext.value.doctorId,
       doctorName:    appointmentContext.value.doctorName,
       amount:        appointmentContext.value.fee,
+      doctorFee:     appointmentContext.value.doctorFee,
+      hospitalFee:   appointmentContext.value.hospitalFee,
+      serviceFee:    appointmentContext.value.serviceFee,
+      hospitalId:    appointmentContext.value.hospitalId || null,
       patientName:   profile.name,
       patientEmail:  profile.email,
       patientPhone:  profile.phone || '0771234567'

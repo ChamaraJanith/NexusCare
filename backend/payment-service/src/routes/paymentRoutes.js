@@ -8,6 +8,7 @@ const {
   getPaymentStatus,
   getAllPayments,
   getPaymentStats,
+  getRevenueReport,
   getPatientAppointmentsFallback,
 } = require("../controllers/paymentController");
 const { protect, restrictTo } = require("../middleware/auth");
@@ -16,8 +17,9 @@ const { protect, restrictTo } = require("../middleware/auth");
 router.post("/webhook", payhereWebhook);
 
 // Admin routes MUST be before /:orderId
-router.get("/admin/stats", protect, restrictTo("admin"), getPaymentStats);
-router.get("/admin/all",   protect, restrictTo("admin"), getAllPayments);
+router.get("/admin/stats",          protect, restrictTo("admin"), getPaymentStats);
+router.get("/admin/all",            protect, restrictTo("admin"), getAllPayments);
+router.get("/admin/revenue-report", protect, restrictTo("admin"), getRevenueReport);
 
 // Patient routes
 router.post("/initiate", protect, restrictTo("patient"), initiatePayment);

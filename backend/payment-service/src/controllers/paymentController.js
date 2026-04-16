@@ -141,6 +141,7 @@ const initiatePayment = async (req, res, next) => {
     const {
       appointmentId, doctorId, doctorName,
       amount, patientName, patientEmail, patientPhone,
+      doctorFee, hospitalFee, serviceFee, hospitalId,
     } = req.body;
 
     if (!amount || !doctorId || !patientName || !patientEmail) {
@@ -166,6 +167,12 @@ const initiatePayment = async (req, res, next) => {
       doctorId,
       doctorName: cleanDoctorName,
       amount,
+      hospitalId: hospitalId || null,
+      charges: {
+        doctorFee:   parseFloat(doctorFee)   || 0,
+        hospitalFee: parseFloat(hospitalFee) || 0,
+        serviceFee:  parseFloat(serviceFee)  || 0,
+      },
     });
 
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:9000";
@@ -540,6 +547,174 @@ const getPatientAppointmentsFallback = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
+// ─── GET REVENUE REPORT (Admin) ───────────────────────────────────────────────
+const getRevenueReport = async (req, res, next) => {
+  try {
+    const { from, to } = req.query;
+    const FEE_SERVICE_URL = process.env.FEE_SERVICE_URL || "http://localhost:5007";
+    const APPOINTMENT_SERVICE_URL_LOCAL = process.env.APPOINTMENT_SERVICE_URL || "http://localhost:5003";
+
+    const dateFilter = { status: "success" };
+    if (from || to) {
+      dateFilter.createdAt = {};
+      if (from) dateFilter.createdAt.$gte = new Date(from);
+      if (to)   dateFilter.createdAt.$lte = new Date(new Date(to).setHours(23, 59, 59, 999));
+    }
+
+    // Run payment aggregations + external calls in parallel
+    const [systemRevenue, byDoctor, byMonth, totalPayments, hospitalsRes, appointmentsRes] = await Promise.all([
+      // 1. Overall summary
+      Payment.aggregate([
+        { $match: dateFilter },
+        { $group: {
+          _id: null,
+          totalRevenue:       { $sum: "$amount" },
+          totalTransactions:  { $sum: 1 },
+          avgAmount:          { $avg: "$amount" },
+          serviceFeeRevenue:  { $sum: { $ifNull: ["$charges.serviceFee",  0] } },
+          doctorFeeRevenue:   { $sum: { $ifNull: ["$charges.doctorFee",   0] } },
+          hospitalFeeRevenue: { $sum: { $ifNull: ["$charges.hospitalFee", 0] } },
+        }},
+      ]),
+
+      // 2. Doctor income — use charges.doctorFee if available, else fall back to full amount
+      Payment.aggregate([
+        { $match: dateFilter },
+        { $group: {
+          _id:          "$doctorId",
+          doctorName:   { $first: "$doctorName" },
+          totalIncome:  { $sum: { $ifNull: ["$charges.doctorFee", "$amount"] } },
+          transactions: { $sum: 1 },
+          lastPayment:  { $max: "$createdAt" },
+        }},
+        { $sort: { totalIncome: -1 } },
+      ]),
+
+      // 3. Monthly trend
+      Payment.aggregate([
+        { $match: { status: "success" } },
+        { $group: {
+          _id: { year: { $year: "$createdAt" }, month: { $month: "$createdAt" } },
+          revenue:      { $sum: "$amount" },
+          transactions: { $sum: 1 },
+        }},
+        { $sort: { "_id.year": 1, "_id.month": 1 } },
+        { $limit: 12 },
+      ]),
+
+      // 4. By status
+      Payment.aggregate([
+        { $group: { _id: "$status", count: { $sum: 1 }, total: { $sum: "$amount" } } },
+      ]),
+
+      // 5. Hospital master list
+      axios.get(`${FEE_SERVICE_URL}/api/hospitals`, { timeout: 5000 })
+        .catch(() => ({ data: { data: [] } })),
+
+      // 6. Paid appointments from appointment-service (for hospital revenue)
+      axios.get(`${APPOINTMENT_SERVICE_URL_LOCAL}/api/appointments/admin/all`, {
+        headers: { "Authorization": req.headers.authorization || "" },
+        params: { paymentStatus: "PAID", limit: 2000 },
+        timeout: 8000,
+      }).catch(() => ({ data: { data: [] } })),
+    ]);
+
+    // Build hospital name lookup from fee-service — index by BOTH hospitalId and _id
+    const hospitals = hospitalsRes?.data?.data || [];
+    const hospitalMap = {};
+    hospitals.forEach(h => {
+      if (h.hospitalId) hospitalMap[h.hospitalId] = h;
+      if (h._id)        hospitalMap[h._id.toString()] = h;
+    });
+
+    // Build hospital revenue from appointment records using doctorHospital name
+    // (hospitalId in appointments may be MongoDB _id or HOSP-XXXX — use name as reliable key)
+    const hospitalRevenueMap = {};
+    const appointments = appointmentsRes?.data?.data || [];
+
+    // Build name→hospital lookup for display
+    const hospitalByName = {};
+    hospitals.forEach(h => { hospitalByName[h.name.toLowerCase()] = h; });
+
+    appointments.forEach(appt => {
+      const hFee = appt.charges?.hospitalFee || 0;
+      if (hFee <= 0) return;
+
+      // Use doctorHospital (name) as the grouping key — most reliable field
+      const hName = appt.doctorHospital || "";
+      if (!hName) return;
+
+      const key = hName.toLowerCase();
+      if (!hospitalRevenueMap[key]) {
+        // Try to find matching hospital in fee-service list by name
+        const matched = hospitalByName[key];
+        hospitalRevenueMap[key] = {
+          hospitalId:   matched?.hospitalId || appt.hospitalId || key,
+          hospitalName: matched?.name || hName,
+          location:     matched?.location || "",
+          revenue:      0,
+          appointments: 0,
+        };
+      }
+      hospitalRevenueMap[key].revenue      += hFee;
+      hospitalRevenueMap[key].appointments += 1;
+    });
+
+    // Merge with hospital master list (show all hospitals, even with 0 revenue)
+    const hospitalRevenue = Object.values(hospitalRevenueMap);
+    const usedNames = new Set(Object.keys(hospitalRevenueMap));
+    hospitals.forEach(h => {
+      if (!usedNames.has(h.name.toLowerCase())) {
+        hospitalRevenue.push({
+          hospitalId:   h.hospitalId,
+          hospitalName: h.name,
+          location:     h.location || "",
+          revenue:      0,
+          appointments: 0,
+        });
+      }
+    });
+    hospitalRevenue.sort((a, b) => b.revenue - a.revenue);
+
+    // Status map
+    const statusMap = {};
+    totalPayments.forEach(s => { statusMap[s._id] = { count: s.count, total: s.total }; });
+
+    // Monthly trend
+    const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const monthlyTrend = byMonth.map(m => ({
+      label: `${monthNames[m._id.month - 1]} ${m._id.year}`,
+      revenue: m.revenue,
+      transactions: m.transactions,
+    }));
+
+    const summary = systemRevenue[0] || {};
+    res.status(200).json({
+      success: true,
+      data: {
+        summary: {
+          totalRevenue:       summary.totalRevenue       || 0,
+          totalTransactions:  summary.totalTransactions  || 0,
+          avgAmount:          summary.avgAmount          || 0,
+          serviceFeeRevenue:  summary.serviceFeeRevenue  || 0,
+          doctorFeeRevenue:   summary.doctorFeeRevenue   || 0,
+          hospitalFeeRevenue: summary.hospitalFeeRevenue || 0,
+        },
+        byDoctor: byDoctor.map(d => ({
+          doctorId:     d._id,
+          doctorName:   d.doctorName || d._id,
+          totalIncome:  d.totalIncome,
+          transactions: d.transactions,
+          lastPayment:  d.lastPayment,
+        })),
+        byHospital: hospitalRevenue,
+        monthlyTrend,
+        byStatus: statusMap,
+      },
+    });
+  } catch (error) { next(error); }
+};
+
 module.exports = {
   initiatePayment,
   payhereWebhook,
@@ -548,5 +723,6 @@ module.exports = {
   getPaymentStatus,
   getAllPayments,
   getPaymentStats,
+  getRevenueReport,
   getPatientAppointmentsFallback,
 };

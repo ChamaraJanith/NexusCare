@@ -79,6 +79,10 @@ export const paymentApi = {
   // Payment stats (GET /api/payments/admin/stats)
   getStats: () =>
     axios.get(`${MS5}/api/payments/admin/stats`, { headers: getHeaders() }),
+
+  // Revenue report (GET /api/payments/admin/revenue-report)
+  getRevenueReport: (params = {}) =>
+    axios.get(`${MS5}/api/payments/admin/revenue-report`, { headers: getHeaders(), params }),
 }
 
 // ── MS6: Fee Management ──────────────────────────────────────────────────────
