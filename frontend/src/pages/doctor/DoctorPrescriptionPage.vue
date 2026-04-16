@@ -170,6 +170,16 @@
           </q-card-section>
         </q-card>
 
+        <q-btn
+          v-if="appointmentType === 'ONLINE'"
+          unelevated
+          color="primary"
+          icon="video_call"
+          label="Join Now"
+          class="full-width join-btn q-mt-md"
+          @click="handleJoinFromPrescription"
+        />
+
         <!-- Preview Modal -->
         <q-dialog v-model="previewOpen" maximized transition-show="slide-up" transition-hide="slide-down">
           <q-card class="bg-dark text-white column">
@@ -461,6 +471,7 @@ const submitting = ref(false);
 const patient = ref(null);
 const reports = ref([]);
 const prescriptionHistory = ref([]);
+const appointmentType = ref('');
 
 // Injected from DoctorLayout.vue — provides full doctor profile
 const doctor = inject('doctor', ref({}));
@@ -520,9 +531,10 @@ onMounted(async () => {
 const fetchPatientData = async () => {
   loading.value = true;
   try {
-    const [patientRes, reportsRes] = await Promise.allSettled([
+    const [patientRes, reportsRes, aptRes] = await Promise.allSettled([
       axios.get(`${API_URL}/api/patient/doctor/${patientId}`, { headers: getHeaders() }),
-      axios.get(`${API_URL}/api/patient/reports`, { params: { patientId }, headers: getHeaders() })
+      axios.get(`${API_URL}/api/patient/reports`, { params: { patientId }, headers: getHeaders() }),
+      axios.get(`${API_URL}/api/appointments/details/${appointmentId}`, { headers: getHeaders() })
     ]);
 
     if (patientRes.status === 'fulfilled') {
@@ -535,11 +547,26 @@ const fetchPatientData = async () => {
     if (reportsRes.status === 'fulfilled') {
       reports.value = reportsRes.value.data.data || [];
     }
+    
+    if (aptRes.status === 'fulfilled') {
+      appointmentType.value = aptRes.value.data.appointment?.appointmentType || '';
+    }
+    
   } catch (error) {
     console.error(error);
   } finally {
     loading.value = false;
   }
+};
+
+const handleJoinFromPrescription = () => {
+  router.push({
+    path: '/doctorVideo',
+    query: {
+      appointmentId,
+      doctorId: doctor.value?.doctorId || parseJwt(getToken())?.roleId
+    }
+  });
 };
 
 const loadPrescriptions = async () => {
@@ -673,6 +700,16 @@ const submitPrescription = async () => {
     await axios.post(`${API_URL}/api/prescriptions`, payload, {
       headers: getHeaders()
     });
+
+    // Notify backend that consultation via prescription is now underway/started (per Part 6 requirement)
+    try {
+      await axios.put(`${API_URL}/api/appointments/consultation/update/${appointmentId}`, 
+        { consultationStarted: true },
+        { headers: getHeaders() }
+      );
+    } catch (e) {
+      console.warn("Failed to update consultation lifecycle state:", e);
+    }
 
     $q.notify({
       type: 'positive',
@@ -994,5 +1031,20 @@ const submitPrescription = async () => {
   .rx-card-header {
     flex-direction: column;
   }
+}
+
+.join-btn {
+  height: 48px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);
+  transition: all 0.2s ease;
+}
+
+.join-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.45);
 }
 </style>

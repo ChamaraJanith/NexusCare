@@ -289,7 +289,7 @@ router.put("/doctor/complete/:id", async (req, res) => {
 
     const updated = await Appointment.findByIdAndUpdate(
       req.params.id,
-      { status: "COMPLETED" },
+      { status: "COMPLETED", consultationCompleted: true },
       { new: true }
     );
 
@@ -297,6 +297,43 @@ router.put("/doctor/complete/:id", async (req, res) => {
     io.emit("appointmentCompleted", updated);
 
     res.json({ message: "Marked as completed", appointment: updated });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── NEW: Consultation Start  ─────────────────────────────────────────
+router.put("/consultation/start/:id", async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) return res.status(401).json({ error: "No token" });
+    
+    // allow docs to start it
+    const updated = await Appointment.findByIdAndUpdate(
+      req.params.id,
+      { consultationStarted: true },
+      { new: true }
+    );
+    if (!updated) return res.status(404).json({ error: "Not found" });
+    res.json({ message: "Consultation started", appointment: updated });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── NEW: Consultation Update ─────────────────────────────────────────
+router.put("/consultation/update/:id", async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) return res.status(401).json({ error: "No token" });
+
+    const updated = await Appointment.findByIdAndUpdate(
+      req.params.id,
+      req.body, // spread consultationStarted / completed states
+      { new: true }
+    );
+    if (!updated) return res.status(404).json({ error: "Not found" });
+    res.json({ message: "Consultation updated", appointment: updated });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

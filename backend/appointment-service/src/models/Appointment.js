@@ -114,7 +114,18 @@ const appointmentSchema = new mongoose.Schema({
   rejectionReason: {
   type: String,
   default: null
-}
+  },
+
+  // 🔥 NEW → Consultation State
+  consultationStarted: {
+    type: Boolean,
+    default: false
+  },
+  
+  consultationCompleted: {
+    type: Boolean,
+    default: false
+  }
 
 }, { timestamps: true });
 
