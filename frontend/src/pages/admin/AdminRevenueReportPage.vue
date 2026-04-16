@@ -23,6 +23,7 @@
         />
         <q-btn unelevated no-caps icon="refresh" label="Refresh" color="green-6" size="sm" @click="loadReport" :loading="loading" />
         <q-btn unelevated no-caps icon="download" label="Export CSV" color="blue-6" size="sm" @click="exportCSV" />
+        <q-btn unelevated no-caps icon="picture_as_pdf" label="Export PDF" color="red-7" size="sm" @click="exportPDF" :loading="pdfLoading" />
       </div>
     </div>
 
@@ -229,10 +230,12 @@
 import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { paymentApi } from '../../services/adminApi'
+import { generateRevenueReportPDF } from '../../utils/generateRevenueReportPDF'
 
 const $q = useQuasar()
 
 const loading     = ref(true)
+const pdfLoading  = ref(false)
 const dateFrom    = ref('')
 const dateTo      = ref('')
 
@@ -305,6 +308,26 @@ function exportCSV() {
   a.download = `revenue-report-${new Date().toISOString().slice(0, 10)}.csv`
   a.click()
   URL.revokeObjectURL(url)
+}
+
+// ── Export PDF ────────────────────────────────────────────────────────────
+async function exportPDF() {
+  pdfLoading.value = true
+  try {
+    await generateRevenueReportPDF({
+      summary:      summary.value,
+      byDoctor:     byDoctor.value,
+      byHospital:   byHospital.value,
+      monthlyTrend: monthlyTrend.value,
+      byStatus:     byStatus.value,
+      dateFrom:     dateFrom.value,
+      dateTo:       dateTo.value,
+    })
+  } catch {
+    $q.notify({ type: 'negative', message: 'Failed to generate PDF', position: 'top-right' })
+  } finally {
+    pdfLoading.value = false
+  }
 }
 
 onMounted(loadReport)
