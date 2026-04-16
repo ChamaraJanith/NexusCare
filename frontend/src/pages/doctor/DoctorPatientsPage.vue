@@ -1,43 +1,55 @@
 <template>
   <q-page padding style="background: #f4f6f9;">
     <!-- Header with Stats -->
-    <div class="row items-center q-mb-xl">
+    <div class="row items-center justify-between q-mb-lg">
       <div>
-        <div class="text-h4 text-weight-bolder text-dark">Patient Records</div>
-        <div class="text-subtitle1 text-grey-6 q-mt-xs">Manage and review your clinical patient history.</div>
+        <div class="text-h4 text-weight-bold text-grey-10">
+          Patient Records
+        </div>
+        <div class="text-body2 text-grey-7">
+          Manage clinical history and consultations
+        </div>
       </div>
+
+      <q-chip
+        class="patient-count-chip"
+        icon="groups"
+      >
+        {{ filteredPatients.length }} Patients
+      </q-chip>
     </div>
 
     <!-- Controls Row -->
-    <div class="row q-col-gutter-md q-mb-md justify-between items-center">
-      <div class="col-12 col-md-4">
-        <q-input 
-          v-model="searchQuery" 
-          outlined 
-          dense 
-          placeholder="Search by name or ID..."
-          class="bg-white q-pr-sm"
-          style="border-radius: 8px;"
-        >
-          <template v-slot:prepend>
-            <q-icon name="search" color="grey-6" />
-          </template>
-        </q-input>
-      </div>
-      <div class="col-12 col-md-4 flex justify-end">
-         <q-btn-toggle
+    <q-card flat class="filter-container q-mb-md">
+      <div class="row items-center q-col-gutter-sm">
+        <!-- Search -->
+        <div class="col-12 col-md-6">
+          <q-input
+            v-model="searchQuery"
+            dense outlined
+            placeholder="Search patients..."
+            class="filter-input modern-search"
+          >
+            <template v-slot:prepend>
+              <q-icon name="search"/>
+            </template>
+          </q-input>
+        </div>
+
+        <!-- Toggle -->
+        <div class="col-12 col-md-6 flex justify-end">
+          <q-btn-toggle
             v-model="filterStatus"
-            flat
-            toggle-color="primary"
-            color="grey-6"
+            unelevated
             :options="[
-              {label: 'All Patients', value: 'All'},
-              {label: 'Recent Updates', value: 'Recent'}
+              {label:'All Patients', value:'All'},
+              {label:'Recent Updates', value:'Recent'}
             ]"
-            style="border: 1px solid #e0e0e0; border-radius: 8px; background: white;"
+            class="modern-toggle"
           />
+        </div>
       </div>
-    </div>
+    </q-card>
 
     <!-- Loading State -->
     <div v-if="loading" class="q-pa-xl flex flex-center column">
@@ -54,7 +66,7 @@
 
     <!-- Hybrid EMR Data Table -->
     <div v-else>
-      <q-card flat class="shadow-2 bg-white" style="border-radius: 12px; overflow: hidden;">
+      <q-card flat class="shadow-2 bg-white modern-table">
         <q-table 
           :rows="filteredPatients" 
           :columns="columns" 
@@ -66,12 +78,12 @@
         >
           <!-- Custom Body Slot for Hybrid Card Feel -->
           <template v-slot:body="props">
-            <q-tr :props="props" class="hover-shadow cursor-pointer transition-generic">
+            <q-tr :props="props" class="hover-row cursor-pointer transition-generic">
               
               <!-- Patient Info Column -->
               <q-td key="info" :props="props" class="q-py-md">
                 <div class="row items-center no-wrap">
-                  <q-avatar size="48px" :color="getColor(props.row.patientName)" text-color="white" class="q-mr-md text-weight-bold shadow-1">
+                  <q-avatar size="48px" :color="getColor(props.row.patientName)" text-color="white" class="q-mr-md text-weight-bold shadow-1 modern-avatar">
                     {{ props.row.patientName ? props.row.patientName.charAt(0).toUpperCase() : '?' }}
                   </q-avatar>
                   <div class="column">
@@ -138,7 +150,7 @@
                     icon="medical_services" 
                     label="Consult"
                     size="sm"
-                    class="q-px-sm shadow-1"
+                    class="q-px-sm shadow-1 consult-btn"
                     @click.stop="$router.push({ path: '/doctor/prescription', query: { patientId: props.row.patientId, appointmentId: props.row.appointmentId }})"
                   >
                      <q-tooltip>Start Formal Consultation</q-tooltip>
@@ -782,4 +794,124 @@ const getRelativeTime = (timestampMs) => {
   gap: 6px;
 }
 
+.filter-container {
+  background: rgba(255,255,255,0.9);
+  backdrop-filter: blur(10px);
+  border-radius: 14px;
+  padding: 10px 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  border: 1px solid #eef2f7;
+  position: sticky;
+  top: 10px;
+  z-index: 20;
+}
+
+.filter-input {
+  border-radius: 10px !important;
+}
+
+.filter-input :deep(.q-field__control) {
+  border-radius: 10px !important;
+}
+
+.modern-toggle {
+  background: #e5e7eb;
+  border-radius: 14px;
+  padding: 4px;
+}
+
+/* 🔥 VERY IMPORTANT — FIX */
+.modern-toggle :deep(.q-btn .q-btn__content) {
+  color: #374151 !important;
+  font-weight: 600;
+}
+
+/* ACTIVE TEXT */
+.modern-toggle :deep(.q-btn--active .q-btn__content) {
+  color: white !important;
+}
+
+/* BUTTON STYLE */
+.modern-toggle :deep(.q-btn) {
+  border-radius: 10px;
+  font-size: 12px;
+  background: transparent;
+}
+
+/* ACTIVE BACKGROUND */
+.modern-toggle :deep(.q-btn--active) {
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* HOVER */
+.modern-toggle :deep(.q-btn:hover) {
+  background: #d1d5db;
+}
+
+.modern-table {
+  border-radius: 16px;
+  background: white;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+}
+
+.hover-row {
+  transition: all 0.2s ease;
+}
+
+.hover-row:hover {
+  background: #f9fafb !important;
+  transform: translateY(-1px);
+}
+
+.modern-avatar {
+  border-radius: 12px;
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  color: white;
+  font-weight: bold;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.consult-btn {
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  color: white;
+  border-radius: 10px;
+}
+
+.q-btn {
+  transition: all 0.2s ease;
+}
+
+.q-btn:hover {
+  transform: translateY(-1px);
+}
+
+.text-dark {
+  color: #111827 !important;
+}
+
+.text-grey-6 {
+  color: #4b5563 !important;
+}
+
+.text-grey-7 {
+  color: #374151 !important;
+}
+
+.patient-count-chip {
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  color: white;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 999px;
+}
+
+.modern-search {
+  background: white;
+  border-radius: 12px;
+}
+
+.modern-search:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
 </style>

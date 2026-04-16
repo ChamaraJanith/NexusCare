@@ -18,46 +18,58 @@
     <div v-else class="column q-gutter-y-sm">
 
       <!-- Filter Bar -->
-      <q-card flat bordered class="q-pa-sm q-mb-md" style="border-radius: 12px;">
-        <div class="row q-col-gutter-sm items-center">
+      <q-card flat class="filter-container q-mb-md">
+        <div class="row items-center q-col-gutter-sm">
           <!-- Search -->
           <div class="col-12 col-md-4">
             <q-input
               v-model="search"
-              dense
-              outlined
+              dense outlined
               placeholder="Search patient..."
-              debounce="300"
-            />
+              class="filter-input"
+            >
+              <template v-slot:prepend>
+                <q-icon name="search" size="16px" color="grey-6"/>
+              </template>
+            </q-input>
           </div>
 
-          <!-- Date filter -->
+          <!-- Date -->
           <div class="col-6 col-md-3">
             <q-input
               v-model="selectedDate"
-              dense
-              outlined
-              type="date"
-            />
+              dense outlined type="date"
+              class="filter-input"
+            >
+              <template v-slot:prepend>
+                <q-icon name="event" size="16px"/>
+              </template>
+            </q-input>
           </div>
 
-          <!-- Type filter -->
+          <!-- Type -->
           <div class="col-6 col-md-3">
             <q-select
               v-model="typeFilter"
-              dense
-              outlined
+              dense outlined
               :options="['ALL','ONLINE','PHYSICAL']"
-              label="Type"
-            />
+              class="filter-input"
+            >
+              <template v-slot:prepend>
+                <q-icon name="tune" size="16px"/>
+              </template>
+            </q-select>
           </div>
 
           <!-- Reset -->
           <div class="col-12 col-md-2">
             <q-btn
-              flat
-              color="grey"
+              unelevated
+              color="grey-2"
+              text-color="dark"
+              icon="restart_alt"
               label="Reset"
+              class="full-width"
               @click="resetFilters"
             />
           </div>
@@ -260,5 +272,40 @@ const openConsultation = async (apt) => {
 .consultation-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+}
+
+/* Global Premium Filter UI */
+.filter-container {
+  background: rgba(255,255,255,0.9);
+  backdrop-filter: blur(10px);
+  border-radius: 14px;
+  padding: 10px 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  border: 1px solid #eef2f7;
+  position: sticky;
+  top: 10px;
+  z-index: 20;
+}
+
+.filter-input {
+  border-radius: 10px !important;
+  font-size: 13px;
+}
+
+.filter-input :deep(.q-field__control) {
+  border-radius: 10px !important;
+}
+
+.filter-chip {
+  background: #f1f5f9;
+  border-radius: 8px;
+  font-size: 11px;
+  padding: 2px 8px;
+}
+
+.q-input:hover,
+.q-select:hover {
+  transform: translateY(-1px);
+  transition: 0.2s;
 }
 </style>
