@@ -505,9 +505,12 @@ const getPatientAppointmentsFallback = async (req, res, next) => {
       const isPaid = payment && payment.status === "success";
       return {
         ...s,
-        // Expose _id as mongoId so MyAppointments.vue can use appt._id correctly
         _id: s.mongoId || s.appointmentId,
         paymentStatus: isPaid ? "PAID" : (s.paymentStatus || "PENDING"),
+        queueNumber: s.queueNumber ?? null,
+        doctorHospital: s.doctorHospital || "",
+        hospitalId: s.hospitalId || "",
+        doctorProfileImage: s.doctorProfileImage || "",
       };
     });
 

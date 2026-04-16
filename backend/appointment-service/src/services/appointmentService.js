@@ -208,6 +208,9 @@ export const createAppointment = async (data) => {
       doctorEmail: saved.doctorEmail || null,
       queueNumber: saved.queueNumber,
       doctorName: saved.doctorName,
+      doctorHospital: saved.doctorHospital || "",
+      hospitalId: saved.hospitalId || "",
+      doctorProfileImage: saved.doctorProfileImage || "",
       patientName: saved.patientName,
       charges: saved.charges || null,
     });

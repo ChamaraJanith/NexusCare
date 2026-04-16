@@ -15,6 +15,7 @@
           <input v-model="revTo" type="date" class="rp-date-input" @change="loadRevenue" />
         </div>
         <q-btn unelevated no-caps icon="file_download" label="Export CSV" color="blue-7" size="sm" class="rp-export-btn" @click="exportCSV" />
+        <q-btn unelevated no-caps icon="picture_as_pdf" label="Export PDF" color="red-7" size="sm" class="rp-export-btn" @click="exportPDF" :loading="pdfLoading" />
         <q-btn unelevated no-caps icon="refresh" label="Refresh" color="green-6" size="sm" @click="loadAll" :loading="loading || revLoading" />
       </div>
     </div>
@@ -306,9 +307,11 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { adminApi, paymentApi } from '../../services/adminApi'
+import { generateRevenueReportPDF } from '../../utils/generateRevenueReportPDF'
 
 const loading    = ref(true)
 const revLoading = ref(true)
+const pdfLoading = ref(false)
 
 const userStats       = ref({})
 const paymentStats    = ref({})
@@ -437,6 +440,25 @@ async function loadRevenue() {
     monthlyTrend.value = d.monthlyTrend || []
   } catch { /* silent */ }
   finally { revLoading.value = false }
+}
+
+async function exportPDF() {
+  pdfLoading.value = true
+  try {
+    await generateRevenueReportPDF({
+      summary:      revSummary.value,
+      byDoctor:     byDoctor.value,
+      byHospital:   byHospital.value,
+      monthlyTrend: monthlyTrend.value,
+      byStatus:     paymentByStatus.value,
+      dateFrom:     revFrom.value,
+      dateTo:       revTo.value,
+    })
+  } catch {
+    // silent — PDF generation failure shouldn't break the page
+  } finally {
+    pdfLoading.value = false
+  }
 }
 
 function exportCSV() {
