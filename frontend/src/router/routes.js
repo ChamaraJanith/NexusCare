@@ -60,7 +60,6 @@ const routes = [
       { path: 'prescription', component: () => import('pages/doctor/DoctorPrescriptionPage.vue') },
       { path: 'availability', component: () => import('pages/doctor/DoctorAvailabilityPage.vue') },
       { path: 'profile', component: () => import('pages/doctor/DoctorProfilePage.vue') },
-      { path: 'reports', component: () => import('pages/doctor/DoctorReportsPage.vue') },
     ]
   },
 

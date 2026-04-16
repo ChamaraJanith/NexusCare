@@ -131,7 +131,6 @@ const sidebarItems = computed(() => {
     { label: 'Consultations',   icon: 'chat',             path: '/doctor/consultations' },
     { label: 'Availability',    icon: 'event_available',  path: '/doctor/availability' },
     { label: 'Video Conference',icon: 'videocam',         path: '/doctorVideo', to: { path: '/doctorVideo', query: { doctorId: docId } } },
-    { label: 'Reports',         icon: 'description',      path: '/doctor/reports' },
   ];
 });
 
