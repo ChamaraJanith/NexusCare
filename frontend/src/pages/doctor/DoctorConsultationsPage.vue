@@ -16,59 +16,112 @@
     </div>
 
     <div v-else class="column q-gutter-y-sm">
+
+      <!-- Filter Bar -->
+      <q-card flat bordered class="q-pa-sm q-mb-md" style="border-radius: 12px;">
+        <div class="row q-col-gutter-sm items-center">
+          <!-- Search -->
+          <div class="col-12 col-md-4">
+            <q-input
+              v-model="search"
+              dense
+              outlined
+              placeholder="Search patient..."
+              debounce="300"
+            />
+          </div>
+
+          <!-- Date filter -->
+          <div class="col-6 col-md-3">
+            <q-input
+              v-model="selectedDate"
+              dense
+              outlined
+              type="date"
+            />
+          </div>
+
+          <!-- Type filter -->
+          <div class="col-6 col-md-3">
+            <q-select
+              v-model="typeFilter"
+              dense
+              outlined
+              :options="['ALL','ONLINE','PHYSICAL']"
+              label="Type"
+            />
+          </div>
+
+          <!-- Reset -->
+          <div class="col-12 col-md-2">
+            <q-btn
+              flat
+              color="grey"
+              label="Reset"
+              @click="resetFilters"
+            />
+          </div>
+        </div>
+      </q-card>
+
+      <!-- Empty Filter State -->
+      <div v-if="filteredConsultations.length === 0" class="q-pa-xl flex flex-center column text-grey-5" style="min-height: 20vh;">
+        <q-icon name="search_off" size="48px" class="q-mb-sm" />
+        <div>No consultations match your filters.</div>
+      </div>
+
       <q-card
-        v-for="apt in consultations"
+        v-for="apt in filteredConsultations"
         :key="apt._id"
         flat bordered
-        style="border-radius: 10px; border-left: 4px solid #3b82f6;"
+        style="border-radius: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);"
+        class="consultation-card"
       >
-        <q-card-section class="row items-center no-wrap">
+        <q-card-section class="row items-center no-wrap q-py-sm q-px-md">
 
           <!-- Avatar -->
-          <q-avatar size="44px" style="background: #edf2f7;" class="q-mr-md flex-shrink-0">
-            <span class="text-primary text-weight-bold">
+          <q-avatar size="40px" style="background: linear-gradient(135deg, #4facfe, #00f2fe);" class="q-mr-md flex-shrink-0">
+            <span class="text-white text-weight-bold" style="font-size: 14px;">
               {{ getInitials(apt.patientName) }}
             </span>
           </q-avatar>
 
           <!-- Info -->
-          <div class="col">
-            <div class="text-weight-bold text-dark" style="font-size: 15px;">
+          <div class="col column justify-center" style="min-width: 0;">
+            <div class="text-weight-bold text-dark ellipsis" style="font-size: 14px;">
               {{ apt.patientName || 'Patient' }}
             </div>
-            <div class="text-grey-6" style="font-size: 12px;">
+            <div class="text-grey-6 ellipsis" style="font-size: 12px; margin-top: 2px;">
               {{ apt.date }} · {{ apt.time }} · {{ apt.appointmentType }}
             </div>
             <div class="row q-gutter-x-sm q-mt-xs">
-              <q-badge color="blue" label="CONFIRMED" />
-              <q-badge color="green" label="PAID" />
-              <q-badge color="grey" :label="'Queue #' + apt.queueNumber" />
+              <q-badge color="blue-1" text-color="blue-8" label="CONFIRMED" rounded style="font-size: 10px;" />
+              <q-badge color="green-1" text-color="green-8" label="PAID" rounded style="font-size: 10px;" />
+              <q-badge color="grey-2" text-color="grey-8" :label="'Queue #' + apt.queueNumber" rounded style="font-size: 10px;" />
+              <q-badge v-if="apt.consultationCompleted" color="green" label="COMPLETED" rounded style="font-size: 10px;" />
+              <q-badge v-else-if="apt.consultationStarted" color="orange" label="IN PROGRESS" rounded style="font-size: 10px;" />
             </div>
           </div>
 
           <!-- Actions -->
-          <div class="row q-gutter-xs flex-shrink-0">
+          <div class="row q-gutter-x-sm flex-shrink-0">
             <!-- Join video (ONLINE only) -->
             <q-btn
               v-if="apt.appointmentType === 'ONLINE'"
               unelevated dense size="sm"
-              color="primary" icon="video_call" label="Join"
-              @click="joinVideo(apt)"
+              color="blue" icon="video_call" label="Join"
+              @click="handleJoin(apt)"
+              style="border-radius: 8px;"
             />
 
             <!-- Write prescription / Start Consultation -->
             <q-btn
               unelevated dense size="sm"
-              color="teal" icon="edit_note" label="Start Consultation"
-              @click="startConsultation(apt)"
-            />
-
-            <!-- Mark complete -->
-            <q-btn
-              unelevated dense size="sm"
-              color="positive" icon="done_all" label="Complete"
-              :loading="completingId === apt._id"
-              @click="markComplete(apt)"
+              :color="apt.consultationStarted ? 'purple' : 'teal'"
+              icon="edit_note"
+              :label="apt.consultationStarted ? 'View Consultation' : 'Start Consultation'"
+              @click="openConsultation(apt)"
+              style="border-radius: 8px;"
             />
           </div>
 
@@ -80,7 +133,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import axios from 'axios';
@@ -91,7 +144,34 @@ const router = useRouter();
 const $q = useQuasar();
 const consultations = ref([]);
 const loading = ref(true);
-const completingId = ref('');
+
+const search = ref('');
+const selectedDate = ref('');
+const typeFilter = ref('ALL');
+
+const filteredConsultations = computed(() => {
+  return consultations.value.filter(a => {
+    const matchName = a.patientName
+      ?.toLowerCase()
+      .includes(search.value.toLowerCase());
+
+    const matchDate = selectedDate.value
+      ? a.date?.startsWith(selectedDate.value)
+      : true;
+
+    const matchType = typeFilter.value === 'ALL'
+      ? true
+      : a.appointmentType === typeFilter.value;
+
+    return matchName && matchDate && matchType;
+  });
+});
+
+const resetFilters = () => {
+  search.value = '';
+  selectedDate.value = '';
+  typeFilter.value = 'ALL';
+};
 
 
 
@@ -121,10 +201,10 @@ onMounted(async () => {
 
     const all = Array.isArray(data) ? data : [];
 
-    // Only show appointments that are CONFIRMED AND fully paid
-    consultations.value = all.filter(
-      a => a.status === 'CONFIRMED' && a.paymentStatus === 'PAID'
-    );
+    // Only show appointments that are CONFIRMED AND fully paid, latest on top
+    consultations.value = all
+      .filter(a => a.status === 'CONFIRMED' && a.paymentStatus === 'PAID')
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
   } catch (err) {
     console.error('Failed to fetch consultations', err);
     $q.notify({ type: 'negative', message: 'Could not load consultations.' });
@@ -133,50 +213,52 @@ onMounted(async () => {
   }
 });
 
-// ── Join video session ────────────────────────────────────────────────────────
-const joinVideo = (apt) => {
+// ── Reusable Join Video ──────────────────────────────────────────────────
+const handleJoin = (apt) => {
   router.push({
     path: '/doctorVideo',
     query: {
       appointmentId: apt._id,
-      doctorId: apt.doctorId,
+      doctorId: apt.doctorId
     }
   });
 };
 
-// ── Start Consultation ────────────────────────────────────────────────────────
-const startConsultation = (apt) => {
-  router.push({
-    path: '/doctor/prescription',
-    query: {
-      patientId: apt.patientId,
-      appointmentId: apt._id
-    }
-  });
-};
-
-// ── Mark complete ─────────────────────────────────────────────────────────────
-const markComplete = async (apt) => {
-  completingId.value = apt._id;
-  const token = getToken();
-
+// ── Open / Start Consultation ─────────────────────────────────────────────────
+const openConsultation = async (apt) => {
   try {
-    await axios.put(
-      `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/appointments/doctor/complete/${apt._id}`,
-      {},
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    // Remove from consultations list once completed
-    consultations.value = consultations.value.filter(a => a._id !== apt._id);
-    $q.notify({ type: 'positive', message: 'Consultation marked as completed!' });
-  } catch (err) {
-    $q.notify({
-      type: 'negative',
-      message: err.response?.data?.error || 'Failed to update.'
+    if (!apt.consultationStarted) {
+      // mark it started in backend
+      const token = getToken();
+      await axios.put(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/appointments/consultation/start/${apt._id}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      apt.consultationStarted = true;
+    }
+    
+    router.push({
+      path: '/doctor/prescription',
+      query: {
+        patientId: apt.patientId,
+        appointmentId: apt._id
+      }
     });
-  } finally {
-    completingId.value = '';
+  } catch (err) {
+    console.error('Failed to start consultation', err);
+    $q.notify({ type: 'negative', message: 'Could not communicate with the server to start consultation' });
   }
 };
+
 </script>
+
+<style scoped>
+.consultation-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.consultation-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+}
+</style>
