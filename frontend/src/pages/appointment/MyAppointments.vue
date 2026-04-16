@@ -165,6 +165,7 @@ const goToPayment = (appt) => {
       doctorFee: appt.charges?.doctorFee || 0,
       hospitalFee: appt.charges?.hospitalFee || 0,
       serviceFee: appt.charges?.serviceFee || 0,
+      hospitalId: appt.hospitalId || null,
       date: appt.date,
       time: appt.time,
       type: appt.appointmentType,

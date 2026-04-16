@@ -70,6 +70,18 @@ const paymentSchema = new mongoose.Schema(
     webhookData: {
       type: mongoose.Schema.Types.Mixed,
     },
+
+    // Fee breakdown stored at initiation time
+    charges: {
+      doctorFee:   { type: Number, default: 0 },
+      hospitalFee: { type: Number, default: 0 },
+      serviceFee:  { type: Number, default: 0 },
+    },
+
+    hospitalId: {
+      type: String,
+      default: null,
+    },
   },
   {
     timestamps: true,

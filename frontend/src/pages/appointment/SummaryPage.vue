@@ -186,7 +186,7 @@ onMounted(async () => {
             const matched = (resH.data?.data || []).find(
               h => h.name === store.selectedSlot.hospital || h.name === store.selectedSlot.location
             );
-            if (matched) hospitalId = matched.hospitalId || matched._id;
+            if (matched) hospitalId = matched.hospitalId || matched._id?.toString();
           } catch { /* fallback */ }
         }
         resolvedHospitalId.value = hospitalId || null;

@@ -191,6 +191,7 @@ const pageTitleMap = {
   '/admin/fees':            'Fee Management',
   '/admin/hospitals':       'Hospitals',
   '/admin/reports':         'Reports & Analytics',
+  '/admin/revenue':         'Revenue Report',
   '/admin/settings':        'Settings',
 }
 
