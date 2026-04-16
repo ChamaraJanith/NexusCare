@@ -287,7 +287,6 @@ const sidebarItems = [
   { label: 'Patient Records', icon: 'group',           path: '/doctor/patients' },
   { label: 'Consultations',   icon: 'chat',            path: '/doctor/consultations' },
   { label: 'Availability',    icon: 'event_available',  path: '/doctor/availability' },
-  { label: 'Reports',         icon: 'description',      path: '/doctor/reports' },
 ];
 
 // ─── State ───────────────────────────────────────────────────────
