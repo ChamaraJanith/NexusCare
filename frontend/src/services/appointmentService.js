@@ -55,7 +55,10 @@ export const getDoctorSlots = async (doctorId, date) => {
     // Handle new response format with stale flag
     if (payload.stale !== undefined) {
       return {
-        data: payload.data,
+        data: {
+          physical: filterExpiredSlots(payload.data?.physical || []),
+          online: filterExpiredSlots(payload.data?.online || []),
+        },
         stale: payload.stale,
         message: payload.message,
       }
@@ -63,7 +66,10 @@ export const getDoctorSlots = async (doctorId, date) => {
 
     // Legacy format (direct data)
     return {
-      data: payload,
+      data: {
+        physical: filterExpiredSlots(payload?.physical || []),
+        online: filterExpiredSlots(payload?.online || []),
+      },
       stale: false,
       message: '',
     }
@@ -145,8 +151,8 @@ export const getDoctorSlotsNext30Days = async (doctorId) => {
     if (payload.stale !== undefined) {
       const data = payload.data
       return {
-        physical: Array.isArray(data.physical) ? data.physical : [],
-        online: Array.isArray(data.online) ? data.online : [],
+        physical: filterExpiredSlots(Array.isArray(data.physical) ? data.physical : []),
+        online: filterExpiredSlots(Array.isArray(data.online) ? data.online : []),
         stale: payload.stale,
         message: payload.message,
       }
@@ -155,8 +161,8 @@ export const getDoctorSlotsNext30Days = async (doctorId) => {
     // Legacy format (direct data)
     const data = payload?.data ?? payload
     return {
-      physical: Array.isArray(data.physical) ? data.physical : [],
-      online: Array.isArray(data.online) ? data.online : [],
+      physical: filterExpiredSlots(Array.isArray(data.physical) ? data.physical : []),
+      online: filterExpiredSlots(Array.isArray(data.online) ? data.online : []),
       stale: false,
       message: '',
     }
@@ -170,4 +176,46 @@ export const getDoctorSlotsNext30Days = async (doctorId) => {
       message: `Failed to fetch availability: ${error.message}`,
     }
   }
+}
+
+/**
+ * UI-level filter to hide expired slots based on local browser time.
+ * Rules:
+ * 1. If slot date < today -> hide it
+ * 2. If slot date is today AND slot time is earlier than current time -> hide it
+ */
+const filterExpiredSlots = (slots) => {
+  if (!Array.isArray(slots)) return []
+
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  const todayStr = `${year}-${month}-${day}`
+
+  const currentHHmm =
+    String(now.getHours()).padStart(2, '0') +
+    ':' +
+    String(now.getMinutes()).padStart(2, '0')
+
+  return slots.filter((slot) => {
+    if (!slot.date || !slot.startTime) return true // Keep if data is missing
+
+    // Robust date normalization (local comparison)
+    let slotDateStr = ''
+    if (typeof slot.date === 'string' && slot.date.match(/^\d{4}[-/]\d{2}[-/]\d{2}/)) {
+      // Use the string directly to avoid timezone shifts if it's already YYYY-MM-DD
+      slotDateStr = slot.date.substring(0, 10).replace(/\//g, '-')
+    } else {
+      const sDate = new Date(slot.date)
+      if (isNaN(sDate.getTime())) return true // Fallback if invalid
+      slotDateStr = `${sDate.getFullYear()}-${String(sDate.getMonth() + 1).padStart(2, '0')}-${String(sDate.getDate()).padStart(2, '0')}`
+    }
+
+    // Comparison logic
+    if (slotDateStr < todayStr) return false
+    if (slotDateStr === todayStr && slot.startTime < currentHHmm) return false
+
+    return true
+  })
 }
