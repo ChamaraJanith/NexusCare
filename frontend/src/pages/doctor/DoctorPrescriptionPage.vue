@@ -376,7 +376,7 @@
                           <span class="rx-meta-value">{{ patient?.patientId || '—' }}</span>
                         </div>
                         <div class="rx-meta-row">
-                          <span class="rx-meta-value">{{ rx.doctorName || 'Dr. Unknown' }}</span>
+                          <span class="rx-meta-value">{{ rx.doctorName ? 'Dr. ' + rx.doctorName : 'Dr. Unknown' }}</span>
                         </div>
                         <div class="rx-meta-row">
                           <span class="rx-meta-label">Date:</span>

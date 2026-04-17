@@ -251,7 +251,7 @@
 
                           <div class="crm-meta-row">
                             <span class="crm-meta-value">
-                              {{ rx.doctorName || 'Dr. Not Available' }}
+                              {{ rx.doctorName ? 'Dr. ' + rx.doctorName : 'Dr. Not Available' }}
                             </span>
                           </div>
 
