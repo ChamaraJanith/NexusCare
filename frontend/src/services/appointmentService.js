@@ -188,34 +188,20 @@ const filterExpiredSlots = (slots) => {
   if (!Array.isArray(slots)) return []
 
   const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
-  const todayStr = `${year}-${month}-${day}`
-
-  const currentHHmm =
-    String(now.getHours()).padStart(2, '0') +
-    ':' +
-    String(now.getMinutes()).padStart(2, '0')
 
   return slots.filter((slot) => {
     if (!slot.date || !slot.startTime) return true // Keep if data is missing
 
-    // Robust date normalization (local comparison)
-    let slotDateStr = ''
-    if (typeof slot.date === 'string' && slot.date.match(/^\d{4}[-/]\d{2}[-/]\d{2}/)) {
-      // Use the string directly to avoid timezone shifts if it's already YYYY-MM-DD
-      slotDateStr = slot.date.substring(0, 10).replace(/\//g, '-')
-    } else {
-      const sDate = new Date(slot.date)
-      if (isNaN(sDate.getTime())) return true // Fallback if invalid
-      slotDateStr = `${sDate.getFullYear()}-${String(sDate.getMonth() + 1).padStart(2, '0')}-${String(sDate.getDate()).padStart(2, '0')}`
-    }
+    // Combine slot.date and slot.startTime into a full DateTime object
+    // Handle both YYYY-MM-DD and YYYY/MM/DD formats
+    const datePart = slot.date.split('T')[0].split(' ')[0].replace(/\//g, '-')
+    
+    // Using local ISO format: YYYY-MM-DDTHH:mm:ss
+    const slotDateTime = new Date(`${datePart}T${slot.startTime}:00`)
+    
+    if (isNaN(slotDateTime.getTime())) return true // Fallback if invalid data
 
-    // Comparison logic
-    if (slotDateStr < todayStr) return false
-    if (slotDateStr === todayStr && slot.startTime < currentHHmm) return false
-
-    return true
+    // Rule: If slotDateTime <= currentTime -> DO NOT SHOW
+    return slotDateTime > now
   })
 }

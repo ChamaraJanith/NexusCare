@@ -264,7 +264,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAppointmentStore } from '../../stores/appointmentStore'
 import { useAuthStore } from '../../stores/authStore'
@@ -301,6 +301,10 @@ const onlineSlots = ref([])
 const slotFees = ref({})
 const slotsStale = ref(false)
 
+// Real-time dynamic filtering
+const now = ref(new Date())
+let timer = null
+
 // Returns hospitalFee from slot (denormalized) or from fetched fee data
 const getHospitalFee = (slot) => {
   if (slot.hospitalFee != null) return slot.hospitalFee
@@ -320,7 +324,21 @@ const fetchFeesForSlots = async (slots, type) => {
   )
 }
 
-const totalSlots = computed(() => physicalSlots.value.length + onlineSlots.value.length)
+const isSlotFuture = (slot, currentNow) => {
+  if (!slot.date || !slot.startTime) return true
+  const datePart = slot.date.split('T')[0].split(' ')[0].replace(/\//g, '-')
+  const slotDateTime = new Date(`${datePart}T${slot.startTime}:00`)
+  return !isNaN(slotDateTime.getTime()) && slotDateTime > currentNow
+}
+
+const filteredPhysicalSlots = computed(() =>
+  physicalSlots.value.filter((s) => isSlotFuture(s, now.value)),
+)
+const filteredOnlineSlots = computed(() =>
+  onlineSlots.value.filter((s) => isSlotFuture(s, now.value)),
+)
+
+const totalSlots = computed(() => filteredPhysicalSlots.value.length + filteredOnlineSlots.value.length)
 
 const groupByDate = (slots) => {
   return slots.reduce((acc, slot) => {
@@ -331,8 +349,8 @@ const groupByDate = (slots) => {
   }, {})
 }
 
-const groupedPhysical = computed(() => groupByDate(physicalSlots.value))
-const groupedOnline = computed(() => groupByDate(onlineSlots.value))
+const groupedPhysical = computed(() => groupByDate(filteredPhysicalSlots.value))
+const groupedOnline = computed(() => groupByDate(filteredOnlineSlots.value))
 
 const availableCount = (slot) => Math.max((slot.slotCount || 1) - (slot.bookedCount || 0), 0)
 const isFull = (slot) => availableCount(slot) === 0
@@ -396,6 +414,15 @@ onMounted(async () => {
   if (!store.selectedDoctor) store.selectDoctor(doctor.value)
 
   fetchSlots()
+
+  // Update 'now' every 30 seconds for real-time expiration
+  timer = setInterval(() => {
+    now.value = new Date()
+  }, 30000)
+})
+
+onUnmounted(() => {
+  if (timer) clearInterval(timer)
 })
 
 const fetchSlots = async () => {
