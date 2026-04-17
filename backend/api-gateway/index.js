@@ -111,6 +111,7 @@ proxy.on("error", (err, req, res) => {
   res.writeHead(502, { "Content-Type": "application/json" });
   res.end(JSON.stringify({ error: "Bad Gateway", message: err.message }));
 });
+
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -124,6 +125,7 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization", "x-internal-service-key"],
   }),
 );
+
 app.get("/health", (req, res) => {
   res.json({
     status: "ok",
@@ -143,33 +145,33 @@ app.get("/health", (req, res) => {
 app.use("/api/auth", route(USER_SERVICE_URL, "user-service"));
 app.use("/api/patient", route(USER_SERVICE_URL, "user-service"));
 app.use("/api/admin", route(USER_SERVICE_URL, "user-service"));
-app.use(
-  "/api/doctors/search",
-  route(APPOINTMENT_SERVICE_URL, "appointment-service"),
-);
+app.use("/api/doctors/search", route(APPOINTMENT_SERVICE_URL, "appointment-service"));
 app.use("/api/doctors/internal", route(DOCTOR_SERVICE_URL, "doctor-service"));
 app.use("/api/doctors", route(DOCTOR_SERVICE_URL, "doctor-service"));
 app.use("/api/availability", routeAvailability);
 app.use("/api/prescriptions", route(DOCTOR_SERVICE_URL, "doctor-service"));
 
-// Appointments — proxy to appointment-service.
-// For GET /api/appointments/patient/:patientId, fall back to payment-service
-// snapshot when appointment-service is down, so patients can still see their appointments.
+/**
+ * Appointments routing with resilient fallbacks.
+ *
+ * Normal path: everything → appointment-service
+ *
+ * When appointment-service is DOWN:
+ *   GET /api/appointments/doctor/:doctorId  → doctor-service  (AppointmentRequest snapshot)
+ *   GET /api/appointments/patient/:patientId → payment-service (AppointmentSnapshot)
+ *   All write operations                    → 503 (cannot be silently rerouted)
+ */
 app.use("/api/appointments", (req, res) => {
   req.url = req.originalUrl;
 
   proxy.web(req, res, { target: APPOINTMENT_SERVICE_URL, changeOrigin: true }, (err) => {
-    const patientReadMatch =
-      req.method === "GET" &&
-      /\/api\/appointments\/patient\/[^/?]+/.test(req.originalUrl);
+    console.warn("⚠️ appointment-service unreachable:", err.message);
 
-    if (patientReadMatch) {
-      console.warn("⚠️ appointment-service down — serving patient appointments from payment-service snapshot");
-      req.url = req.originalUrl.replace(
-        /\/api\/appointments\/patient\//,
-        "/api/payments/fallback/appointments/patient/"
-      );
-      proxy.web(req, res, { target: PAYMENT_SERVICE_URL, changeOrigin: true }, (fallbackErr) => {
+    // ── Doctor schedule fallback → doctor-service AppointmentRequest snapshot ─
+    if (req.method === "GET" && /\/api\/appointments\/doctor\/[^/?]+$/.test(req.originalUrl)) {
+      console.warn("⚠️ Falling back to doctor-service snapshot for doctor appointments");
+      req.url = req.originalUrl;
+      proxy.web(req, res, { target: DOCTOR_SERVICE_URL, changeOrigin: true }, () => {
         if (!res.headersSent) {
           res.writeHead(503, { "Content-Type": "application/json" });
           res.end(JSON.stringify({
@@ -181,9 +183,48 @@ app.use("/api/appointments", (req, res) => {
       return;
     }
 
+    // ── Appointment details fallback → doctor-service snapshot ────────────────
+    if (req.method === "GET" && /\/api\/appointments\/details\/[^/?]+/.test(req.originalUrl)) {
+      console.warn("⚠️ Falling back to doctor-service for appointment details");
+      req.url = req.originalUrl;
+      proxy.web(req, res, { target: DOCTOR_SERVICE_URL, changeOrigin: true }, () => {
+        if (!res.headersSent) {
+          res.writeHead(503, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({
+            error: "Service Unavailable",
+            message: "Appointment service is currently unavailable.",
+          }));
+        }
+      });
+      return;
+    }
+
+    // ── Patient appointments fallback → payment-service AppointmentSnapshot ───
+    if (req.method === "GET" && /\/api\/appointments\/patient\/[^/?]+/.test(req.originalUrl)) {
+      console.warn("⚠️ Falling back to payment-service snapshot for patient appointments");
+      req.url = req.originalUrl.replace(
+        /\/api\/appointments\/patient\//,
+        "/api/payments/fallback/appointments/patient/"
+      );
+      proxy.web(req, res, { target: PAYMENT_SERVICE_URL, changeOrigin: true }, () => {
+        if (!res.headersSent) {
+          res.writeHead(503, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({
+            error: "Service Unavailable",
+            message: "Appointment service is currently unavailable. Please try again shortly.",
+          }));
+        }
+      });
+      return;
+    }
+
+    // ── All other requests — return 503 ───────────────────────────────────────
     if (!res.headersSent) {
-      res.writeHead(502, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "Bad Gateway", message: err?.message || "appointment-service unavailable" }));
+      res.writeHead(503, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({
+        error: "Service Unavailable",
+        message: "Appointment service is currently unavailable. Please try again shortly.",
+      }));
     }
   });
 });
@@ -192,10 +233,7 @@ app.use("/api/ai", route(AI_SERVICE_URL, "ai-service"));
 app.use("/api/payments", route(PAYMENT_SERVICE_URL, "payment-service"));
 app.use("/api/service-fee", route(FEE_SERVICE_URL, "fee-service"));
 app.use("/api/hospitals", route(FEE_SERVICE_URL, "fee-service"));
-app.use(
-  "/api/notifications",
-  route(NOTIFICATION_SERVICE_URL, "notification-service"),
-);
+app.use("/api/notifications", route(NOTIFICATION_SERVICE_URL, "notification-service"));
 app.use("/api/video", route(VIDEO_SERVICE_URL, "video-service"));
 
 app.listen(process.env.PORT || 8080, () => {

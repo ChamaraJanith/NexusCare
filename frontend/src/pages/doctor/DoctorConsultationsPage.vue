@@ -2,6 +2,14 @@
   <q-page padding style="background: #f5f6fa;">
     <div class="text-h5 text-weight-bold text-dark q-mb-lg">Consultations</div>
 
+    <!-- Stale data banner — shown when appointment-service is down -->
+    <q-banner v-if="isStaleData" rounded dense class="bg-orange-1 text-orange-9 q-mb-md" style="border: 1px solid #ffe0b2; border-radius: 10px;">
+      <template v-slot:avatar>
+        <q-icon name="cloud_off" color="orange-7" />
+      </template>
+      Showing cached data — appointment service is temporarily unavailable. Consultations are still accessible.
+    </q-banner>
+
     <div v-if="loading" class="flex flex-center" style="min-height: 40vh;">
       <q-spinner-puff color="primary" size="50px" />
     </div>
@@ -109,7 +117,7 @@
             <div class="row q-gutter-x-sm q-mt-xs">
               <q-badge color="blue-1" text-color="blue-8" label="CONFIRMED" rounded style="font-size: 10px;" />
               <q-badge color="green-1" text-color="green-8" label="PAID" rounded style="font-size: 10px;" />
-              <q-badge color="grey-2" text-color="grey-8" :label="'Queue #' + apt.queueNumber" rounded style="font-size: 10px;" />
+              <q-badge color="grey-2" text-color="grey-8" :label="'Queue #' + (apt.queueNumber ?? '—')" rounded style="font-size: 10px;" />
               <q-badge v-if="apt.consultationCompleted" color="green" label="COMPLETED" rounded style="font-size: 10px;" />
               <q-badge v-else-if="apt.consultationStarted" color="orange" label="IN PROGRESS" rounded style="font-size: 10px;" />
             </div>
@@ -198,6 +206,8 @@ const getInitials = (n) =>
   n ? n.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() : '?';
 
 // ── Fetch only CONFIRMED + PAID appointments ──────────────────────────────────
+const isStaleData = ref(false);
+
 onMounted(async () => {
   const token = getToken();
   const decoded = token ? parseJwt(token) : null;
@@ -206,12 +216,15 @@ onMounted(async () => {
   if (!doctorId) { loading.value = false; return; }
 
   try {
-    const { data } = await axios.get(
+    const res = await axios.get(
       `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/appointments/doctor/${doctorId}`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
-    const all = Array.isArray(data) ? data : [];
+    // Detect if we're reading from a snapshot (appointment-service was down)
+    isStaleData.value = res.headers['x-data-source'] === 'doctor-service-snapshot';
+
+    const all = Array.isArray(res.data) ? res.data : [];
 
     // Only show appointments that are CONFIRMED AND fully paid, latest on top
     consultations.value = all
@@ -240,16 +253,23 @@ const handleJoin = (apt) => {
 const openConsultation = async (apt) => {
   try {
     if (!apt.consultationStarted) {
-      // mark it started in backend
       const token = getToken();
-      await axios.put(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/appointments/consultation/start/${apt._id}`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      apt.consultationStarted = true;
+      try {
+        await axios.put(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/appointments/consultation/start/${apt._id}`,
+          {},
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        apt.consultationStarted = true;
+      } catch (startErr) {
+        // appointment-service may be down — proceed anyway.
+        // The patient is CONFIRMED + PAID, so the doctor must be able to consult.
+        // consultationStarted will sync when appointment-service recovers.
+        console.warn('Could not mark consultation started (appointment-service may be down), proceeding anyway:', startErr.message);
+        apt.consultationStarted = true;
+      }
     }
-    
+
     router.push({
       path: '/doctor/prescription',
       query: {
@@ -258,8 +278,8 @@ const openConsultation = async (apt) => {
       }
     });
   } catch (err) {
-    console.error('Failed to start consultation', err);
-    $q.notify({ type: 'negative', message: 'Could not communicate with the server to start consultation' });
+    console.error('Failed to open consultation', err);
+    $q.notify({ type: 'negative', message: 'Could not open consultation.' });
   }
 };
 

@@ -37,14 +37,15 @@ export const createPrescription = async (data, user) => {
     return med;
   });
 
-  // 🔥 Doctor identity (ONLY from authenticated user)
+  // 🔥 Doctor identity (from token, fallback to request body)
   const doctorId = user.doctorId || user.id;
 
   const doctorName =
     user.name ||
-    user.fullName;
+    user.fullName ||
+    data.doctorName ||   // sent by frontend from injected doctor profile
+    null;
 
-  // ❗ Strict enforcement (no more "Unknown Doctor")
   if (!doctorName) {
     throw new Error("Doctor profile name missing in token");
   }

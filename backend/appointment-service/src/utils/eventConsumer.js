@@ -18,6 +18,10 @@ const PAYMENT_EXCHANGE = "payments";
 const PAYMENT_QUEUE = "appointment_service_payments";
 const PAYMENT_ROUTING = "payment.#";
 
+// Doctor command events (confirm/reject published by doctor-service)
+const DOCTOR_COMMANDS_QUEUE = "appointment_service_doctor_commands";
+const DOCTOR_COMMANDS_ROUTING = "appointment.doctor_#";
+
 /**
  * Initialize RabbitMQ consumer
  */
@@ -49,7 +53,13 @@ export const initializeConsumer = async () => {
     await channel.bindQueue(paymentQueue.queue, PAYMENT_EXCHANGE, PAYMENT_ROUTING);
     await channel.consume(paymentQueue.queue, handlePaymentEvent, { noAck: false });
 
-    console.log("✅ Event consumer initialized - listening for doctor + payment events");
+    // ── Doctor command events — confirm/reject queued while appointment-service was down ─
+    await channel.assertExchange("appointments", "topic", { durable: true });
+    const doctorCmdQueue = await channel.assertQueue(DOCTOR_COMMANDS_QUEUE, { durable: true });
+    await channel.bindQueue(doctorCmdQueue.queue, "appointments", DOCTOR_COMMANDS_ROUTING);
+    await channel.consume(doctorCmdQueue.queue, handleDoctorCommandEvent, { noAck: false });
+
+    console.log("✅ Event consumer initialized - listening for doctor + payment + doctor-command events");
   } catch (error) {
     console.error("❌ Failed to initialize event consumer:", error.message);
     setTimeout(initializeConsumer, 5000);
@@ -247,6 +257,103 @@ const handlePaymentEvent = async (msg) => {
     channel.ack(msg);
   } catch (err) {
     console.error("❌ Error handling payment event:", err.message);
+    channel.nack(msg, false, !msg.fields.redelivered);
+  }
+};
+
+/**
+ * Handle appointment.doctor_confirmed and appointment.doctor_rejected events.
+ * Published by doctor-service when a doctor confirms/rejects via doctor-service API.
+ * This guarantees eventual consistency even when appointment-service was down.
+ */
+const handleDoctorCommandEvent = async (msg) => {
+  if (!msg) return;
+  try {
+    const payload = JSON.parse(msg.content.toString());
+    const routingKey = msg.fields?.routingKey || "";
+
+    const { appointmentId, mongoId, doctorId, status, rejectionReason } = payload;
+
+    if (!appointmentId && !mongoId) {
+      console.warn("⚠️ [doctor-cmd] Missing appointmentId/mongoId — discarding");
+      channel.nack(msg, false, false);
+      return;
+    }
+
+    const query = {
+      $or: [
+        ...(mongoId ? [{ _id: mongoId }] : []),
+        { appointmentId },
+      ].filter(Boolean),
+    };
+
+    const existing = await Appointment.findOne(query);
+
+    if (!existing) {
+      console.warn(`⚠️ [doctor-cmd] Appointment not found for ${appointmentId || mongoId} — acking`);
+      channel.ack(msg);
+      return;
+    }
+
+    // Idempotency — skip if already in the target state
+    if (
+      (routingKey === "appointment.doctor_confirmed" && existing.status === "CONFIRMED") ||
+      (routingKey === "appointment.doctor_rejected" && existing.status === "CANCELLED")
+    ) {
+      console.log(`ℹ️ [doctor-cmd] Already in target state (${existing.status}) — skipping`);
+      channel.ack(msg);
+      return;
+    }
+
+    // No status regression: don't allow going back to PENDING
+    if (status === "PENDING") {
+      console.warn("⚠️ [doctor-cmd] Status regression to PENDING rejected");
+      channel.ack(msg);
+      return;
+    }
+
+    const update = { status };
+    if (routingKey === "appointment.doctor_rejected") {
+      update.rejectionReason = rejectionReason || "Rejected by doctor";
+    }
+
+    const updated = await Appointment.findOneAndUpdate(query, update, { new: true });
+
+    if (updated) {
+      console.log(`✅ [doctor-cmd] Appointment ${updated.appointmentId} → ${updated.status}`);
+
+      // Re-publish so payment-service snapshot stays in sync
+      const eventKey = routingKey === "appointment.doctor_confirmed"
+        ? "appointment.confirmed"
+        : "appointment.rejected";
+
+      publishEvent("appointments", eventKey, {
+        appointmentId: updated.appointmentId,
+        id:            updated._id?.toString(),
+        patientId:     updated.patientId,
+        doctorId:      updated.doctorId,
+        appointmentType: updated.appointmentType,
+        status:        updated.status,
+        paymentStatus: updated.paymentStatus,
+        date:          updated.date,
+        time:          updated.time,
+        patientEmail:  updated.email,
+        patientPhone:  updated.phone,
+        doctorEmail:   updated.doctorEmail || null,
+        queueNumber:   updated.queueNumber,
+        doctorName:    updated.doctorName,
+        doctorHospital: updated.doctorHospital || "",
+        hospitalId:    updated.hospitalId || "",
+        doctorProfileImage: updated.doctorProfileImage || "",
+        patientName:   updated.patientName,
+        rejectionReason: updated.rejectionReason,
+        charges:       updated.charges || null,
+      }).catch((e) => console.warn("⚠️ Failed to re-publish after doctor command:", e.message));
+    }
+
+    channel.ack(msg);
+  } catch (err) {
+    console.error("❌ [doctor-cmd] Error handling doctor command event:", err.message);
     channel.nack(msg, false, !msg.fields.redelivered);
   }
 };

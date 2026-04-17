@@ -378,4 +378,33 @@ router.patch("/:id/payment", async (req, res) => {
   }
 });
 
+// ── ADMIN: Backfill — re-publish all appointments as events so downstream snapshots sync ─
+router.post("/admin/backfill-events", async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "No token provided" });
+    const token = authHeader.split(" ")[1];
+    const userData = await verifyUser(token);
+    if (userData.role !== "admin") return res.status(403).json({ error: "Admin only" });
+
+    const appointments = await Appointment.find({}).lean();
+    let published = 0;
+    let failed = 0;
+
+    for (const appt of appointments) {
+      try {
+        await publishEvent("appointments", "appointment.created", buildAppointmentEventPayload(appt));
+        published++;
+      } catch (e) {
+        failed++;
+        console.warn(`⚠️ Backfill failed for ${appt.appointmentId}:`, e.message);
+      }
+    }
+
+    res.json({ success: true, total: appointments.length, published, failed });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;

@@ -6,6 +6,7 @@ import appointmentRoutes from "./routes/appointmentRoutes.js";
 import doctorSearchRoutes from "./routes/doctorSearchRoutes.js";
 import availabilityRoutes from "./routes/availabilityRoutes.js";
 import { initializeConsumer, closeConsumer } from "./utils/eventConsumer.js";
+import { runStartupBackfill } from "./utils/startupBackfill.js";
 import AvailabilitySlot from "./models/AvailabilitySlot.js";
 import http from "node:http";
 import { Server } from "socket.io";
@@ -104,6 +105,11 @@ const startServer = async () => {
     } catch (consumerError) {
       console.warn("⚠️ Event consumer failed to start:", consumerError.message);
     }
+
+    // Re-publish all appointments on startup so downstream snapshots stay in sync
+    runStartupBackfill().catch((err) =>
+      console.warn("⚠️ Startup backfill failed (non-critical):", err.message)
+    );
   } catch (err) {
     console.error("❌ MongoDB connection failed:", err.message);
     console.error(err);
