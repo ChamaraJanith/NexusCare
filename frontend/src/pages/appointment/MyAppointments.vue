@@ -45,7 +45,7 @@
             <div class="text-subtitle1 text-weight-bold text-white">
               {{ appt.patientName || 'Your Appointment' }}
             </div>
-            <div class="text-caption text-grey-5">ID: {{ appt._id }}</div>
+            <div class="text-caption text-grey-5">ID: {{ appt.appointmentId || appt._id }}</div>
             <div class="text-caption text-blue-4">{{ appt.appointmentType }}</div>
             <div class="text-caption"
               :class="appt.paymentStatus === 'PAID' ? 'text-green-4' : 'text-orange-4'">
@@ -155,7 +155,7 @@ const goToPayment = (appt) => {
   localStorage.setItem("date", appt.date || "");
   localStorage.setItem("time", appt.time || "");
   localStorage.setItem("queueNumber", appt.queueNumber || "-");
-  localStorage.setItem("appointmentId", appt._id || "");
+  localStorage.setItem("appointmentId", appt.appointmentId || appt._id || "");
 
   router.push({
     path: '/appointment/payment',
@@ -169,7 +169,7 @@ const goToPayment = (appt) => {
       date: appt.date,
       time: appt.time,
       type: appt.appointmentType,
-      appointmentId: appt._id
+      appointmentId: appt.appointmentId || appt._id
     }
   });
 };
