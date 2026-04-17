@@ -281,7 +281,7 @@ const proceedToRequest = async () => {
 
     const result = await bookAppointment(payload);
     const apt = result.appointment || result;
-    const realId = apt._id;
+    const realId = apt.appointmentId || apt._id;
 
     // Save to localStorage for receipt fallback
     localStorage.setItem("appointmentId", realId || "");

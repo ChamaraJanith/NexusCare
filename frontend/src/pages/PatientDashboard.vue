@@ -1473,7 +1473,7 @@ onMounted(async () => {
  
 const goToPayment = (ap) => {
   const resolvedDoctorName = doctorNames.value[ap.doctorId] || ap.doctorName || ''
-  localStorage.setItem('appointmentId',   ap._id)
+  localStorage.setItem('appointmentId',   ap.appointmentId || ap._id)
   localStorage.setItem('doctorName',      resolvedDoctorName)
   localStorage.setItem('amount',          ap.charges?.total || 0)
   localStorage.setItem('doctorFee',       ap.charges?.doctorFee   || 0)
@@ -1487,7 +1487,7 @@ const goToPayment = (ap) => {
   router.push({
     path: '/appointment/payment',
     query: {
-      appointmentId: ap._id,
+      appointmentId: ap.appointmentId || ap._id,
       doctorId:      ap.doctorId,
       doctorName:    doctorNames.value[ap.doctorId] || ap.doctorName || '',
       doctorFee:     ap.charges?.doctorFee   || 0,
