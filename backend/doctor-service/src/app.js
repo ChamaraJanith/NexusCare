@@ -5,8 +5,10 @@ import cors from "cors";
 
 import doctorRoutes from "./routes/doctor.routes.js";
 import availabilityRoutes from "./routes/availability.routes.js";
-import prescriptionRoutes from "./routes/prescription.routes.js"; // 🔥 ADD THIS
+import prescriptionRoutes from "./routes/prescription.routes.js";
+import appointmentRoutes from "./routes/appointment.routes.js";
 import { startRabbitMQConsumer } from "./services/rabbitmqConsumer.js";
+import { startAppointmentConsumer } from "./services/appointmentEventConsumer.js";
 import { initializePublisher, closePublisher } from "./utils/eventPublisher.js";
 import { migrateHospitalFees } from "./services/migrateHospitalFees.js";
 
@@ -24,7 +26,8 @@ app.use("/uploads", express.static("uploads"));
 // 🔹 Routes
 app.use("/api/doctors", doctorRoutes);
 app.use("/api/availability", availabilityRoutes);
-app.use("/api/prescriptions", prescriptionRoutes); // 🔥 ADD THIS
+app.use("/api/prescriptions", prescriptionRoutes);
+app.use("/api/appointments", appointmentRoutes);
 
 // 🔹 Global Error Handler for upload/multer errors
 app.use((err, req, res, next) => {
@@ -111,6 +114,13 @@ const startServer = async () => {
         "⚠️ RabbitMQ consumer failed to start:",
         consumerError.message,
       );
+    }
+
+    // Start appointment event consumer — keeps local AppointmentRequest snapshots in sync
+    try {
+      await startAppointmentConsumer();
+    } catch (consumerError) {
+      console.warn("⚠️ Appointment event consumer failed to start:", consumerError.message);
     }
 
     try {
