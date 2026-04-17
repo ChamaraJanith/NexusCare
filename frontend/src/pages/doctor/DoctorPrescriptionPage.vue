@@ -16,127 +16,157 @@
       <div class="col-12 col-md-4 column q-gutter-y-md">
         
         <!-- Patient Details Card -->
-        <q-card flat bordered style="border-radius: 12px;">
-          <q-card-section class="bg-primary text-white">
-            <div class="text-h6 text-weight-bold">Patient Details</div>
+        <q-card flat bordered class="patient-profile-card">
+          <!-- 1. Header (Premium Identity Section) -->
+          <q-card-section class="patient-header-gradient text-white q-pa-md">
+            <div class="row items-center justify-between">
+              <div class="text-h6 text-weight-bold">Patient Details</div>
+              <q-badge color="green-13" text-color="dark" label="Active Patient" class="text-weight-bold shadow-1" />
+            </div>
           </q-card-section>
           
-          <q-card-section v-if="patient">
-            <div class="row items-center q-mb-md">
-              <q-avatar size="50px" color="blue-1" text-color="primary" class="q-mr-md text-weight-bold">
+          <q-card-section v-if="patient" class="q-pa-md">
+            <!-- Avatar Row -->
+            <div class="row items-center q-mb-lg">
+              <q-avatar size="64px" color="blue-1" text-color="primary" class="q-mr-md text-weight-bold shadow-2" style="font-size: 28px;">
                 {{ patient.name ? patient.name.charAt(0).toUpperCase() : '?' }}
               </q-avatar>
               <div>
-                <div class="text-weight-bold text-dark text-h6">{{ patient.name }}</div>
-                <div class="text-grey-7">{{ patient.patientId }}</div>
+                <div class="text-weight-bold text-dark text-h5" style="letter-spacing: -0.5px;">{{ patient.name }}</div>
+                <div class="text-grey-7 q-mt-xs">
+                  <q-badge outline color="grey-7" class="q-px-sm q-py-xs" style="border-radius: 6px;">{{ patient.patientId }}</q-badge>
+                </div>
               </div>
             </div>
 
-            <q-list dense>
-              <q-item>
-                <q-item-section avatar>
-                  <q-icon name="cake" color="grey" />
-                </q-item-section>
-                <q-item-section class="text-dark">
-                  <span class="text-grey-7 text-weight-medium">Age:</span>
-                  <span class="text-weight-bold text-dark"> {{ patient.age ? patient.age + ' yrs' : 'N/A' }}</span>
-                </q-item-section>
-              </q-item>
+            <!-- 2-Col Grid structure -->
+            <div class="row q-col-gutter-md">
+              
+              <!-- 🟦 Personal Info -->
+              <div class="col-12 col-md-6">
+                <div class="patient-data-card patient-card-blue q-pa-md full-height">
+                  <div class="row items-center q-mb-sm">
+                    <q-icon name="person" color="blue-8" size="sm" class="q-mr-sm" />
+                    <div class="text-subtitle2 text-weight-bold text-blue-9">Personal Info</div>
+                  </div>
+                  <q-separator class="q-mb-md" />
+                  <div class="row q-col-gutter-sm">
+                    <div class="col-12 col-md-6">
+                      <div class="patient-data-item">
+                        <div class="text-caption text-grey-6">Age</div>
+                        <div class="text-body2 text-weight-bold text-dark">{{ patient.age ? patient.age + ' yrs' : 'N/A' }}</div>
+                      </div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                      <div class="patient-data-item">
+                        <div class="text-caption text-grey-6">Gender</div>
+                        <div class="text-body2 text-weight-bold text-dark">{{ patient.gender || 'N/A' }}</div>
+                      </div>
+                    </div>
+                    <div class="col-12">
+                      <div class="patient-data-item">
+                        <div class="text-caption text-grey-6">Blood Group</div>
+                        <div class="text-body2 text-weight-bold text-dark">
+                          <q-icon name="water_drop" color="red" size="xs" class="q-mr-xs" v-if="patient.bloodGroup" />
+                          {{ patient.bloodGroup || 'N/A' }}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-              <q-item>
-                <q-item-section avatar>
-                  <q-icon name="wc" color="grey" />
-                </q-item-section>
-                <q-item-section class="text-dark">
-                  <span class="text-grey-7 text-weight-medium">Gender:</span>
-                  <span class="text-weight-bold text-dark"> {{ patient.gender || 'N/A' }}</span>
-                </q-item-section>
-              </q-item>
+              <!-- 🟩 Contact Info -->
+              <div class="col-12 col-md-6">
+                <div class="patient-data-card patient-card-green q-pa-md full-height">
+                  <div class="row items-center q-mb-sm">
+                    <q-icon name="contact_phone" color="green-8" size="sm" class="q-mr-sm" />
+                    <div class="text-subtitle2 text-weight-bold text-green-9">Contact Info</div>
+                  </div>
+                  <q-separator class="q-mb-md" />
+                  <div class="row q-col-gutter-sm">
+                    <div class="col-12">
+                      <div class="patient-data-item">
+                        <div class="text-caption text-grey-6">Phone</div>
+                        <div class="text-body2 text-weight-bold text-dark">{{ patient.phone || 'N/A' }}</div>
+                      </div>
+                    </div>
+                    <div class="col-12">
+                      <div class="patient-data-item">
+                        <div class="text-caption text-grey-6">Email</div>
+                        <div class="text-body2 text-weight-bold text-dark ellipsis" :title="patient.email || ''">{{ patient.email || 'N/A' }}</div>
+                      </div>
+                    </div>
+                    <div class="col-12">
+                      <div class="patient-data-item">
+                        <div class="text-caption text-grey-6">City</div>
+                        <div class="text-body2 text-weight-bold text-dark">{{ patient.address?.city || 'N/A' }}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-              <q-item>
-                <q-item-section avatar>
-                  <q-icon name="bloodtype" color="red" />
-                </q-item-section>
-                <q-item-section class="text-dark">
-                  <span class="text-grey-7 text-weight-medium">Blood Group:</span>
-                  <span class="text-weight-bold text-dark"> {{ patient.bloodGroup || 'N/A' }}</span>
-                </q-item-section>
-              </q-item>
+              <!-- 🟥 Emergency Info -->
+              <div class="col-12 col-md-6">
+                <div class="patient-data-card patient-card-red q-pa-md full-height">
+                  <div class="row items-center q-mb-sm">
+                    <q-icon name="warning" color="red-8" size="sm" class="q-mr-sm" />
+                    <div class="text-subtitle2 text-weight-bold text-red-9">Emergency Info</div>
+                  </div>
+                  <q-separator class="q-mb-md" />
+                  <div class="patient-data-item">
+                    <div class="text-caption text-grey-6">Emergency Contact Name</div>
+                    <div class="text-body2 text-weight-bold text-dark">{{ patient.emergencyContact?.name || 'N/A' }}</div>
+                  </div>
+                </div>
+              </div>
 
-              <!-- Phone -->
-              <q-item>
-                <q-item-section avatar>
-                  <q-icon name="phone" color="grey" />
-                </q-item-section>
-                <q-item-section class="text-dark">
-                  <span class="text-grey-7 text-weight-medium">Phone:</span>
-                  <span class="text-weight-bold text-dark">
-                    {{ patient.phone || 'N/A' }}
-                  </span>
-                </q-item-section>
-              </q-item>
+              <!-- 🟨 Medical Info -->
+              <div class="col-12 col-md-6">
+                <div class="patient-data-card patient-card-yellow q-pa-md full-height">
+                  <div class="row items-center q-mb-sm">
+                    <q-icon name="medical_information" color="orange-8" size="sm" class="q-mr-sm" />
+                    <div class="text-subtitle2 text-weight-bold text-orange-9">Medical Info</div>
+                  </div>
+                  <q-separator class="q-mb-md" />
+                  
+                  <div class="q-mb-sm">
+                    <div class="text-caption text-grey-6 q-mb-xs">Allergies</div>
+                    <div v-if="patient.allergies && patient.allergies.length > 0">
+                      <q-chip v-for="allergy in patient.allergies" :key="allergy" class="text-weight-medium bg-orange-2 text-orange-10 q-ma-none q-mr-xs q-mb-xs" size="sm" rounded>
+                        {{ allergy }}
+                      </q-chip>
+                    </div>
+                    <div v-else class="row items-center rounded-borders q-pa-sm bg-orange-1 text-orange-9 text-caption" style="border: 1px dashed #fdba74;">
+                       <q-icon name="check_circle" size="xs" class="q-mr-sm" />
+                       No known allergies
+                    </div>
+                  </div>
 
-              <!-- Email -->
-              <q-item>
-                <q-item-section avatar>
-                  <q-icon name="email" color="grey" />
-                </q-item-section>
-                <q-item-section class="text-dark">
-                  <span class="text-grey-7 text-weight-medium">Email:</span>
-                  <span class="text-weight-bold text-dark">
-                    {{ patient.email || 'N/A' }}
-                  </span>
-                </q-item-section>
-              </q-item>
+                  <div>
+                    <div class="text-caption text-grey-6 q-mb-xs">Chronic Conditions</div>
+                    <div v-if="patient.chronicConditions && patient.chronicConditions.length > 0">
+                      <q-chip v-for="cond in patient.chronicConditions" :key="cond" class="text-weight-medium bg-red-2 text-red-10 q-ma-none q-mr-xs q-mb-xs" size="sm" rounded>
+                        {{ cond }}
+                      </q-chip>
+                    </div>
+                    <div v-else class="row items-center rounded-borders q-pa-sm bg-red-1 text-red-9 text-caption" style="border: 1px dashed #fca5a5;">
+                       <q-icon name="check_circle" size="xs" class="q-mr-sm" />
+                       No chronic conditions
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-              <!-- City -->
-              <q-item>
-                <q-item-section avatar>
-                  <q-icon name="location_on" color="grey" />
-                </q-item-section>
-                <q-item-section class="text-dark">
-                  <span class="text-grey-7 text-weight-medium">City:</span>
-                  <span class="text-weight-bold text-dark">
-                    {{ patient.address?.city || 'N/A' }}
-                  </span>
-                </q-item-section>
-              </q-item>
-
-              <!-- Emergency Contact -->
-              <q-item>
-                <q-item-section avatar>
-                  <q-icon name="warning" color="red" />
-                </q-item-section>
-                <q-item-section class="text-dark">
-                  <span class="text-grey-7 text-weight-medium">Emergency:</span>
-                  <span class="text-weight-bold text-dark">
-                    {{ patient.emergencyContact?.name || 'N/A' }}
-                  </span>
-                </q-item-section>
-              </q-item>
-            </q-list>
-
-            <q-separator class="q-my-md" />
-
-            <div class="text-weight-bold text-dark q-mb-xs">Allergies</div>
-            <div v-if="patient.allergies && patient.allergies.length > 0">
-              <q-chip v-for="allergy in patient.allergies" :key="allergy" color="orange-1" text-color="orange-9" size="sm" dense>
-                {{ allergy }}
-              </q-chip>
             </div>
-            <div v-else class="text-grey-7 text-caption">No known allergies.</div>
 
-            <div class="text-weight-bold text-dark q-mt-md q-mb-xs">Chronic Conditions</div>
-            <div v-if="patient.chronicConditions && patient.chronicConditions.length > 0">
-              <q-chip v-for="cond in patient.chronicConditions" :key="cond" color="red-1" text-color="red-9" size="sm" dense>
-                {{ cond }}
-              </q-chip>
-            </div>
-            <div v-else class="text-grey-7 text-caption">None reported.</div>
           </q-card-section>
           
-          <q-card-section v-else class="text-center text-grey-7 py-lg">
-            Could not load patient details.
+          <q-card-section v-else class="text-center text-grey-7 q-py-xl">
+            <q-icon name="person_off" size="48px" color="grey-4" class="q-mb-md" />
+            <div class="text-h6 text-weight-medium text-dark">Patient Not Found</div>
+            <div>Could not load patient details.</div>
           </q-card-section>
         </q-card>
 
@@ -759,6 +789,50 @@ const submitPrescription = async () => {
 
 <!-- All visual styles scoped to this component only (Part 1 rule) -->
 <style scoped>
+/* ── Premium Patient Details UI ──────────────────────────────────────────── */
+.patient-profile-card {
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+}
+
+.patient-header-gradient {
+  background: linear-gradient(135deg, #2563eb, #4f46e5);
+}
+
+.patient-data-card {
+  border-radius: 12px;
+  border: 1px solid #f1f5f9;
+  transition: all 0.2s ease;
+}
+
+.patient-data-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+}
+
+.patient-card-blue {
+  background-color: #f8fafc;
+}
+
+.patient-card-green {
+  background-color: #f0fdf4;
+}
+
+.patient-card-red {
+  background-color: #fef2f2;
+}
+
+.patient-card-yellow {
+  background-color: #fffbeb;
+}
+
+.patient-data-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 /* ── Part 1: Text visibility — all titles use dark readable color ────────── */
 ::selection {
   background: #cce5ff;
