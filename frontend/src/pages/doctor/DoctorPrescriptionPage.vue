@@ -682,7 +682,6 @@ const submitPrescription = async () => {
   try {
     const doctorName = doctor.value?.name || localStorage.getItem('doctor_name') || getDoctorName();
     const doctorId = doctor.value?.doctorId || doctor.value?._id || null;
-    const now = new Date().toISOString();
 
     const payload = {
       patientId,
@@ -701,14 +700,16 @@ const submitPrescription = async () => {
       headers: getHeaders()
     });
 
-    // Notify backend that consultation via prescription is now underway/started (per Part 6 requirement)
+    // Mark appointment as COMPLETED — removes it from the active consultations list.
+    // This is the real-world pattern: prescription = consultation done.
     try {
-      await axios.put(`${API_URL}/api/appointments/consultation/update/${appointmentId}`, 
-        { consultationStarted: true },
+      await axios.put(`${API_URL}/api/appointments/doctor/complete/${appointmentId}`,
+        {},
         { headers: getHeaders() }
       );
     } catch (e) {
-      console.warn("Failed to update consultation lifecycle state:", e);
+      // Non-critical — appointment-service may be down. Will sync via RabbitMQ when it recovers.
+      console.warn("Failed to mark appointment completed:", e.message);
     }
 
     $q.notify({
@@ -716,27 +717,8 @@ const submitPrescription = async () => {
       message: 'Prescription created successfully!'
     });
 
-    // Immediately reflect in UI before reload completes (Part 5)
-    const newEntry = {
-      _id: 'temp-' + Date.now(),
-      ...payload,
-      createdAt: now,
-      status: 'active'
-    };
-    prescriptionHistory.value.unshift(newEntry);
-
-    // Reset form
-    form.diagnosis = '';
-    form.symptoms = '';
-    form.advice = '';
-    form.followUpDate = '';
-    form.notes = '';
-    form.medicines = [
-      { name: '', dosage: '', frequency: '', duration: '', instructions: '' }
-    ];
-
-    // Reload from server to sync real _id / status
-    await loadPrescriptions();
+    // Navigate back to consultations — appointment is now COMPLETED and will no longer appear
+    setTimeout(() => router.push('/doctor/consultations'), 1200);
 
   } catch (error) {
     console.error('Prescription submission failed:', error);

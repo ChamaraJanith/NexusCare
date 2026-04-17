@@ -73,6 +73,7 @@ const handleAppointmentEvent = async (msg) => {
       "appointment.rejected",
       "appointment.cancelled",
       "appointment.online_confirmed",
+      "appointment.completed",
     ];
 
     if (syncRoutes.includes(routingKey)) {

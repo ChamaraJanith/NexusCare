@@ -299,6 +299,12 @@ router.put("/doctor/complete/:id", async (req, res) => {
     const { io } = await import("../app.js");
     io.emit("appointmentCompleted", updated);
 
+    try {
+      await publishEvent("appointments", "appointment.completed", buildAppointmentEventPayload(updated));
+    } catch (err) {
+      console.warn("⚠️ Failed to publish appointment.completed event:", err.message || err);
+    }
+
     res.json({ message: "Marked as completed", appointment: updated });
   } catch (error) {
     res.status(500).json({ error: error.message });
