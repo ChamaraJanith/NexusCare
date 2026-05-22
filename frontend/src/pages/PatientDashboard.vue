@@ -1487,7 +1487,7 @@ const goToPayment = (ap) => {
   router.push({
     path: '/appointment/payment',
     query: {
-      appointmentId: ap.appointmentId || ap._id,
+      appointmentId: ap._id,
       doctorId:      ap.doctorId,
       doctorName:    doctorNames.value[ap.doctorId] || ap.doctorName || '',
       doctorFee:     ap.charges?.doctorFee   || 0,
